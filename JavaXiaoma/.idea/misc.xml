@@ -8,13 +8,14 @@
   <component name="MavenProjectsManager">
     <option name="originalFiles">
       <list>
-        <option value="$PROJECT_DIR$/Validation/pom.xml" />
+        <option value="$PROJECT_DIR$/user-platform/pom.xml" />
+        <option value="$PROJECT_DIR$/user-platform/.flattened-pom.xml" />
+        <option value="$PROJECT_DIR$/my-dependency-injection/pom.xml" />
+        <option value="$PROJECT_DIR$/my-dependency-injection/.flattened-pom.xml" />
       </list>
     </option>
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_15_PREVIEW" project-jdk-name="17" project-jdk-type="JavaSDK">
-    <output url="file://$PROJECT_DIR$/out" />
-  </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="17" project-jdk-type="JavaSDK" />
   <component name="SuppressionsComponent">
     <option name="suppComments" value="[]" />
   </component>
