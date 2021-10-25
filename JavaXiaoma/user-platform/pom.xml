@@ -11,6 +11,7 @@
 
     <modules>
         <module>../my-dependency-injection</module>
+        <module>my-configuration</module>
     </modules>
 
 

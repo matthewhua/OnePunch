@@ -6,7 +6,7 @@
     <groupId>io.matthew</groupId>
     <artifactId>user-platform</artifactId>
     <version>M1-SNAPSHOT</version>
-    <relativePath>../user-platform/pom.xml</relativePath>
+    <relativePath>../pom.xml</relativePath>
   </parent>
   <groupId>io.matthew</groupId>
   <artifactId>my-denpendency-injection</artifactId>

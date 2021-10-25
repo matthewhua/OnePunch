@@ -4,5 +4,5 @@
 # Editor-based HTTP Client requests
 /httpRequests/
 *.iml
-JavaXiaoma.iml
+
 *.class

@@ -3,8 +3,9 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/JavaXiaoma.iml" filepath="$PROJECT_DIR$/.idea/JavaXiaoma.iml" />
-      <module fileurl="file://$PROJECT_DIR$/my-dependency-injection/my-denpendency-injection.iml" filepath="$PROJECT_DIR$/my-dependency-injection/my-denpendency-injection.iml" />
-      <module fileurl="file://$PROJECT_DIR$/my-dependency-injection/my-dependency-injection.iml" filepath="$PROJECT_DIR$/my-dependency-injection/my-dependency-injection.iml" />
+      <module fileurl="file://$PROJECT_DIR$/user-platform/my-configuration/my-configuration.iml" filepath="$PROJECT_DIR$/user-platform/my-configuration/my-configuration.iml" />
+      <module fileurl="file://$PROJECT_DIR$/user-platform/my-dependency-injection/my-denpendency-injection.iml" filepath="$PROJECT_DIR$/user-platform/my-dependency-injection/my-denpendency-injection.iml" />
+      <module fileurl="file://$PROJECT_DIR$/user-platform/my-dependency-injection/my-dependency-injection.iml" filepath="$PROJECT_DIR$/user-platform/my-dependency-injection/my-dependency-injection.iml" />
       <module fileurl="file://$PROJECT_DIR$/user-platform/user-platform.iml" filepath="$PROJECT_DIR$/user-platform/user-platform.iml" />
       <module fileurl="file://$PROJECT_DIR$/user-platform/user-platform (1).iml" filepath="$PROJECT_DIR$/user-platform/user-platform (1).iml" />
     </modules>
