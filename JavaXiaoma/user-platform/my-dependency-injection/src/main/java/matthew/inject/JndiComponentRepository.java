@@ -53,4 +53,4 @@ public class JndiComponentRepository extends AbstractComponentRepository{
     }
 }
 
-}
+

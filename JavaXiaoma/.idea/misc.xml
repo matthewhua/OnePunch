@@ -9,10 +9,6 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/user-platform/pom.xml" />
-        <option value="$PROJECT_DIR$/user-platform/.flattened-pom.xml" />
-        <option value="$PROJECT_DIR$/my-dependency-injection/pom.xml" />
-        <option value="$PROJECT_DIR$/my-dependency-injection/.flattened-pom.xml" />
-        <option value="$PROJECT_DIR$/user-platform/my-dependency-injection/pom.xml" />
       </list>
     </option>
   </component>
