@@ -2,6 +2,7 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel>
+      <module name="my-commons" target="8" />
       <module name="my-configuration" target="8" />
       <module name="my-dependency-injection" target="8" />
       <module name="user-platform" target="8" />
@@ -10,6 +11,7 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="my-commons" options="-proc:none -parameters" />
       <module name="my-configuration" options="-proc:none -parameters" />
       <module name="my-dependency-injection" options="-proc:none -parameters" />
       <module name="user-web" options="-proc:none -parameters" />

@@ -13,6 +13,7 @@
         <module>my-dependency-injection</module>
         <module>my-configuration</module>
         <module>user-web</module>
+        <module>my-commons</module>
     </modules>
 
 
