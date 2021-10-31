@@ -3,5 +3,7 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/user-platform/my-configuration/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/user-platform/my-dependency-injection/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/user-platform/user-web/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/user-platform/user-web/src/main/resources" charset="UTF-8" />
   </component>
 </project>
