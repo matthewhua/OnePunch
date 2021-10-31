@@ -16,13 +16,29 @@ public class DefaultConfig implements Config {
 
     private final ConfigSources configSources;
 
+    private final Converter converters;
 
-    @Override
-    public <T> T getValue(String s, Class<T> aClass) {
-        return null;
-    }
+	public DefaultConfig(ConfigSources configSources, Converter converters)
+	{
+		this.configSources = configSources;
+		this.converters = converters;
+	}
 
-    @Override
+
+	@Override
+    public <T> T getValue(String propertyName, Class<T> propertyType) {
+		ConfigValue configValue = getConfigValue(propertyName);
+		if (configValue == null)
+			return null;
+		String propertyValue = configValue.getValue();
+		// String 转换成目标类型
+		doGetConverter(propertyType)
+
+	}
+
+
+
+	@Override
     public ConfigValue getConfigValue(String s) {
         return null;
     }
@@ -46,6 +62,11 @@ public class DefaultConfig implements Config {
     public <T> Optional<Converter<T>> getConverter(Class<T> aClass) {
         return Optional.empty();
     }
+
+	protected  <T> void doGetConverter(Class<T> propertyType)
+	{
+		this.converters.get
+	}
 
     @Override
     public <T> T unwrap(Class<T> aClass) {
