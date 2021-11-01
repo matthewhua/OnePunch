@@ -1,0 +1,14 @@
+matthew.configuration.microprofile.config.converter.BigDecimalConverter
+matthew.configuration.microprofile.config.converter.BigIntegerConverter
+matthew.configuration.microprofile.config.converter.BooleanConverter
+matthew.configuration.microprofile.config.converter.ByteConverter
+matthew.configuration.microprofile.config.converter.CharacterConverter
+matthew.configuration.microprofile.config.converter.ClassConverter
+matthew.configuration.microprofile.config.converter.DoubleConverter
+matthew.configuration.microprofile.config.converter.FloatConverter
+matthew.configuration.microprofile.config.converter.IntegerConverter
+matthew.configuration.microprofile.config.converter.LongConverter
+matthew.configuration.microprofile.config.converter.ObjectConverter
+matthew.configuration.microprofile.config.converter.ShortConverter
+matthew.configuration.microprofile.config.converter.StringConverter
+matthew.configuration.microprofile.config.converter.URIConverter

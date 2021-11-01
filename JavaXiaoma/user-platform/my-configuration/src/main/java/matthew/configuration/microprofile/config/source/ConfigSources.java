@@ -8,8 +8,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static java.util.Collections.sort;
-import static jdk.nashorn.internal.objects.Global.load;
-
+import static java.util.ServiceLoader.load;
+import static java.util.stream.Stream.of;
 /**
  * @author Matthew
  * @time 2021/10/25 13:44
@@ -36,8 +36,10 @@ public class ConfigSources implements Iterable<ConfigSource>{
     public void addDeFaultSources() {
         if(addedDefaultConfigSources)
         	return;
-
-        addC
+		addConfigSources(JavaSystemPropertiesConfigSource.class,
+				OperationSystemEnvironmentVariablesConfigSource.class,
+				DefaultResourceConfigSource.class
+		);
 
     }
 
@@ -55,7 +57,11 @@ public class ConfigSources implements Iterable<ConfigSource>{
 
 
 	public void addConfigSources(Class<? extends ConfigSource>... configSourceClasses) {
-    	addC
+		addConfigSources(
+				of(configSourceClasses)
+						.map(this::newInstance)
+						.toArray(ConfigSource[]::new)
+		);
 	}
 
 	public void  addConfigSources(ConfigSource... configSources)
@@ -66,7 +72,7 @@ public class ConfigSources implements Iterable<ConfigSource>{
 	private  void addConfigSources(Iterable<ConfigSource>  configSourceClass)
 	{
 		configSources.forEach(this.configSources::add);
-		sort(this.configSources, ConfigSource);
+		sort(this.configSources,  ConfigSourceOrdinalComparator.INSTANCE);
 	}
 
 	private ConfigSource newInstance(Class<? extends ConfigSource> configSourceClass) {
