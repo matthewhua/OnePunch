@@ -31,17 +31,21 @@ public class DefaultConfigBuilder implements ConfigBuilder {
 
     @Override
     public ConfigBuilder addDiscoveredSources() {
-        return null;
+        configSources.addDiscoveredSources();
+        return this;
     }
 
     @Override
     public ConfigBuilder addDiscoveredConverters() {
-        return null;
+        converters.addDiscoveredConverters();
+        return this;
     }
 
     @Override
     public ConfigBuilder forClassLoader(ClassLoader classLoader) {
-        return null;
+        configSources.setClassLoader(classLoader);
+        converters.setClassLoader(classLoader);
+        return this;
     }
 
     @Override

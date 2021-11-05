@@ -62,6 +62,9 @@ public class Converters implements Iterable<Converter> {
 		priorityQueue.offer(new PrioritizedConverter(converter, priority));
 	}
 
+	public void setClassLoader(ClassLoader classLoader) {
+		this.classLoader = classLoader;
+	}
 
 	protected Class<?> resolveConvertedType(Converter<?> converter){
 		assertConverter(converter);
