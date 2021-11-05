@@ -1,4 +1,4 @@
-package handsome.matt.foundation
+package matt.foundation
 
 import scala.collection.mutable.ArrayBuffer
 

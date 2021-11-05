@@ -1,4 +1,4 @@
-package handsome.matt.foundation
+package matt.foundation
 // cala trait is like the original Java interface,
 // where you define the desired interface for some piece of functionality, but you don’t implement any behavior.
 trait TailWagger{
