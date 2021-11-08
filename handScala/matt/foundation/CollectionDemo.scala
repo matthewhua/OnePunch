@@ -64,6 +64,7 @@ object Lists extends App{
 }
 
 /**
+ * 上面的
  * How to remember the method names
  *  but one way to remember those method names is to think that the : character represents the side that the sequence is on,
  *  so when you use +: you know that the list needs to be on the right,
@@ -73,4 +74,9 @@ object Lists extends App{
  */
 
 
-object
+object VectorDemo extends App{
+  private val nums = Vector(1, 2, 3, 4, 5)
+  private val b: Any = nums :+ 4
+  private val value = Vector(4, 5)
+  nums ++ value
+}
