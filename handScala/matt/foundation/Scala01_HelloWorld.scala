@@ -18,9 +18,7 @@ object Scala01_HelloWorld {
 
 }
 
-object Person{
 
-}
 
 //trait has its own main method
 object Hello2 extends App{
