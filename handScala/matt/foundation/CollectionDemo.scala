@@ -73,8 +73,6 @@ object Lists extends App{
  *  Similarly, when you use :+ you know the list needs to be on the left:
  *  a :+ 4
  */
-
-
 object VectorDemo extends App{
   private val nums = Vector(1, 2, 3)
   private val b: Any = nums :+ 4

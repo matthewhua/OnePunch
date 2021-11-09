@@ -108,7 +108,7 @@ When creating enumerations
 When creating containers for “messages” that you want to pass between other objects (such as with the Akka actors library)
  */
 
-sealed trait Topping
+/*sealed trait Topping
 case object Cheese extends Topping
 case object Pepperoni extends Topping
 case object Sausage extends Topping
@@ -123,13 +123,7 @@ case object LargeCrustSize extends CrustSize
 sealed trait CrustType
 case object RegularCrustType extends CrustType
 case object ThinCrustType extends CrustType
-case object ThickCrustType extends CrustType
-
-case class Pizza (
-                   crustSize: CrustSize,
-                   crustType: CrustType,
-                   toppings: Seq[Topping]
-                 )
+case object ThickCrustType extends CrustType*/
 
 
 
