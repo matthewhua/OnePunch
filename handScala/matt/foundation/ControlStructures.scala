@@ -36,6 +36,16 @@ object ForLoopTest extends App{
 
   //for (p <- people) println(p) //普通For 循环
   people.foreach(println)  // forEach
+  //在 for 循环 中你可以使用分号 (;) 来设置多个区间，它将迭代给定区间所有的可能值。
+  var a = 0;
+  var b = 0;
+  for (a <- 1 to 3; b <- 1 to 3){
+    println("Value of a: " + a)
+    println("Value of b: " + b)
+  }
+  var god = "Matthew"
+  // for循环过滤
+  for (p <- people if p == god) println(p)
 }
 
 object MapTest extends App{
