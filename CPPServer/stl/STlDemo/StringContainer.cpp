@@ -130,7 +130,7 @@ void test05()
     cout << s.find('d') << endl; // 3
 
     cout << s.rfind('d') << endl;//7
-    cout << s.find("kkk") << endl;
+    cout << s.find("kkk") << endl; //-1 的十六进制 为 0xFFFFFFFF 十进制为 4294967295
 
     s.replace(2, 4, "AAA");
     cout << s << endl;
@@ -202,6 +202,63 @@ void test08()
     s.erase(2, 3);
     cout << s << endl;
 }
+
+
+/*
+string和c-style字符串转换
+*/
+void test09()
+{
+    const char *str = "hello";
+    string s = string(str);
+    cout << s << endl;
+
+    const char *str2 = s.c_str();
+    cout << s << endl;
+
+
+}
+
+// 字符串内存重新分配, []和at获取的字符引用，可以能会出错
+void test10()
+{
+    string s = "abcde";
+    char &a = s[2];
+    char &b = s[3];
+
+    a = '1';
+    b = '2';
+    cout << "a:" << a << endl;
+    cout << "b:" << b << endl;
+    cout << s << endl;
+
+    cout << "字符串的原空间地址:" << (int*)s.c_str() << endl;
+
+    s = "fdasfdasfdsafdasherewrkewhsaferew";
+    cout << "字符串的空间地址:" << (int*)s.c_str() << endl;
+
+
+    //原空间被释放，但是a还是被释放的s[2]空间的别名，如果操作非法的空间，会出错
+   // a = '3';
+}
+
+//用迭代器遍历字符串
+void test11()
+{
+    string s = "hello";
+    for (string::iterator i = s.begin(); i != s.end() ; ++i) {
+        cout << *i << " ";
+    }
+
+    cout << endl;
+
+    // 反向遍历
+    for (string::reverse_iterator it = s.rbegin();  it != s.rend() ; ++it) {
+        cout << *it << " ";
+    }
+    cout << endl;
+}
+
 int main(){
    /* test01();
     test02();
@@ -211,5 +268,7 @@ int main(){
     test06();*/
     test07();
     test08();
+    test10();
+    test11();
     return EXIT_FAILURE;
 }

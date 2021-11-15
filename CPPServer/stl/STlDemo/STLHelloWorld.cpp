@@ -144,12 +144,125 @@ void test04()
         ++begin;
     }
 }
+
+/*
+查找和替换
+int find(const string& str, int pos = 0) const; //查找str第一次出现位置,从pos开始查找
+int find(constchar* s, int pos = 0) const;  //查找s第一次出现位置,从pos开始查找
+int find(constchar* s, int pos, int n) const;  //从pos位置查找s的前n个字符第一次位置
+int find(constchar c, int pos = 0) const;  //查找字符c第一次出现位置
+int rfind(conststring& str, int pos = npos) const;//查找str最后一次位置,从pos开始查找
+int rfind(constchar* s, int pos = npos) const;//查找s最后一次出现位置,从pos开始查找
+int rfind(constchar* s, int pos, int n) const;//从pos查找s的前n个字符最后一次位置
+int rfind(constchar c, int pos = 0) const; //查找字符c最后一次出现位置
+string& replace(int pos, int n, const string& str); //替换从pos开始n个字符为字符串str
+string& replace(int pos, int n, const char* s); //替换从pos开始的n个字符为字符串s
+
+*//*
+
+void test05()
+{
+    string s = "abcdefgd";
+    cout << s.find('d') << endl; //3
+
+    cout << s.rfind('d') << endl; //7
+    cout << s.find('kkk') << endl; //-1 的十六进制 为 0xFFFFFFFF 十进制为 4294967295
+
+    s.replace(2, 4, "AAA");
+    cout << s << endl;
+}
+
+*/
+/*
+比较操作
+
+compare函数在>时返回 1，<时返回 -1，==时返回 0。
+比较区分大小写，比较时参考字典顺序，排越前面的越小。
+大写的A比小写的a小。
+
+int compare(const string&s) const;//与字符串s比较
+int compare(const char *s) const;//与字符串s比较
+
+*//*
+
+void test06()
+{
+    string s1 = "hello";
+    string s2 = "hello";
+    const char* str = "world";
+
+    if (s1.compare(s2) == 0)
+    {
+        cout << "s1 == s2 " << endl;
+    }
+    if (s2.compare(str) == 0)
+    {
+        cout << "s1 == str " << endl;
+    }
+    else
+    {
+        cout << "s2 != str" << endl;
+    }
+}
+
+*/
+/*
+子串
+string substr(int pos = 0, int n = npos) const;//返回由pos开始的n个字符组成的字符串
+
+*//*
+
+void test07()
+{
+    string email = "hello world@itcast.com";
+    unsigned int pos = email.find('@');
+    string username = email.substr(0, pos);
+    cout << username << endl;
+
+    string prex = email.substr(pos + 1);
+    cout << prex << endl;
+}
+
+*/
+/*
+插入和删除操作
+string& insert(int pos, const char* s); //插入字符串
+string& insert(int pos, const string& str); //插入字符串
+string& insert(int pos, int n, char c);//在指定位置插入n个字符c
+string& erase(int pos, int n = npos);//删除从Pos开始的n个字符
+
+*//*
+
+void test08()
+{
+    string s = "aaaa";
+    s.insert(3, "AAAA");
+    cout << s << endl;
+
+    s.insert(3, 5, 'M');
+    cout << s << endl;
+
+    s.erase(2, 3);
+    cout << s << endl;
+
+}
+*/
+
+
+
+
 int main()
 {
-    test01();
+   /* test01();
     test02();
     test03();
-    test04();
+    test04();*/
+    //test05();
+    test06();
+    test07();
+    test08();
+    test09();
     system("pause");
     return 0;
 }
+
