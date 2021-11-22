@@ -5,7 +5,7 @@
 #include <vector>
 #include <deque>
 #include <string>
-#include <algorithm>//Ëã·¨Í·ÎÄ¼ş
+#include <algorithm>//ç®—æ³•å¤´æ–‡ä»¶
 #include <ctime>
 
 using namespace std;
@@ -21,8 +21,8 @@ void CreateStudent(vector<Student> &vstu)
 {
     string setName = "ABCDE";
     for (int i = 0; i < 5; ++i) {
-        Student stu; //´´½¨Ñ§Éú
-        stu.name = "Ñ§Éú";
+        Student stu; //åˆ›å»ºå­¦ç”Ÿ
+        stu.name = "å­¦ç”Ÿ";
         stu.name += setName[i];
         stu.mScore = 0;
         vstu.push_back(stu);
@@ -33,31 +33,31 @@ void CreateStudent(vector<Student> &vstu)
 void EvaluateScore(vector<Student> &vstu) {
     srand((unsigned int) time(NULL));
 
-    //±éÀúÑ§Éú
+    //éå†å­¦ç”Ÿ
     for (auto it = vstu.begin(); it != vstu.end(); ++it) {
-        // ±£´æ·ÖÊı
+        // ä¿å­˜åˆ†æ•°
         deque<int> dScore;
-        //ÆÀÎ¯¸øÑ§Éú´ò·Ö
+        //è¯„å§”ç»™å­¦ç”Ÿæ‰“åˆ†
         for (int i = 0; i < 10; i++) {
             int socre = rand() % 70 + 30;
             dScore.push_back(socre);
         }
-        //ÅÅĞò
-        sort(dScore.begin(), dScore.end()); // ÒÑ¾­ÅÅĞòºÃ
-        // È¥µô×î¸ß·ÖºÍ×îµÍ·Ö
+        //æ’åº
+        sort(dScore.begin(), dScore.end()); // å·²ç»æ’åºå¥½
+        // å»æ‰æœ€é«˜åˆ†å’Œæœ€ä½åˆ†
         dScore.pop_back();
         dScore.pop_front();
 
-        // Çó×Ü·Ö
+        // æ±‚æ€»åˆ†
         int total = 0;
         for (deque<int>::iterator sit = dScore.begin(); sit != dScore.end(); ++sit) {
             total += (*sit);
         }
 
-        // ÇóÆ½¾ù·Ö
+        // æ±‚å¹³å‡åˆ†
         int averageScore = total / dScore.size();
 
-        // Æ½¾ù·Ö´æ´¢µ½¶ÔÏóÖĞ
+        // å¹³å‡åˆ†å­˜å‚¨åˆ°å¯¹è±¡ä¸­
         it->mScore = averageScore;
     }
 }
@@ -67,7 +67,7 @@ bool myCompare(Student &s1, Student &s2)
     return s1.mScore > s2.mScore;
 }
 
-//3.ÅÅÃû²¢´òÓ¡
+//3.æ’åå¹¶æ‰“å°
 void ShowStudentScore(vector<Student> &vstu)
 {
     sort(vstu.begin(), vstu.end(), myCompare);
@@ -80,15 +80,15 @@ void ShowStudentScore(vector<Student> &vstu)
 
 void test()
 {
-    //´æ´¢Ñ§ÉúµÄÈİÆ÷
+    //å­˜å‚¨å­¦ç”Ÿçš„å®¹å™¨
     vector<Student>  vstu;
 
-	//1.´´½¨Ñ§Éú
+	//1.åˆ›å»ºå­¦ç”Ÿ
 	CreateStudent(vstu);
-    //2.ÆÀÎ¯¸øÑ§Éú´ò·Ö
+    //2.è¯„å§”ç»™å­¦ç”Ÿæ‰“åˆ†
     EvaluateScore(vstu);
 
-    //3.ÅÅÃû²¢´òÓ¡
+    //3.æ’åå¹¶æ‰“å°
     ShowStudentScore(vstu);
 }
 

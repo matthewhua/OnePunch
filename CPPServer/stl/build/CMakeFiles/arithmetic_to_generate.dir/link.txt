@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/arithmetic_to_generate.dir/arithmetic_to_generate.cpp.o -o arithmetic_to_generate 

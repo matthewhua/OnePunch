@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/stackContainer.dir/stackContainer.cpp.o -o stackContainer 

@@ -4,7 +4,7 @@
 
 #include<iostream>
 
-#include<set>//multsetÒ²ÊÇÕâ¸öÍ·ÎÄ¼ş
+#include<set>//multsetä¹Ÿæ˜¯è¿™ä¸ªå¤´æ–‡ä»¶
 #include<algorithm>
 #include<string>
 
@@ -16,7 +16,7 @@ void test()
     it++;
     it--;
     //it + 2;err
-    //Ë«Ïòµü´úÆ÷
+    //åŒå‘è¿­ä»£å™¨
 }
 
 void printSet(set<int> &s)
@@ -39,24 +39,24 @@ void printSetFor(set<int> &s)
 
 
 /*
-¹¹Ôìº¯Êı
-set<T> st;//setÄ¬ÈÏ¹¹Ôìº¯Êı£º
-mulitset<T> mst; //multisetÄ¬ÈÏ¹¹Ôìº¯Êı:
-set(const set &st);//¿½±´¹¹Ôìº¯Êı
+æ„é€ å‡½æ•°
+set<T> st;//seté»˜è®¤æ„é€ å‡½æ•°ï¼š
+mulitset<T> mst; //multiseté»˜è®¤æ„é€ å‡½æ•°:
+set(const set &st);//æ‹·è´æ„é€ å‡½æ•°
 
-¸³Öµ²Ù×÷
-set&operator=(const set &st);//ÖØÔØµÈºÅ²Ù×÷·û
-swap(st);//½»»»Á½¸ö¼¯ºÏÈİÆ÷
-´óĞ¡²Ù×÷
-size();//·µ»ØÈİÆ÷ÖĞÔªËØµÄÊıÄ¿
-empty();//ÅĞ¶ÏÈİÆ÷ÊÇ·ñÎª¿Õ
+èµ‹å€¼æ“ä½œ
+set&operator=(const set &st);//é‡è½½ç­‰å·æ“ä½œç¬¦
+swap(st);//äº¤æ¢ä¸¤ä¸ªé›†åˆå®¹å™¨
+å¤§å°æ“ä½œ
+size();//è¿”å›å®¹å™¨ä¸­å…ƒç´ çš„æ•°ç›®
+empty();//åˆ¤æ–­å®¹å™¨æ˜¯å¦ä¸ºç©º
 
-²åÈëºÍÉ¾³ı²Ù×÷
-insert(elem);//ÔÚÈİÆ÷ÖĞ²åÈëÔªËØ¡£
-clear();//Çå³ıËùÓĞÔªËØ
-erase(pos);//É¾³ıposµü´úÆ÷ËùÖ¸µÄÔªËØ£¬·µ»ØÏÂÒ»¸öÔªËØµÄµü´úÆ÷¡£
-erase(beg, end);//É¾³ıÇø¼ä[beg,end)µÄËùÓĞÔªËØ £¬·µ»ØÏÂÒ»¸öÔªËØµÄµü´úÆ÷¡£
-erase(elem);//É¾³ıÈİÆ÷ÖĞÖµÎªelemµÄÔªËØ¡£
+æ’å…¥å’Œåˆ é™¤æ“ä½œ
+insert(elem);//åœ¨å®¹å™¨ä¸­æ’å…¥å…ƒç´ ã€‚
+clear();//æ¸…é™¤æ‰€æœ‰å…ƒç´ 
+erase(pos);//åˆ é™¤posè¿­ä»£å™¨æ‰€æŒ‡çš„å…ƒç´ ï¼Œè¿”å›ä¸‹ä¸€ä¸ªå…ƒç´ çš„è¿­ä»£å™¨ã€‚
+erase(beg, end);//åˆ é™¤åŒºé—´[beg,end)çš„æ‰€æœ‰å…ƒç´  ï¼Œè¿”å›ä¸‹ä¸€ä¸ªå…ƒç´ çš„è¿­ä»£å™¨ã€‚
+erase(elem);//åˆ é™¤å®¹å™¨ä¸­å€¼ä¸ºelemçš„å…ƒç´ ã€‚
 
 */
 void test01()
@@ -67,7 +67,7 @@ void test01()
     s.insert(2);
     s.insert(10);
     s.insert(7);
-    //×ÔÉí¹æÔò½øĞĞÅÅĞò, ´ÓĞ¡µ½´ó
+    //è‡ªèº«è§„åˆ™è¿›è¡Œæ’åº, ä»å°åˆ°å¤§
     printSetFor(s);
 }
 
@@ -89,7 +89,7 @@ void printSet2(set<int, myfunc> &s)
     cout << endl;
 }
 
-//¸Ä±äsetÈİÆ÷µÄ¹æÔò£¬±äÎª½µĞò£¨´Ó´óµ½Ğ¡£©
+//æ”¹å˜setå®¹å™¨çš„è§„åˆ™ï¼Œå˜ä¸ºé™åºï¼ˆä»å¤§åˆ°å°ï¼‰
 void test02()
 {
    // cout << "______________________________" << endl;
@@ -108,7 +108,7 @@ void print(int v)
     cout << v << " ";
 }
 
-//setÈİÆ÷²»ÔÊĞíÓĞÁ½¸öÏàÍ¬µÄÔªËØ
+//setå®¹å™¨ä¸å…è®¸æœ‰ä¸¤ä¸ªç›¸åŒçš„å…ƒç´ 
 void test03()
 {
     set<int> s;
@@ -119,39 +119,39 @@ void test03()
     s.insert(7);
 
     printSetFor(s);
-    //×¢Òâ£ºsetÈİÆ÷²»ÔÊĞíÓĞÁ½¸öÏàÍ¬µÄÔªËØ£¬µ«ÊÇ²åÈëÏàÍ¬µÄÔªËØ£¬±àÒë²»»á±¨´í£¬ÔËËãÒ²²»±¨´í
-    //Ö»ÊÇ²»°ÑÊı¾İÊäÈëÈİÆ÷
+    //æ³¨æ„ï¼šsetå®¹å™¨ä¸å…è®¸æœ‰ä¸¤ä¸ªç›¸åŒçš„å…ƒç´ ï¼Œä½†æ˜¯æ’å…¥ç›¸åŒçš„å…ƒç´ ï¼Œç¼–è¯‘ä¸ä¼šæŠ¥é”™ï¼Œè¿ç®—ä¹Ÿä¸æŠ¥é”™
+    //åªæ˜¯ä¸æŠŠæ•°æ®è¾“å…¥å®¹å™¨
     s.insert(8);
     printSetFor(s);
 
     pair<set<int>::iterator, bool> ret = s.insert(11);
     if (ret.second)
     {
-        cout << "²åÈë³É¹¦" << endl;
+        cout << "æ’å…¥æˆåŠŸ" << endl;
     }
     else
     {
-        cout << "²åÈëÊ§°Ü" << endl;
+        cout << "æ’å…¥å¤±è´¥" << endl;
     }
     s.erase(2);
     s.erase(s.begin());
     printSetFor(s);
 
 
-    //×ÔÉí¹æÔò½øĞĞÅÅĞò£¬´ÓĞ¡µ½´ó
-    //²»ÄÜÍ¨¹ıËã·¨ÅÅĞòÀ´ÅÅĞò¹ØÁªÊ½ÈİÆ÷µÄÔªËØ
+    //è‡ªèº«è§„åˆ™è¿›è¡Œæ’åºï¼Œä»å°åˆ°å¤§
+    //ä¸èƒ½é€šè¿‡ç®—æ³•æ’åºæ¥æ’åºå…³è”å¼å®¹å™¨çš„å…ƒç´ 
     //sort(s.begin(), s.end());
 
     for_each(s.begin(), s.end(), print);
 }
 
 /*
-²éÕÒ²Ù×÷
-find(key);//²éÕÒ¼ükeyÊÇ·ñ´æÔÚ,Èô´æÔÚ£¬·µ»Ø¸Ã¼üµÄÔªËØµÄµü´úÆ÷£»Èô²»´æÔÚ£¬·µ»Øset.end();
-1.	count(key);//²éÕÒ¼ükeyµÄÔªËØ¸öÊı
-2.	lower_bound(keyElem);//·µ»ØµÚÒ»¸ökey>=keyElemÔªËØµÄµü´úÆ÷¡£
-3.	upper_bound(keyElem);//·µ»ØµÚÒ»¸ökey>keyElemÔªËØµÄµü´úÆ÷¡£
-equal_range(keyElem);//·µ»ØÈİÆ÷ÖĞkeyÓëkeyElemÏàµÈµÄÉÏÏÂÏŞµÄÁ½¸öµü´úÆ÷¡£
+æŸ¥æ‰¾æ“ä½œ
+find(key);//æŸ¥æ‰¾é”®keyæ˜¯å¦å­˜åœ¨,è‹¥å­˜åœ¨ï¼Œè¿”å›è¯¥é”®çš„å…ƒç´ çš„è¿­ä»£å™¨ï¼›è‹¥ä¸å­˜åœ¨ï¼Œè¿”å›set.end();
+1.	count(key);//æŸ¥æ‰¾é”®keyçš„å…ƒç´ ä¸ªæ•°
+2.	lower_bound(keyElem);//è¿”å›ç¬¬ä¸€ä¸ªkey>=keyElemå…ƒç´ çš„è¿­ä»£å™¨ã€‚
+3.	upper_bound(keyElem);//è¿”å›ç¬¬ä¸€ä¸ªkey>keyElemå…ƒç´ çš„è¿­ä»£å™¨ã€‚
+equal_range(keyElem);//è¿”å›å®¹å™¨ä¸­keyä¸keyElemç›¸ç­‰çš„ä¸Šä¸‹é™çš„ä¸¤ä¸ªè¿­ä»£å™¨ã€‚
 
 */
 void test05() {
@@ -164,27 +164,27 @@ void test05() {
 
     auto iterator = s.find(10);
     if (iterator == s.end()){
-        cout << "²éÕÒÊ§°Ü" << endl;
+        cout << "æŸ¥æ‰¾å¤±è´¥" << endl;
     }else{
-        cout << "²éÕÒ³É¹¦£º" << *iterator << endl;
+        cout << "æŸ¥æ‰¾æˆåŠŸï¼š" << *iterator << endl;
     }
-    //²éÕÒ´óÓÚµÈÓÚ2 µÄ×îĞ¡Êı
+    //æŸ¥æ‰¾å¤§äºç­‰äº2 çš„æœ€å°æ•°
     iterator = s.lower_bound(2);
 
-    //²éÕÒ´óÓÚ2µÄ×îĞ¡Êı
+    //æŸ¥æ‰¾å¤§äº2çš„æœ€å°æ•°
     iterator = s.upper_bound(2);
     if (iterator == s.end())
     {
-        cout << "²éÕÒÊ§°Ü" << endl;
+        cout << "æŸ¥æ‰¾å¤±è´¥" << endl;
     }
     else
     {
-        cout << "²éÕÒ³É¹¦£º" << *iterator << endl;
+        cout << "æŸ¥æ‰¾æˆåŠŸï¼š" << *iterator << endl;
     }
-    //·µ»Ø´óÓÚµÈÓÚ2µÄÁ½¸ö×îĞ¡µÄÊı£¬Èç¹ûÓĞ2ÄÇÃ´¾Í·µ»Ø2ºÍ´óÓÚ2µÄ×îĞ¡Êı
+    //è¿”å›å¤§äºç­‰äº2çš„ä¸¤ä¸ªæœ€å°çš„æ•°ï¼Œå¦‚æœæœ‰2é‚£ä¹ˆå°±è¿”å›2å’Œå¤§äº2çš„æœ€å°æ•°
     pair<set<int>::iterator, set<int>::iterator> ret = s.equal_range(4);
     cout << *(ret.first) << endl; //4
-    cout << *(ret.second) << endl; //6 Ã»ÓĞ2 µÄ»°¾Í·µ»ØºÍÒ» Ò»ÑùµÄÖµ
+    cout << *(ret.second) << endl; //6 æ²¡æœ‰2 çš„è¯å°±è¿”å›å’Œä¸€ ä¸€æ ·çš„å€¼
 
     multiset<int> s1;
     s1.insert(44);
@@ -192,12 +192,12 @@ void test05() {
     s1.insert(44);
     s1.insert(9);
     s1.insert(7);
-    cout << s1.count(44) << endl; // 3¸ö
+    cout << s1.count(44) << endl; // 3ä¸ª
 
 }
 
 
-//´æ´¢¶ÔÏóÊ±£¬ĞèÒª¸æËßsetÈİÆ÷¹æÔò
+//å­˜å‚¨å¯¹è±¡æ—¶ï¼Œéœ€è¦å‘Šè¯‰setå®¹å™¨è§„åˆ™
 class Maker
 {
 public:
@@ -211,7 +211,7 @@ public:
     int age;
 };
 
-struct MakerFunc
+/*struct MakerFunc
 {
     bool operator<(const Maker &m1) const{
         return m1.age > this->;
@@ -231,12 +231,11 @@ void test06()
     {
         cout << "Name:" << it->name << " Age:" << it->age << endl;
     }
-}
+}*/
 int main()
 {
    //test01();
     //test02();
     //    test03();
     test05();
-    test06();
 }

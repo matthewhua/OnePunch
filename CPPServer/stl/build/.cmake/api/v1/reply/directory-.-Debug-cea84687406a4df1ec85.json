@@ -1,0 +1,423 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 24,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"CopyAndSwapAlogorithm"
+			],
+			"targetId" : "CopyAndSwapAlogorithm::@6890427a1f51a3e7e1df",
+			"targetIndex" : 0,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"DequeContainer"
+			],
+			"targetId" : "DequeContainer::@6890427a1f51a3e7e1df",
+			"targetIndex" : 1,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"FindAlogorithn"
+			],
+			"targetId" : "FindAlogorithn::@6890427a1f51a3e7e1df",
+			"targetIndex" : 2,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 4,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"ForeachAlgorithm"
+			],
+			"targetId" : "ForeachAlgorithm::@6890427a1f51a3e7e1df",
+			"targetIndex" : 3,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"ListContainer"
+			],
+			"targetId" : "ListContainer::@6890427a1f51a3e7e1df",
+			"targetIndex" : 4,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 6,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"MapContainer"
+			],
+			"targetId" : "MapContainer::@6890427a1f51a3e7e1df",
+			"targetIndex" : 5,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 7,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"PairContainer"
+			],
+			"targetId" : "PairContainer::@6890427a1f51a3e7e1df",
+			"targetIndex" : 6,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 8,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"QueueContainer"
+			],
+			"targetId" : "QueueContainer::@6890427a1f51a3e7e1df",
+			"targetIndex" : 7,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 9,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"STLHelloWorld"
+			],
+			"targetId" : "STLHelloWorld::@6890427a1f51a3e7e1df",
+			"targetIndex" : 8,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 10,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"STLPrinciple"
+			],
+			"targetId" : "STLPrinciple::@6890427a1f51a3e7e1df",
+			"targetIndex" : 9,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 11,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"SetContainer"
+			],
+			"targetId" : "SetContainer::@6890427a1f51a3e7e1df",
+			"targetIndex" : 10,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 12,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"SortAlogorithm"
+			],
+			"targetId" : "SortAlogorithm::@6890427a1f51a3e7e1df",
+			"targetIndex" : 11,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 13,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"StringContainer"
+			],
+			"targetId" : "StringContainer::@6890427a1f51a3e7e1df",
+			"targetIndex" : 12,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 14,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"VectorsContainer"
+			],
+			"targetId" : "VectorsContainer::@6890427a1f51a3e7e1df",
+			"targetIndex" : 13,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 15,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"arithmetic_to_generate"
+			],
+			"targetId" : "arithmetic_to_generate::@6890427a1f51a3e7e1df",
+			"targetIndex" : 14,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 16,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"collection_alogorithm"
+			],
+			"targetId" : "collection_alogorithm::@6890427a1f51a3e7e1df",
+			"targetIndex" : 15,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 17,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"evaluateSocre"
+			],
+			"targetId" : "evaluateSocre::@6890427a1f51a3e7e1df",
+			"targetIndex" : 16,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 18,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"evaluateSocre2"
+			],
+			"targetId" : "evaluateSocre2::@6890427a1f51a3e7e1df",
+			"targetIndex" : 17,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 19,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"functionObject"
+			],
+			"targetId" : "functionObject::@6890427a1f51a3e7e1df",
+			"targetIndex" : 18,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 20,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"functionalObejectAdpater"
+			],
+			"targetId" : "functionalObejectAdpater::@6890427a1f51a3e7e1df",
+			"targetIndex" : 19,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 21,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"liftDemo"
+			],
+			"targetId" : "liftDemo::@6890427a1f51a3e7e1df",
+			"targetIndex" : 20,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 22,
+			"component" : "Unspecified",
+			"destination" : "bin/backtracking",
+			"paths" : 
+			[
+				"stackContainer"
+			],
+			"targetId" : "stackContainer::@6890427a1f51a3e7e1df",
+			"targetIndex" : 21,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : ".",
+		"source" : "."
+	}
+}
