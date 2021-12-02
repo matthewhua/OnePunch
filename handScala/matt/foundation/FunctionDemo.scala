@@ -20,7 +20,7 @@ object FunctionDemo extends App  {
 
   def sum(list: List[Int]): Int =   list match {
     case Nil => 0
-    case head:: tail  => head + sum(tail)
+    case head :: tail  => head + sum(tail)
   }
 
   private val v1: List[Int] = List.range(1, 4)
