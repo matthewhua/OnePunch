@@ -8,6 +8,7 @@ fun main()
     printSum(1, 2)
     printSumWithoutReturn(1, 2)
     variable()
+    incrementX()
 }
 
 //A function with two Int parameters and Int return type.
@@ -34,5 +35,20 @@ fun variable(){
     val c: Int  // Type required when no initializer is provided
     c = 3
     println("a $a b $b c $c")
+    var x = 5;
+    x += 1
+    print("x: $x")
+
+
+
 }
+
+val PI = 3.14
+var x = 0
+
+fun incrementX(){
+    x += 1
+}
+
+
 
