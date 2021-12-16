@@ -59,13 +59,20 @@ fun getMutableMapDemo(mutableMap: MutableMap<String, Int>) {
 }
 
 
+fun listDemo(){
+    val listOf = listOf(User2("matthew", 18), User2("Alice", 19))
+    val map = listOf.map { it.id }
+    println("map的 Id 为 $map, list的 类型为${listOf.javaClass.canonicalName}, map 的类型为 ${map.javaClass.canonicalName}")
+}
+
+
 /**
  * @author Matthew
  * @date 2021-12-07 0:05
  */
 fun main()
 {
-
+    listDemo()
     val items = listOf("apple", "banana", "kiwifruit")
     for (item in items)
     {

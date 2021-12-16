@@ -1,0 +1,23 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.6.0'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '1.6.0'
+}
+
+
+repositories {
+    mavenCentral()
+    maven { url "https://plugins.gradle.org/m2/" }
+    maven { url "https://maven.pkg.jetbrains.space/kotlin/p/kotlin/dev" }
+    maven { url 'https://maven.pkg.jetbrains.space/kotlin/p/dokka/dev' }
+    mavenLocal()
+}
+
+dependencies {
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0-RC2'
+}
+
+sourceSets {
+    main.kotlin.srcDirs = ['src']
+    main.resources.srcDirs = ['resources']
+    test.kotlin.srcDirs = ['test']
+}

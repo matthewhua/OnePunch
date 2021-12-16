@@ -50,6 +50,7 @@ object Resource{
 
 // Java 7's try-with-resources
 fun autoClose(){
+    // 等价于7
     val stream = Files.newInputStream(Paths.get("/some/file.txt"))
     stream.buffered().reader().use { reader ->
         println(reader.readText())
