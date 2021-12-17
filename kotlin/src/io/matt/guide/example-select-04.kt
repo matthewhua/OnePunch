@@ -6,8 +6,8 @@
 package io.matt.guide.exampleSelect04
 
 import kotlinx.coroutines.*
-import io.matt.selects.select
-import java.util.*
+import kotlinx.coroutines.selects.select
+import kotlin.random.Random
 
 fun CoroutineScope.asyncString(time: Int) = async {
     delay(time.toLong())

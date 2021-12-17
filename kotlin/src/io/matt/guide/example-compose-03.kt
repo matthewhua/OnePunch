@@ -19,6 +19,10 @@ fun main() = runBlocking<Unit> {
         one.start() // start the first one
         two.start() // start the second one
         println("The answer is ${one.await() + two.await()}")
+        /**
+         * ，如果我们只是在 println 中调⽤ await，⽽没有在单独的协程中调⽤ start，这 将会导致顺序⾏为，
+         * 直到 await 启动该协程 执⾏并等待⾄它结束，这并不是惰性的预期 ⽤例。
+         */
     }
     println("Completed in $time ms")
 }

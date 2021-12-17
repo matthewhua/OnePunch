@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 fun main() = runBlocking<Unit> {
-    val channel = Channel<Int>(4) // create buffered channel
+    val channel = Channel<Int>(3) // create buffered channel
     val sender = launch { // launch sender coroutine
         repeat(10) {
             println("Sending $it") // print before sending each element

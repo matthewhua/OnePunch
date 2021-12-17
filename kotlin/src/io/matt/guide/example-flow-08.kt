@@ -5,16 +5,18 @@
 // This file was automatically generated from flow.md by Knit tool. Do not edit.
 package io.matt.guide.exampleFlow08
 
-import io.matt.delay
-import io.matt.flow.asFlow
-import io.matt.flow.map
-import io.matt.runBlocking
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 
 suspend fun performRequest(request: Int): String {
     delay(1000) // imitate long-running asynchronous work
     return "response $request"
 }
 
+@OptIn(InternalCoroutinesApi::class)
 fun main() = runBlocking<Unit> {
     (1..3).asFlow() // a flow of requests
         .map { request -> performRequest(request) }

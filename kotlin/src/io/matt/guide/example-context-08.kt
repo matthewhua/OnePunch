@@ -5,10 +5,7 @@
 // This file was automatically generated from coroutine-context-and-dispatchers.md by Knit tool. Do not edit.
 package io.matt.guide.exampleContext08
 
-import io.matt.CoroutineName
-import io.matt.async
-import io.matt.delay
-import io.matt.runBlocking
+import kotlinx.coroutines.*
 
 fun log(msg: String) = println("[${Thread.currentThread().name}] $msg")
 

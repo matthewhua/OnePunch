@@ -5,11 +5,13 @@
 // This file was automatically generated from select-expression.md by Knit tool. Do not edit.
 package io.matt.guide.exampleSelect02
 
-import io.matt.cancelChildren
-import io.matt.channels.ReceiveChannel
-import io.matt.channels.produce
-import io.matt.runBlocking
-import io.matt.selects.select
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.withTimeoutOrNull
 
 suspend fun selectAorB(a: ReceiveChannel<String>, b: ReceiveChannel<String>): String =
     select<String> {

@@ -6,11 +6,10 @@
 package io.matt.guide.exampleSelect05
 
 import kotlinx.coroutines.*
-import io.matt.channels.Channel
-import io.matt.channels.ReceiveChannel
-import io.matt.channels.produce
-import io.matt.selects.select
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.selects.select
 
 fun CoroutineScope.switchMapDeferreds(input: ReceiveChannel<Deferred<String>>) = produce<String> {
     var current = input.receive() // start with first received deferred value

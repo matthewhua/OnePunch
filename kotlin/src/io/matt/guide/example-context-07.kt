@@ -5,9 +5,10 @@
 // This file was automatically generated from coroutine-context-and-dispatchers.md by Knit tool. Do not edit.
 package io.matt.guide.exampleContext07
 
-import io.matt.delay
-import io.matt.launch
-import io.matt.runBlocking
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 fun main() = runBlocking<Unit> {
     // launch a coroutine to process some kind of incoming request

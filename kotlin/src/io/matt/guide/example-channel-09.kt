@@ -24,7 +24,7 @@ fun main() = runBlocking {
 }
 
 suspend fun player(name: String, table: Channel<Ball>) {
-    for (ball in table) { // receive the ball in a loop
+    for (ball in table) { // receive the ball in a loop 因为之前是空的，所以这里先不触发
         ball.hits++
         println("$name $ball")
         delay(300) // wait a bit

@@ -5,12 +5,14 @@
 // This file was automatically generated from flow.md by Knit tool. Do not edit.
 package io.matt.guide.exampleFlow05
 
-import io.matt.delay
-import io.matt.flow.Flow
-import io.matt.flow.flow
-import io.matt.runBlocking
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.runBlocking
 
-fun simple(): Flow<Int> = flow { 
+
+fun simple(): Flow<Int> = flow {
     println("Flow started")
     for (i in 1..3) {
         delay(100)
@@ -18,6 +20,7 @@ fun simple(): Flow<Int> = flow {
     }
 }
 
+@OptIn(InternalCoroutinesApi::class)
 fun main() = runBlocking<Unit> {
     println("Calling simple function...")
     val flow = simple()

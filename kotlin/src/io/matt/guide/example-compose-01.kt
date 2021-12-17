@@ -16,7 +16,7 @@ fun main() = runBlocking<Unit> {
         val two = doSomethingUsefulTwo()
         println("The answer is ${one + two}")
     }
-    println("Completed in $time ms")
+    println("Completed in $time ms") //Completed in 2024 ms
 }
 
 suspend fun doSomethingUsefulOne(): Int {

@@ -5,9 +5,10 @@
 // This file was automatically generated from cancellation-and-timeouts.md by Knit tool. Do not edit.
 package io.matt.guide.exampleCancel06
 
-import io.matt.delay
-import io.matt.runBlocking
-import io.matt.withTimeout
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+
 
 fun main() = runBlocking {
     withTimeout(1300L) {

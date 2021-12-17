@@ -5,9 +5,10 @@
 // This file was automatically generated from channels.md by Knit tool. Do not edit.
 package io.matt.guide.exampleChannel02
 
-import io.matt.channels.Channel
-import io.matt.launch
-import io.matt.runBlocking
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+
 
 fun main() = runBlocking {
     val channel = Channel<Int>()

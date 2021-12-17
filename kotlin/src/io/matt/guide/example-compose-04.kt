@@ -8,6 +8,13 @@ package io.matt.guide.exampleCompose04
 import kotlinx.coroutines.*
 import kotlin.system.measureTimeMillis
 
+
+/**
+ * 家人们，这个不推荐使用
+ * 如果 val one = somethingUsefulOneAsync() 这⼀⾏和 one.await() 表达式这 ⾥在代码中有逻辑错误， 并且程序抛出了异常以及程序在操作的过程中中⽌，将会发⽣ 什么。
+ * 通常情况下，⼀个全局的异常处理者会捕获这个异常，将异常打印成⽇记并报告 给开发者，但是反之该程序将会继续执⾏其它操作。
+ */
+
 // note that we don't have `runBlocking` to the right of `main` in this example
 fun main() {
     val time = measureTimeMillis {
@@ -20,7 +27,7 @@ fun main() {
             println("The answer is ${one.await() + two.await()}")
         }
     }
-    println("Completed in $time ms")
+    println("Completed in $time ms") //Completed in 1086 ms
 }
 
 @OptIn(DelicateCoroutinesApi::class)

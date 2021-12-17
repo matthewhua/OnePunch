@@ -5,10 +5,7 @@
 // This file was automatically generated from cancellation-and-timeouts.md by Knit tool. Do not edit.
 package io.matt.guide.exampleCancel08
 
-import io.matt.delay
-import io.matt.launch
-import io.matt.runBlocking
-import io.matt.withTimeout
+import kotlinx.coroutines.*
 
 var acquired = 0
 

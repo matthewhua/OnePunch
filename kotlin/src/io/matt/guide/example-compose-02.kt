@@ -16,7 +16,7 @@ fun main() = runBlocking<Unit> {
         val two = async { doSomethingUsefulTwo() }
         println("The answer is ${one.await() + two.await()}")
     }
-    println("Completed in $time ms")
+    println("Completed in $time ms") //Completed in 1018 ms 速度快了两倍
 }
 
 suspend fun doSomethingUsefulOne(): Int {

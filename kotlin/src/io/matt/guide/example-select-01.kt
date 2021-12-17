@@ -5,14 +5,10 @@
 // This file was automatically generated from select-expression.md by Knit tool. Do not edit.
 package io.matt.guide.exampleSelect01
 
-import io.matt.CoroutineScope
-import io.matt.cancelChildren
-import io.matt.channels.ReceiveChannel
-import io.matt.channels.produce
-import io.matt.delay
-import io.matt.runBlocking
-import io.matt.selects.select
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.selects.select
 
 fun CoroutineScope.fizz() = produce<String> {
     while (true) { // sends "Fizz" every 300 ms

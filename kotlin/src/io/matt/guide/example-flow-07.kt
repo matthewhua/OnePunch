@@ -5,9 +5,11 @@
 // This file was automatically generated from flow.md by Knit tool. Do not edit.
 package io.matt.guide.exampleFlow07
 
-import io.matt.flow.asFlow
-import io.matt.runBlocking
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.runBlocking
 
+@OptIn(InternalCoroutinesApi::class)
 fun main() = runBlocking<Unit> {
     // Convert an integer range to a flow
     (1..3).asFlow().collect { value -> println(value) }

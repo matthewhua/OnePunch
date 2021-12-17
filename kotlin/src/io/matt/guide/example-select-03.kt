@@ -6,11 +6,12 @@
 package io.matt.guide.exampleSelect03
 
 import kotlinx.coroutines.*
-import io.matt.channels.Channel
-import io.matt.channels.SendChannel
-import io.matt.channels.consumeEach
-import io.matt.channels.produce
-import io.matt.selects.select
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.selects.select
+
 
 fun CoroutineScope.produceNumbers(side: SendChannel<Int>) = produce<Int> {
     for (num in 1..10) { // produce 10 numbers from 1 to 10

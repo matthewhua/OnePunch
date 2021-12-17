@@ -5,10 +5,7 @@
 // This file was automatically generated from coroutine-context-and-dispatchers.md by Knit tool. Do not edit.
 package io.matt.guide.exampleContext09
 
-import io.matt.CoroutineName
-import io.matt.Dispatchers
-import io.matt.launch
-import io.matt.runBlocking
+import kotlinx.coroutines.*
 
 fun main() = runBlocking<Unit> {
     launch(Dispatchers.Default + CoroutineName("test")) {

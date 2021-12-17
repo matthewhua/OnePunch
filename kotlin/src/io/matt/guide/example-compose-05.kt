@@ -15,10 +15,11 @@ fun main() = runBlocking<Unit> {
     val time = measureTimeMillis {
         println("The answer is ${concurrentSum()}")
     }
-    println("Completed in $time ms")
+    println("Completed in $time ms") //Completed in 1016 ms
 }
 
 suspend fun concurrentSum(): Int = coroutineScope {
+    //我们仍然可以同时执⾏这两个操作：
     val one = async { doSomethingUsefulOne() }
     val two = async { doSomethingUsefulTwo() }
     one.await() + two.await()

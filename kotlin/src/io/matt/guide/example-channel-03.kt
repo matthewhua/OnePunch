@@ -5,11 +5,13 @@
 // This file was automatically generated from channels.md by Knit tool. Do not edit.
 package io.matt.guide.exampleChannel03
 
-import io.matt.CoroutineScope
-import io.matt.channels.ReceiveChannel
-import io.matt.channels.consumeEach
-import io.matt.channels.produce
-import io.matt.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 fun CoroutineScope.produceSquares(): ReceiveChannel<Int> = produce {
     for (x in 1..5) send(x * x)
