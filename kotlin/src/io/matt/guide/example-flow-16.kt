@@ -7,10 +7,11 @@ package io.matt.guide.exampleFlow16
 
 
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-
+import kotlinx.coroutines.runBlocking
 import kotlin.system.measureTimeMillis
 
 fun simple(): Flow<Int> = flow {
@@ -28,5 +29,5 @@ fun main() = runBlocking<Unit> {
             println(value) 
         } 
     }   
-    println("Collected in $time ms")
+    println("Collected in $time ms") // Collected in 1271 ms
 }

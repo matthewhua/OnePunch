@@ -23,5 +23,5 @@ fun main() = runBlocking<Unit> {
             "string $it"
         }.collect { 
             println("Collect $it")
-        }    
+        }
 }

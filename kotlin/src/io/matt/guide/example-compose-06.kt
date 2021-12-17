@@ -18,6 +18,10 @@ fun main() = runBlocking<Unit> {
     }
 }
 
+
+/**
+ * 请注意，如果其中⼀个⼦协程（即 two ）失败，第⼀个 async 以及等待中的⽗协程都 会被取消：
+ */
 suspend fun failedConcurrentSum(): Int = coroutineScope {
     val one = async<Int> { 
         try {

@@ -5,14 +5,20 @@
 // This file was automatically generated from coroutine-context-and-dispatchers.md by Knit tool. Do not edit.
 package io.matt.guide.exampleContext08
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 fun log(msg: String) = println("[${Thread.currentThread().name}] $msg")
 
+/**
+ * 命名协程以⽤于调试
+ */
 fun main() = runBlocking(CoroutineName("main")) {
     log("Started main coroutine")
     // run two background value computations
-    val v1 = async(CoroutineName("v1coroutine")) {
+    val v1 = async(CoroutineName("v1coroutine")) { //设置Coroutine名称
         delay(500)
         log("Computing v1")
         252

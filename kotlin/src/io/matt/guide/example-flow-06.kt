@@ -13,6 +13,11 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 
+/**
+ * 流取消
+ *
+ * 这里是时间取消
+ */
 fun simple(): Flow<Int> = flow {
     for (i in 1..3) {
         delay(100)          

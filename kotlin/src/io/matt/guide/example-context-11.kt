@@ -9,6 +9,9 @@ import kotlinx.coroutines.*
 
 val threadLocal = ThreadLocal<String?>() // declare thread-local variable
 
+/**
+ * ThreadLocal ， asContextElement 扩展函数在这⾥会充当救兵。它创建了额外的上下 ⽂元素， 且保留给定 ThreadLocal 的值，并在每次协程切换其上下⽂时恢复它。
+ */
 fun main() = runBlocking<Unit> {
     threadLocal.set("main")
     println("Pre-main, current thread: ${Thread.currentThread()}, thread local value: '${threadLocal.get()}'")

@@ -16,6 +16,12 @@ suspend fun performRequest(request: Int): String {
     return "response $request"
 }
 
+
+/**
+ * 在流转换操作符中，最通⽤的⼀种称为 transform。它可以⽤来模仿简单的转换，例如
+map 与 filter，以及实施更复杂的转换。 使⽤ transform 操作符，我们可以 发射 任意 值任意次。
+
+ */
 @OptIn(InternalCoroutinesApi::class)
 fun main() = runBlocking<Unit> {
     (1..3).asFlow() // a flow of requests

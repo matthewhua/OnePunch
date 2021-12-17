@@ -8,8 +8,12 @@ package io.matt.guide.exampleContext07
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 
+
+/**
+ * ⼀个⽗协程总是等待所有的⼦协程执⾏结束。⽗协程并不显式的跟踪所有⼦协程的启 动，
+ * 并且不必使⽤ Job.join 在最后的时候等待它们：
+ */
 fun main() = runBlocking<Unit> {
     // launch a coroutine to process some kind of incoming request
     val request = launch {

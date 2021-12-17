@@ -7,6 +7,9 @@ package io.matt.guide.exampleContext10
 
 import kotlinx.coroutines.*
 
+/**
+ * 协程作⽤域
+ */
 class Activity {
     private val mainScope = CoroutineScope(Dispatchers.Default) // use Default for test purposes
     

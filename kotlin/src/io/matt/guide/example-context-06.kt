@@ -5,7 +5,10 @@
 // This file was automatically generated from coroutine-context-and-dispatchers.md by Knit tool. Do not edit.
 package io.matt.guide.exampleContext06
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 fun main() = runBlocking<Unit> {
     // launch a coroutine to process some kind of incoming request
@@ -25,7 +28,7 @@ fun main() = runBlocking<Unit> {
         }
     }
     delay(500)
-    request.cancel() // cancel processing of the request
+    request.cancel() // cancel processing of the request 然后job2 就没用了惹
     delay(1000) // delay a second to see what happens
     println("main: Who has survived request cancellation?")
 }
