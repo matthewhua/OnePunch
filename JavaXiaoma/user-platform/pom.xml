@@ -14,6 +14,7 @@
         <module>my-configuration</module>
         <module>user-web</module>
         <module>my-commons</module>
+        <module>user-data</module>
     </modules>
 
 

@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping>
+    <class name="io.matthew.entity.Employee">
+        <meta attribute="class-description">
+            This class contains the employee detail.
+        </meta>
+        <id name="id" type="int">
+            <generator class="native"/>
+        </id>
+        <property name="firstName"  type="string"/>
+        <property name="lastName"  type="string"/>
+        <property name="salary" type="int"/>
+    </class>
+</hibernate-mapping>
