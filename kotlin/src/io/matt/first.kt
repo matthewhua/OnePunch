@@ -38,9 +38,6 @@ fun variable(){
     var x = 5;
     x += 1
     print("x: $x")
-
-
-
 }
 
 val PI = 3.14

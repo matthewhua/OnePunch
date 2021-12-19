@@ -47,6 +47,26 @@ object Resource{
     const val name = "Matthew"
 }
 
+class Rectangle3(){
+    var length = 0
+    var breadth = 0
+    var color = 0xFAFAFA
+}
+
+
+/**
+ *  配置对象的属性（apply）
+ * 这对于配置未出现在对象构造函数中的属性⾮常有⽤。
+ */
+fun applySomething()
+{
+
+    Rectangle3().apply {
+        length = 4
+        breadth = 5
+        color = 0xFAFAFA
+    }
+}
 
 // Java 7's try-with-resources
 fun autoClose(){
@@ -69,6 +89,18 @@ fun swapTwoVariables(){
 
 // Mark code as incomplete (TODO)
 fun calcTexts(): BigDecimal = TODO("Waiting for feedback from accounting ")
+
+
+/**
+ * 需要泛型信息的泛型函数
+ */
+public final class Gson{
+
+/*    public <T>
+
+    inline fun <reified T: Any> Gson.f*/
+}
+
 
 
 fun main(){

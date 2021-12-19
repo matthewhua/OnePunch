@@ -29,6 +29,16 @@ suspend fun massiveRun(action: suspend () -> Unit) {
 val mutex = Mutex()
 var counter = 0
 
+/**
+ * 使⽤永远不会同时执⾏的 关键代码块 来保护共享状态的所有
+修改。在阻塞的世界中，你通常会为此⽬的使⽤ synchronized 或者 ReentrantLock 。
+在协程中的替代品叫做 Mutex 。它具有 lock 和 unlock ⽅法， 可以隔离关键的部分。关
+键的区别在于 Mutex.lock() 是⼀个挂起函数，它不会阻塞线程。
+ */
+/**
+ * 还有 withLock 扩展函数，可以⽅便的替代常⽤的 mutex.lock(); try { …… } finally {
+    mutex.unlock() } 模式：
+ */
 fun main() = runBlocking {
     withContext(Dispatchers.Default) {
         massiveRun {
@@ -40,3 +50,7 @@ fun main() = runBlocking {
     }
     println("Counter = $counter")
 }
+/**
+ * Completed 100000 actions in 169 ms
+Counter = 100000
+ */

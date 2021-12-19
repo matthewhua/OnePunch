@@ -26,10 +26,20 @@ suspend fun massiveRun(action: suspend () -> Unit) {
 val counterContext = newSingleThreadContext("CounterContext")
 var counter = 0
 
+/**
+ * 这段代码运⾏⾮常缓慢，因为它进⾏了 细粒度 的线程限制。每个增量操作都得使⽤
+[withContext(counterContext)] 块从多线程 Dispatchers.Default 上下⽂切换到单线程上
+下⽂
+
+Completed 100000 actions in 523 ms
+Counter = 100000
+
+ */
 fun main() = runBlocking {
     withContext(Dispatchers.Default) {
         massiveRun {
             // confine each increment to a single-threaded context
+            // 将每次⾃增限制在单线程上下⽂中
             withContext(counterContext) {
                 counter++
             }

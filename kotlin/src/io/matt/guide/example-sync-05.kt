@@ -27,6 +27,12 @@ suspend fun massiveRun(action: suspend () -> Unit) {
 val counterContext = newSingleThreadContext("CounterContext")
 var counter = 0
 
+
+/**
+ * 在实践中，线程限制是在⼤段代码中执⾏的，例如：状态更新类业务逻辑中⼤部分都是
+限于单线程中。
+这段代码运⾏更快⽽且打印出了正确的结果。
+ */
 fun main() = runBlocking {
     // confine everything to a single-threaded context
     withContext(counterContext) {
@@ -36,3 +42,8 @@ fun main() = runBlocking {
     }
     println("Counter = $counter")
 }
+
+/**
+ * Completed 100000 actions in 22 ms
+    Counter = 100000
+ */
