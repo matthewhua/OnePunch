@@ -15,6 +15,10 @@ fun simple(): Flow<Int> = flow {
     }
 }
 
+/**
+ * 我们可以将 catch 操作符的声明性与处理所有异常的期望相结合，将 collect 操作符的代 码块移动到 onEach 中，并将其放到 catch 操作符之前。收集该流必须由调⽤⽆参的
+collect() 来触发：
+ */
 fun main() = runBlocking<Unit> {
     simple()
         .onEach { value ->

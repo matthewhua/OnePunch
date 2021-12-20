@@ -22,7 +22,11 @@ fun simple(): Flow<Int> = flow {
     }
 }
 
-fun main() = runBlocking<Unit> { 
+/**
+ * 我们看到，虽然第⼀个数字仍在处理中，但第⼆个和第三个数字已经产⽣，
+ * 因此第⼆个 是 conflated ，只有最新的（第三个）被交付给收集器：
+ */
+fun main() = runBlocking<Unit> {
     val time = measureTimeMillis {
         simple()
             .conflate() // conflate emissions, don't process each one

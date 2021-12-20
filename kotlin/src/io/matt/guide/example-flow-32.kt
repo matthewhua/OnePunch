@@ -13,6 +13,9 @@ import kotlinx.coroutines.runBlocking
 
 fun simple(): Flow<Int> = (1..3).asFlow()
 
+/**
+ * 对于声明式，流拥有 onCompletion 过渡操作符，它在流完全收集时调⽤。 可以使⽤ onCompletion 操作符重写前⾯的示例，并产⽣相同的输出：
+ */
 @OptIn(InternalCoroutinesApi::class)
 fun main() = runBlocking<Unit> {
     simple()

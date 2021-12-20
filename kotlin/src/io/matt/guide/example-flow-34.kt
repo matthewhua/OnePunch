@@ -16,9 +16,12 @@ fun simple(): Flow<Int> = (1..3).asFlow()
 @OptIn(InternalCoroutinesApi::class)
 fun main() = runBlocking<Unit> {
     simple()
+        /**
+         * 与 catch 操作符的另⼀个不同点是 onCompletion 能观察到所有异常并且仅在上游流成 功完成（没有取消或失败）的情况下接收⼀个 null 异常。
+         */
         .onCompletion { cause -> println("Flow completed with $cause") }
         .collect { value ->
-            check(value <= 1) { "Collected $value" }                 
+            check(value <= 1) { "Collected $value" }
             println(value) 
         }
 }

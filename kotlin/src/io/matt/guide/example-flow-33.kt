@@ -17,6 +17,9 @@ fun simple(): Flow<Int> = flow {
     throw RuntimeException()
 }
 
+/**
+ * onCompletion 的主要优点是其 lambda 表达式的可空参数 Throwable 可以⽤于确定流 收集是正常完成还是有异常发⽣。
+ */
 @OptIn(InternalCoroutinesApi::class)
 fun main() = runBlocking<Unit> {
     simple()

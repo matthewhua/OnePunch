@@ -6,6 +6,7 @@
 package io.matt.guide.exampleFlow25
 
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -18,7 +19,11 @@ fun requestFlow(i: Int): Flow<String> = flow {
     emit("$i: Second")    
 }
 
-@OptIn(InternalCoroutinesApi::class)
+/**
+ * 与 collectLatest 操作符类似（在"处理最新值" ⼩节中已经讨论过），也有相对应的“最 新”展平模式，
+ * 在发出新流后⽴即取消先前流的收集。 这由 flatMapLatest 操作符来实 现。
+ */
+@OptIn(InternalCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 fun main() = runBlocking<Unit> {
     val startTime = currentTimeMillis() // remember the start time 
     (1..3).asFlow().onEach { delay(100) } // a number every 100 ms 

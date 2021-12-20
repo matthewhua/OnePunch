@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.zip
 import kotlinx.coroutines.runBlocking
 
+/**
+ * 就像 Kotlin 标准库中的 Sequence.zip 扩展函数⼀样， 流拥有⼀个 zip 操作符⽤于组合 两个流中的相关值：
+ */
 @OptIn(InternalCoroutinesApi::class)
 fun main() = runBlocking<Unit> {
     val nums = (1..3).asFlow() // numbers 1..3
