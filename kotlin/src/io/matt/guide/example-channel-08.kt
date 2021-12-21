@@ -19,6 +19,10 @@ fun main() = runBlocking<Unit> {
         }
     }
     // don't receive anything... just wait....
-    delay(1000)
+    repeat(10)  {
+        channel.receive()
+        delay(100)
+    }
+    delay(3000)
     sender.cancel() // cancel sender coroutine
 }
