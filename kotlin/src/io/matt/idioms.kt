@@ -1,5 +1,6 @@
 package io.matt
 
+import io.matt.Resource.name
 import java.math.BigDecimal
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -76,6 +77,6 @@ fun main(){
     foo()
     val filter = JavaFilter()
     filter.FilterOne()
-    println(Resource.name)
+    println(name)
     swapTwoVariables()
 }
