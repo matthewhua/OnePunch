@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.runBlocking
 
 
+
 @OptIn(InternalCoroutinesApi::class)
 fun main() = runBlocking<Unit> {
     (1..5).asFlow().collect { value -> 
@@ -18,3 +19,7 @@ fun main() = runBlocking<Unit> {
         println(value)
     } 
 }
+
+/**
+ * can throw an Exception
+ */

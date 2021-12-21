@@ -24,6 +24,10 @@ fun CoroutineScope.buzz() = produce<String> {
     }
 }
 
+/**
+ * 使⽤ receive 挂起函数，我们可以从两个通道接收 其中⼀个 的数据。 但是 select 表达
+    式允许我们使⽤其 onReceive ⼦句 同时 从两者接收
+ */
 suspend fun selectFizzBuzz(fizz: ReceiveChannel<String>, buzz: ReceiveChannel<String>) {
     select<Unit> { // <Unit> means that this select expression does not produce any result 
         fizz.onReceive { value ->  // this is the first select clause

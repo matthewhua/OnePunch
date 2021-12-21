@@ -1,0 +1,250 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-cea84687406a4df1ec85.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.8"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20,
+						21
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "STlDemo",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20,
+						21
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "CopyAndSwapAlogorithm::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-CopyAndSwapAlogorithm-Debug-e1627cb773290a9099ad.json",
+					"name" : "CopyAndSwapAlogorithm",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "DequeContainer::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-DequeContainer-Debug-d30a9ecc95327f55641e.json",
+					"name" : "DequeContainer",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "FindAlogorithn::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-FindAlogorithn-Debug-efdbea16b8e6a2c2a36e.json",
+					"name" : "FindAlogorithn",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ForeachAlgorithm::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ForeachAlgorithm-Debug-c50b381b2da242213710.json",
+					"name" : "ForeachAlgorithm",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ListContainer::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ListContainer-Debug-44a22dca9c7d39582a5a.json",
+					"name" : "ListContainer",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "MapContainer::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-MapContainer-Debug-b161762251ed00f78174.json",
+					"name" : "MapContainer",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "PairContainer::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-PairContainer-Debug-94d89a245a9e0449b7ef.json",
+					"name" : "PairContainer",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "QueueContainer::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-QueueContainer-Debug-8737d34cdef5bb0b5c30.json",
+					"name" : "QueueContainer",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "STLHelloWorld::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-STLHelloWorld-Debug-f71fbc932ac2ece0e560.json",
+					"name" : "STLHelloWorld",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "STLPrinciple::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-STLPrinciple-Debug-f38a97fc6dcec9a20aca.json",
+					"name" : "STLPrinciple",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "SetContainer::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-SetContainer-Debug-20da029d8a6207e71fdf.json",
+					"name" : "SetContainer",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "SortAlogorithm::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-SortAlogorithm-Debug-7b334c07f7b5eca38cef.json",
+					"name" : "SortAlogorithm",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "StringContainer::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-StringContainer-Debug-ffa527e2ac4ca5fc4fe2.json",
+					"name" : "StringContainer",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "VectorsContainer::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-VectorsContainer-Debug-006ed192d324152473de.json",
+					"name" : "VectorsContainer",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "arithmetic_to_generate::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-arithmetic_to_generate-Debug-cdae51c8027cd247d2a7.json",
+					"name" : "arithmetic_to_generate",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "collection_alogorithm::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-collection_alogorithm-Debug-06c4bc3c553441502b09.json",
+					"name" : "collection_alogorithm",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "evaluateSocre::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-evaluateSocre-Debug-cc8f3e434dd02363431f.json",
+					"name" : "evaluateSocre",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "evaluateSocre2::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-evaluateSocre2-Debug-9c29a576c4dd0fa82020.json",
+					"name" : "evaluateSocre2",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "functionObject::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-functionObject-Debug-ee56571793147ec24650.json",
+					"name" : "functionObject",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "functionalObejectAdpater::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-functionalObejectAdpater-Debug-ee13bcb1c0aa47d138b9.json",
+					"name" : "functionalObejectAdpater",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "liftDemo::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-liftDemo-Debug-b5e991101b1001b6582f.json",
+					"name" : "liftDemo",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "stackContainer::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-stackContainer-Debug-a7b7cae97e61da52a5d9.json",
+					"name" : "stackContainer",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+		"source" : "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/liftDemo.dir/liftDemo.cpp.o -o liftDemo 

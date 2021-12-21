@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/collection_alogorithm.dir/collection_alogorithm.cpp.o -o collection_alogorithm 

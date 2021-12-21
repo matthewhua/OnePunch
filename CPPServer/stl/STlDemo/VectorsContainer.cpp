@@ -8,15 +8,10 @@ using namespace std;
 
 void printVector(const vector<int> &vec)
 {
-    for (std::_Vector_const_iterator<std::_Vector_val<std::_Simple_types<int>>>::value_type it : vec) {
-        cout << it << " ";
-    }
-
-
-   /* for (vector<int>::const_iterator it = vec.begin(); it != vec.end(); ++it) 原始写法
+   for (vector<int>::const_iterator it = vec.begin(); it != vec.end(); ++it) //原始写法
     {
         cout << *it << " ";
-    }*/
+    }
     cout << endl;
 }
 

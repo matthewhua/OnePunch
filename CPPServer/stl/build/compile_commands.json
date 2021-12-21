@@ -1,0 +1,112 @@
+[
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/stackContainer.dir/stackContainer.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/stackContainer.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/stackContainer.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/evaluateSocre.dir/evaluateSocre.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/evaluateSocre.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/evaluateSocre.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/collection_alogorithm.dir/collection_alogorithm.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/collection_alogorithm.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/collection_alogorithm.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/evaluateSocre2.dir/evaluateSocre2.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/evaluateSocre2.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/evaluateSocre2.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/arithmetic_to_generate.dir/arithmetic_to_generate.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/arithmetic_to_generate.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/arithmetic_to_generate.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/CopyAndSwapAlogorithm.dir/CopyAndSwapAlogorithm.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/CopyAndSwapAlogorithm.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/CopyAndSwapAlogorithm.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/DequeContainer.dir/DequeContainer.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/DequeContainer.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/DequeContainer.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/SortAlogorithm.dir/SortAlogorithm.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/SortAlogorithm.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/SortAlogorithm.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/functionalObejectAdpater.dir/functionalObejectAdpater.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/functionalObejectAdpater.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/functionalObejectAdpater.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/ForeachAlgorithm.dir/ForeachAlgorithm.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/ForeachAlgorithm.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/ForeachAlgorithm.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/ListContainer.dir/ListContainer.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/ListContainer.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/ListContainer.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/StringContainer.dir/StringContainer.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/StringContainer.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/StringContainer.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/PairContainer.dir/PairContainer.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/PairContainer.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/PairContainer.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/liftDemo.dir/liftDemo.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/liftDemo.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/liftDemo.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/VectorsContainer.dir/VectorsContainer.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/VectorsContainer.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/VectorsContainer.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/QueueContainer.dir/QueueContainer.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/QueueContainer.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/QueueContainer.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/STLHelloWorld.dir/STLHelloWorld.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/STLHelloWorld.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/STLHelloWorld.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/functionObject.dir/functionObject.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/functionObject.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/functionObject.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/FindAlogorithn.dir/FindAlogorithn.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/FindAlogorithn.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/FindAlogorithn.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/STLPrinciple.dir/STLPrinciple.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/STLPrinciple.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/STLPrinciple.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/MapContainer.dir/MapContainer.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/MapContainer.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/MapContainer.cpp"
+},
+{
+  "directory": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/SetContainer.dir/SetContainer.cpp.o -c /home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/SetContainer.cpp",
+  "file": "/home/matthew/IdeaProjects/OnePunch/CPPServer/stl/STlDemo/SetContainer.cpp"
+}
+]

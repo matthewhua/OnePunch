@@ -8,11 +8,26 @@ class Shape
 
 class Rectangle(var height:Double, var length:Double){
     var perimeter = (height + length) * 2
+
+    init {
+        println("hello ")
+    }
+
+    // 次构造函数
+    constructor(height:Double, length: Double, color: String): this(height,length){
+        println("Constructor $height")
+    }
+
 }
+
+
+
+
 
 fun main()
 {
     val rectangle = Rectangle(4.0, 3.0)
+    val rectangle1 = Rectangle(1.0, 1.0, "red")
     println("The perimeter is ${rectangle.perimeter}")
 }
 

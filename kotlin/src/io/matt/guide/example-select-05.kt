@@ -37,6 +37,7 @@ fun CoroutineScope.asyncString(str: String, time: Long) = async {
     str
 }
 
+
 fun main() = runBlocking<Unit> {
     val chan = Channel<Deferred<String>>() // the channel for test
     launch { // launch printing coroutine

@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/FindAlogorithn.dir/FindAlogorithn.cpp.o -o FindAlogorithn 

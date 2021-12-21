@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/VectorsContainer.dir/VectorsContainer.cpp.o -o VectorsContainer 
