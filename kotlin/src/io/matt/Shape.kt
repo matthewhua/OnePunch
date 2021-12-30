@@ -1,12 +1,14 @@
 package io.matt
 
+import java.awt.Rectangle
+
 /**
  * @author Matthew
  * @date 2021-12-06 23:42
  */
 class Shape
 
-class Rectangle(var height:Double, var length:Double){
+data class Rectangle(var height:Double, var length:Double){
     var perimeter = (height + length) * 2
 
     init {

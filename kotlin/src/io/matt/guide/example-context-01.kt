@@ -21,7 +21,7 @@ fun main() = runBlocking<Unit> {
     launch(Dispatchers.Default) { // will get dispatched to DefaultDispatcher 
         println("Default               : I'm working in thread ${Thread.currentThread().name}") //DEFAULT_SCHEDULER_NAME = "DefaultDispatcher"
     }
-    launch(newSingleThreadContext("MyOwnThread")) { // will get its own new thread 为协程的运⾏启动了⼀个线程。
+    val launch = launch(newSingleThreadContext("MyOwnThread")) { // will get its own new thread 为协程的运⾏启动了⼀个线程。
         println("newSingleThreadContext: I'm working in thread ${Thread.currentThread().name}")
     }
 }

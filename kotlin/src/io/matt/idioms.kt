@@ -102,13 +102,23 @@ public final class Gson{
     inline fun <reified T: Any> Gson.f*/
 }
 
-
+fun loopWithFlag() {
+    val listOf = listOf(1, 2, 3, 4, 5, 6)
+    listOf.forEach {
+        if (it % 2 != 0) {
+            return@forEach print("hello") //这里也会被执行
+        }
+        println(it)
+    }
+}
 
 fun main(){
     creteDto()
     foo()
-    val filter = JavaFilter()
-    filter.FilterOne()
+   /* val filter = JavaFilter()
+    filter.FilterOne()*/
     println(name)
     swapTwoVariables()
+    println("---------------------- test flag -----------------------------")
+    loopWithFlag()
 }

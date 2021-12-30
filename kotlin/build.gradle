@@ -18,6 +18,7 @@ dependencies {
 }
 
 sourceSets {
+    main.java.srcDirs = ['src']
     main.kotlin.srcDirs = ['src']
     main.resources.srcDirs = ['resources']
     test.kotlin.srcDirs = ['test']

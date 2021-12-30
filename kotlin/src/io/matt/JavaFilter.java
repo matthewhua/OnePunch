@@ -5,6 +5,10 @@ import java.util.stream.Collectors;
 
 public class JavaFilter {
 
+    public static void main(String[] args) {
+        System.out.println("Hello fuck");
+    }
+
     public void FilterOne()
     {
         // Java Filter 方式
