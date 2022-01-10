@@ -7,6 +7,9 @@ package io.matthew.exception;
  * Java 报错都会爆出来 Exception in thread "main" java.lang.RuntimeException: 你怎么回事
  * 	at io.matthew.entity.ExceptionTest.main(ExceptionTest.java:7)
  *
+ *
+ * Exception in thread "main" io.matthew.exception.MyException: 就是真的牛皮 (可以爆红，但没有堆栈信息）
+ *
  */
 public class ExceptionTest {
 
