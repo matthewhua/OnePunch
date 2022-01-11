@@ -1,6 +1,7 @@
 package io.matthew.poidemo.xlsx.streaming;
 
 
+import io.matthew.poidemo.util.TempFileUtils;
 import org.apache.poi.util.IOUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.openxml4j.opc.OPCPackage;
@@ -29,28 +30,28 @@ public class SavePasswordProtectedXlsx {
         if(args.length != 2) {
             throw new IllegalArgumentException("Expected 2 params: filename and password");
         }
-
+        TempFileUtils.checkTempFiles();
         String filename = args[0];
         String password = args[1];
-        final SXSSFWorkbookWithCustomZipEntrySource wb = new SXSSFWorkbookWithCustomZipEntrySource();
+        SXSSFWorkbookWithCustomZipEntrySource wb = new SXSSFWorkbookWithCustomZipEntrySource();
 
         try {
             for(int i = 0; i < 10; i++) {
-                final SXSSFSheet sheet = wb.createSheet("Sheet" + i);
+                 SXSSFSheet sheet = wb.createSheet("Sheet" + i);
                 for (int r = 0; r < 1000; r++) {
-                    final SXSSFRow row = sheet.createRow(r);
+                     SXSSFRow row = sheet.createRow(r);
                     for (int c = 0; c < 1000; c++) {
-                        final SXSSFCell cell = row.createCell(c);
+                        SXSSFCell cell = row.createCell(c);
                         cell.setCellValue("abcd");
                     }
                 }
             }
 
-            final EncryptedTempData tempData = new EncryptedTempData();
+            EncryptedTempData tempData = new EncryptedTempData();
             try{
                 wb.write(tempData.getOutputStream());
                 save(tempData.getInputStream(), filename, password);
-                System.out.println("Saved" + filename);
+                System.out.println("Saved " + filename);
             }finally {
                 tempData.dispose();
             }
@@ -59,15 +60,17 @@ public class SavePasswordProtectedXlsx {
             //the dispose call is necessary to ensure temp files are removed
             wb.dispose();
         }
+        TempFileUtils.checkTempFiles();
     }
 
-    public static void save(final InputStream inputStream, final String filename, final String pwd)
+    public static void save( InputStream inputStream,  String filename,  String pwd)
             throws InvalidFormatException, IOException, GeneralSecurityException {
+
         try (POIFSFileSystem fs = new POIFSFileSystem();
              OPCPackage opc = OPCPackage.open(inputStream);
              FileOutputStream fos = new FileOutputStream(filename)) {
-            final EncryptionInfo info = new EncryptionInfo(EncryptionMode.agile);
-            final Encryptor enc = Encryptor.getInstance(info);
+             EncryptionInfo info = new EncryptionInfo(EncryptionMode.agile);
+             Encryptor enc = Encryptor.getInstance(info);
             enc.confirmPassword(pwd);
             opc.save(enc.getDataStream(fs));
             fs.writeFilesystem(fos);
