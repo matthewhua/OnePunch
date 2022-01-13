@@ -1,5 +1,7 @@
 package io.matt
 
+import java.time.Instant
+import java.time.LocalDateTime
 import kotlin.reflect.KProperty
 
 
@@ -51,14 +53,17 @@ fun main()
     println(" = ${lazySample.lazyStr}")
 
 
-    val user = User(
+/*    val user = User(
         mapOf(
             "name" to "John Doe",
             "age" to 25
         )
     )
 
-    println("name = ${user.name}, age = ${user.age}")
+    println("name = ${user.name}, age = ${user.age}")*/
+    val now = LocalDateTime.now()
+    val now1 = Instant.now()
+    println(" LocalDateTime 的时间$now,Instant的UTC 时间为$now1")
 }
 
 
