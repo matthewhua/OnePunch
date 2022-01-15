@@ -1,0 +1,1 @@
+registerW2HTellDeal(World2HomeTell.MsgCase.TASKFINISHONWORLDTELL, TaskFinishOnWorldDeal())
