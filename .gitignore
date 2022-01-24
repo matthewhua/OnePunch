@@ -1,0 +1,13 @@
+﻿CPPServer
+.idea
+JavaWay/ExcelRobot/target
+JavaWay/gradle
+.idea
+kotlin/.gradle
+kotlin/build
+handScala/out
+JavaWay/javassistDemo/target
+JavaWay/kotlinx-benchmark/.gradle
+kotlin/gradle
+JavaWay/kotlinx-benchmark/gradle
+*.iml

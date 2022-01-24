@@ -1,0 +1,57 @@
+//plugins {
+//    id 'java'
+//    id 'org.jetbrains.kotlin.plugin.allopen' version "1.6.0"
+//    id 'org.jetbrains.kotlinx.benchmark' version '0.4.1'
+//    id 'org.jetbrains.kotlin.jvm'
+//}
+//
+//group 'org.jetbrains.kotlinx.benchmark.examples'
+//version '0.1-SNAPSHOT'
+//
+//// how to apply plugin to a specific source set?
+//allOpen {
+//    annotation("org.openjdk.jmh.annotations.State")
+//}
+//
+//sourceSets.all {
+//    kotlin.srcDirs = ["src/main/kotlin"]
+//    java.srcDirs = ["$it.name/src"]
+//    resources.srcDirs = ["$it.name/resources"]
+//}
+//
+//buildscript {
+//    repositories {
+//        maven { url 'https://maven.aliyun.com/nexus/content/repositories/google' }
+//        maven { url 'https://maven.aliyun.com/nexus/content/groups/public' }
+//        maven { url 'https://maven.aliyun.com/nexus/content/repositories/jcenter' }
+//        maven { url 'https://maven.pkg.jetbrains.space/kotlin/p/kotlinx/maven' }
+//        gradlePluginPortal()
+//    }
+//
+//}
+//
+//
+//compileKotlin {
+//    kotlinOptions.jvmTarget = "11"
+//}
+//compileTestKotlin {
+//    kotlinOptions.jvmTarget = "11"
+//}
+//
+//
+//// Propagate dependencies from main sourceSet
+//// You can add "+ sourceSets.test.output" to include test output as well
+//dependencies {
+//    implementation(project(":kotlinx-benchmark-runtime"))
+//    benchmarksCompile sourceSets.main.output + sourceSets.main.runtimeClasspath
+//}
+//
+//benchmark {
+//    // Setup configurations
+//    targets {
+//        // This one matches sourceSet name above
+//        register("benchmarks") {
+//            jmhVersion = "1.21"
+//        }
+//    }
+//}
