@@ -8,5 +8,6 @@ class Shape(x: Int, y: Int) {
 
 
 fun main(){
+
     ExceptionTest()
 }
