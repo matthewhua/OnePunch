@@ -1,9 +1,16 @@
 package io.matthew.lucene.test;
 
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
+import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.queryparser.flexible.standard.StandardQueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.search.spans.SpanNearQuery;
 import org.apache.lucene.search.spans.SpanQuery;
@@ -11,8 +18,8 @@ import org.apache.lucene.search.spans.SpanTermQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.junit.Test;
+import org.wltea.analyzer.lucene.IKAnalyzer;
 
-import java.io.IOException;
 import java.nio.file.Paths;
 
 public class QueryTest {
@@ -80,6 +87,66 @@ public class QueryTest {
         final SpanNearQuery spanNearQuery = new SpanNearQuery(new SpanQuery[]{tq1, tq2}, 3, true);  //我是绝壁 大帅哥 中间差3位
         doSearch(spanNearQuery);
     }
+
+    /** 模糊查询 */
+    @Test
+    public void testSearchLikeQuery() throws Exception {
+        // WildcardQuery：通配符查询  *表示0个或多个字符，?表示1个字符，\是转义符。
+       /* WildcardQuery wildcardQuery = new WildcardQuery( new Term("name", "mat*"));
+        doSearch(wildcardQuery);*/
+        final FuzzyQuery fuzzyQuery = new FuzzyQuery(new Term("name", "mattehew"), 2); //输错也可以搜索
+        doSearch(fuzzyQuery);
+    }
+
+    @Test
+    public void testSearchNumQuery() throws Exception {
+        final Query query = IntPoint.newRangeQuery("id", 1, 10);
+        doSearch(query);
+    }
+
+    @Test
+    public void testQueryParser() throws Exception {
+        // Analyzer analyzer  = new StandardAnalyzer(); 检索不出来
+        final IKAnalyzer analyzer = new IKAnalyzer();
+        final QueryParser queryParser = new QueryParser("desc", analyzer);
+        // 构建搜索对象
+        final Query query = queryParser.parse("desc:帅哥 AND name:matthew");
+        doSearch(query);
+    }
+
+    @Test
+    public void testSearchMultiQueryParser() throws Exception {
+        // 创建分词器
+        Analyzer analyzer = new IKAnalyzer();
+        // 1. 创建MultiFieldQueryParser搜索对象
+        String[] fields = {"name", "desc"};
+        final MultiFieldQueryParser multiFieldQueryParser = new MultiFieldQueryParser(fields, analyzer);
+        // 创建搜索对象
+        final Query query = multiFieldQueryParser.parse("帅哥");
+        // 打印生成的搜索语句
+        System.out.println(query);
+        // 执行搜索
+        doSearch(query);
+    }
+
+    @Test
+    public void testSearchQueryParser() throws Exception {
+        final StandardAnalyzer analyzer = new StandardAnalyzer();
+        final StandardQueryParser standardQueryParser = new StandardQueryParser(analyzer);
+        final Query query = standardQueryParser.parse("desc:我 AND name:matthew", "desc");
+
+        //通配符匹配 建议通配符在后 通配符在前效率低
+        // query = parser.parse("name:L*","desc");
+        // query = parser.parse("name:L???","desc");
+
+        // 模糊匹配 query = parser.parse("lucene~","desc");
+        // 区间查询 query = parser.parse("id:[1 TO 100]","desc");
+
+        // 跨度查询 ~2表示词语之间包含两个词语
+        // query= parser.parse("\"lucene java\"~2","desc");
+        doSearch(query);
+    }
+
 
 
 }
