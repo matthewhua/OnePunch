@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<mapper namespace="product">
+
+
+    <select id="selectList">
+        select * from product
+    </select>
+
+    <select id="selectOne">
+        select * from product where id = ? and username = ?
+    </select>
+
+</mapper>
