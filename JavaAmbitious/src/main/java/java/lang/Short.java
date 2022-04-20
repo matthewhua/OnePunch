@@ -200,7 +200,7 @@ public final class Short extends Number implements Comparable<Short> {
         return valueOf(s, 10);
     }
 
-    private static class ShortCache {
+    private static class  ShortCache {
         private ShortCache(){}
 
         static final Short cache[] = new Short[-(-128) + 127 + 1];
