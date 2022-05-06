@@ -8,7 +8,7 @@ public class CallInterface {
 
     public static void  callName() throws Exception {
         final ClassPool pool = ClassPool.getDefault();
-        pool.appendClassPath("D:\\develop\\practive\\OnePunch\\JavaWay\\javassistDemo\\src\\main\\java");
+        pool.appendClassPath("H:\\Dev\\GithubSource\\java\\OnePunch\\JavaWay\\javassistDemo\\src\\main\\java");
 
         //获取接口
         final CtClass codeClass = pool.get("io.matthew.factory.PersonI");
