@@ -16,9 +16,9 @@
     <!--给实体类的全限定类名给别名-->
     <typeAliases>
         <!--给单独的实体起别名-->
-        <typeAlias type="io.matt.pojo.User" alias="user"></typeAlias>
+        <!--<typeAlias type="io.matt.pojo.User" alias="user"></typeAlias>-->
         <!--批量起别名：该包下所有的类的本身的类名：别名还不区分大小写-->
-        <!-- <package name="io.matt.pojo"/>-->
+         <package name="io.matt.pojo"/>
     </typeAliases>
 
     <!--environments:运行环境-->
@@ -38,7 +38,7 @@
 
     <!--引入映射配置文件-->
     <mappers>
-        <mapper resource="UserMapper.xml"/>
+        <package name="io.matt.mapper"/>
     </mappers>
 
 
