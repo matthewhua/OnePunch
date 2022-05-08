@@ -11,7 +11,7 @@
         <module>JavaPerformance</module>
         <module>ExcelRobot</module>
         <module>javassistDemo</module>
-        <module>SearchEngine</module>
+        <module>javaOOP</module>
     </modules>
 
     <properties>

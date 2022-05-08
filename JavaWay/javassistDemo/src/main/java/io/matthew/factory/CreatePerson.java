@@ -45,7 +45,7 @@ public class CreatePerson {
         cc.addMethod(ctMethod);
 
         //这里 会将这个创建的类对象编译为 .class 文件
-        cc.writeFile("D:\\develop\\practive\\OnePunch\\JavaWay\\javassistDemo\\src\\main\\java");
+        cc.writeFile("H:\\Dev\\GithubSource\\java\\OnePunch\\JavaWay\\javassistDemo\\src\\main\\java");
     }
 
 

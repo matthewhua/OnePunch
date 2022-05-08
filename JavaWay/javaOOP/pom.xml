@@ -3,21 +3,13 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>JavaAmbitious</artifactId>
-        <groupId>io.matt</groupId>
+        <artifactId>JavaWay</artifactId>
+        <groupId>io.matthew</groupId>
         <version>1.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>Concurrency</artifactId>
-    <dependencies>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.1</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+    <artifactId>javaOOP</artifactId>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>

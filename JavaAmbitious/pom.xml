@@ -11,6 +11,7 @@
     <modules>
         <module>mybatis-total</module>
         <module>Concurrency</module>
+        <module>fromBlog</module>
     </modules>
 
     <properties>
