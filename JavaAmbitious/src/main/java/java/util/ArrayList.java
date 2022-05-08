@@ -1271,7 +1271,8 @@ public class ArrayList<E> extends AbstractList<E>
         return new ArrayListSpliterator<>(this, 0, -1, 0);
     }
 
-    /** Index-based split-by-two, lazily initialized Spliterator */
+    /** Index-based split-by-two, lazily initialized Spliterator
+     * ArrayList中内部类ArrayListSpliterator */
     static final class ArrayListSpliterator<E> implements Spliterator<E> {
 
         /*
@@ -1308,8 +1309,8 @@ public class ArrayList<E> extends AbstractList<E>
 
         private final ArrayList<E> list;
         private int index; // current index, modified on advance/split
-        private int fence; // -1 until used; then one past last index
-        private int expectedModCount; // initialized when fence set
+        private int fence; // -1 until used; then one past last index 栅栏，其实是元素索引值的上边界值(不包含)，一般初始化的时候为-1，使用时具体值为元素索引
+        private int expectedModCount; // initialized when fence set 预期的修改次数，一般初始化值等于modCount
 
         /** Create new spliterator covering the given  range */
         ArrayListSpliterator(ArrayList<E> list, int origin, int fence,
@@ -1334,6 +1335,7 @@ public class ArrayList<E> extends AbstractList<E>
             return hi;
         }
 
+        // Spliterator自分割，这里采用了二分法
         public ArrayListSpliterator<E> trySplit() {
             int hi = getFence(), lo = index, mid = (lo + hi) >>> 1;
             return (lo >= mid) ? null : // divide range in half unless too small
@@ -1344,7 +1346,9 @@ public class ArrayList<E> extends AbstractList<E>
         public boolean tryAdvance(Consumer<? super E> action) {
             if (action == null)
                 throw new NullPointerException();
+            // 获取迭代的上下边界
             int hi = getFence(), i = index;
+            // 由于前面分析下边界是包含关系，上边界是非包含关系，所以这里要i < hi而不是i <= hi
             if (i < hi) {
                 index = i + 1;
                 @SuppressWarnings("unchecked") E e = (E)list.elementData[i];

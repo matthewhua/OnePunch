@@ -566,6 +566,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     final Node<K,V> getNode(int hash, Object key) {
         Node<K,V>[] tab; Node<K,V> first, e; int n; K k;
         if ((tab = table) != null && (n = tab.length) > 0 &&
+                //(n - 1) & hash
+                // (n - 1) & (Object.hashcode() ^ Object.hashcode() >>> 16)
             (first = tab[(n - 1) & hash]) != null) {
             if (first.hash == hash && // always check first node
                 ((k = first.key) == key || (key != null && key.equals(k))))
@@ -574,7 +576,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                 if (first instanceof TreeNode)
                     return ((TreeNode<K,V>)first).getTreeNode(hash, key);
                 do {
-                    if (e.hash == hash &&
+                    if (e.hash == hash && //如果hash 两个相同的对象,他们的对象不一定相等
                         ((k = e.key) == key || (key != null && key.equals(k))))
                         return e;
                 } while ((e = e.next) != null);
@@ -674,13 +676,13 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * @return the table
      */
     final Node<K,V>[] resize() {
-        Node<K,V>[] oldTab = table;
-        int oldCap = (oldTab == null) ? 0 : oldTab.length;
-        int oldThr = threshold;
+        Node<K,V>[] oldTab = table; //old 16 长度
+        int oldCap = (oldTab == null) ? 0 : oldTab.length; //16
+        int oldThr = threshold; //12
         int newCap, newThr = 0;
         if (oldCap > 0) {
-            if (oldCap >= MAXIMUM_CAPACITY) {
-                threshold = Integer.MAX_VALUE;
+            if (oldCap >= MAXIMUM_CAPACITY) { //放弃扩容
+                threshold = Integer.MAX_VALUE; // threshold 这个值,只与扩容有关.
                 return oldTab;
             }
             else if ((newCap = oldCap << 1) < MAXIMUM_CAPACITY &&
@@ -700,14 +702,18 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         }
         threshold = newThr;
         @SuppressWarnings({"rawtypes","unchecked"})
+
             Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
-        table = newTab;
+        table = newTab; //真正的开始了给 table 进行newTab的赋值
+
+        // ===================节点的迁移(原位置和新位置)==============
         if (oldTab != null) {
             for (int j = 0; j < oldCap; ++j) {
                 Node<K,V> e;
                 if ((e = oldTab[j]) != null) {
-                    oldTab[j] = null;
-                    if (e.next == null)
+                    oldTab[j] = null; //太棒了, let gc do it
+                    if (e.next == null) //单个节点,非链表,非树
+                        // 如果进行map 扩容,我们的树肯定会被拆掉,性能消耗
                         newTab[e.hash & (newCap - 1)] = e;
                     else if (e instanceof TreeNode)
                         ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
@@ -717,14 +723,14 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                         Node<K,V> next;
                         do {
                             next = e.next;
-                            if ((e.hash & oldCap) == 0) {
+                            if ((e.hash & oldCap) == 0) { //位置不变
                                 if (loTail == null)
                                     loHead = e;
                                 else
-                                    loTail.next = e;
+                                    loTail.next = e; // 尾插法
                                 loTail = e;
                             }
-                            else {
+                            else { //如果不等于0, 变化位置, 将该元素从新位置放置到新table
                                 if (hiTail == null)
                                     hiHead = e;
                                 else

@@ -78,11 +78,13 @@ abstract class AbstractPipeline<E_IN, E_OUT, S extends BaseStream<E_OUT, S>>
      * Backlink to the head of the pipeline chain (self if this is the source
      * stage).
      */
+    // 流管道链式结构的头节点（只有当前的AbstractPipeline引用是头节点，此变量才会被赋值，非头节点为NULL)
     @SuppressWarnings("rawtypes")
     private final AbstractPipeline sourceStage;
 
     /**
      * The "upstream" pipeline, or null if this is the source stage.
+     *  流管道链式结构的upstream，也就是上一个节点，如果是头节点此引用为NULL
      */
     @SuppressWarnings("rawtypes")
     private final AbstractPipeline previousStage;

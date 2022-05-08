@@ -93,10 +93,10 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
     /** The queued items */
     final Object[] items;
 
-    /** items index for next take, poll, peek or remove */
+    /** items index for next take, poll, peek or remove 队头指针 */
     int takeIndex;
 
-    /** items index for next put, offer, or add */
+    /** items index for next put, offer, or add 队尾指针*/
     int putIndex;
 
     /** Number of elements in the queue */
@@ -107,7 +107,9 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      * found in any textbook.
      */
 
-    /** Main lock guarding all access */
+    /** Main lock guarding all access
+     * 核心为一个锁加两个条件
+     * */
     final ReentrantLock lock;
 
     /** Condition for waiting takes */
@@ -162,7 +164,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         if (++putIndex == items.length)
             putIndex = 0;
         count++;
-        notEmpty.signal();
+        notEmpty.signal(); //当将数据put到queue中之后,通知非空条件
     }
 
     /**
@@ -181,7 +183,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         count--;
         if (itrs != null)
             itrs.elementDequeued();
-        notFull.signal();
+        notFull.signal(); //take 结束,通知非满条件
         return x;
     }
 
@@ -400,7 +402,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         lock.lockInterruptibly();
         try {
             while (count == 0)
-                notEmpty.await();
+                notEmpty.await(); //take 的时候,如果队列为空,则阻塞
             return dequeue();
         } finally {
             lock.unlock();
