@@ -1,3 +1,4 @@
+import io.matt.dao.IUserDao;
 import io.matt.pojo.User;
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.session.SqlSession;
@@ -70,4 +71,46 @@ public class MybatisTest {
 
         sqlSession.close();
     }
+
+    @Test
+    public void test5() throws IOException {
+        InputStream resourceAsStream = Resources.getResourceAsStream("sqlMapConfig.xml");
+        SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(resourceAsStream);
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+
+        IUserDao mapper = sqlSession.getMapper(IUserDao.class);
+        List<User> all = mapper.findAll();
+        for (User user : all) {
+            System.out.println(user);
+        }
+    }
+
+    @Test
+    public void test6() throws IOException {
+        InputStream resourceAsStream = Resources.getResourceAsStream("sqlMapConfig.xml");
+        SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(resourceAsStream);
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+
+        IUserDao mapper = sqlSession.getMapper(IUserDao.class);
+        User user1 = new User();
+        user1.setId(6);
+        user1.setUsername("tom");
+        List<User> all = mapper.findByCondition(user1);
+        all.forEach(System.out::println);
+    }
+
+    @Test
+    public void test7() throws IOException {
+        InputStream resourceAsStream = Resources.getResourceAsStream("sqlMapConfig.xml");
+        SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(resourceAsStream);
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+
+        IUserDao mapper = sqlSession.getMapper(IUserDao.class);
+        int[] arr = {1, 6};
+
+        List<User> byIds = mapper.findByIds(arr);
+        byIds.forEach(System.out::println);
+    }
+
+
 }

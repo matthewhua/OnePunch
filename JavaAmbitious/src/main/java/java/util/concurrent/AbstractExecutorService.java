@@ -109,7 +109,7 @@ public abstract class AbstractExecutorService implements ExecutorService {
     public Future<?> submit(Runnable task) {
         if (task == null) throw new NullPointerException();
         RunnableFuture<Void> ftask = newTaskFor(task, null);
-        execute(ftask);
+        ex ecute(ftask);
         return ftask;
     }
 

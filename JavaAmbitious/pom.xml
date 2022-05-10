@@ -12,6 +12,8 @@
         <module>mybatis-total</module>
         <module>Concurrency</module>
         <module>fromBlog</module>
+        <module>mybatis_multitable</module>
+        <module>JPA-with-Hibernate</module>
     </modules>
 
     <properties>

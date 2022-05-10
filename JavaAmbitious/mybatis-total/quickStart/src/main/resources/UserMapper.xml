@@ -31,6 +31,28 @@
         delete from user where id = #{abc}
     </delete>
 
+    <!-- 动态sql 多条件组合查询-->
+    <select id="findByCondition" parameterType="user" resultType="user">
+        select * from user
+            <where>
+                <if test="id!=0">
+                    and id = #{id}
+                </if>
+                <if test="username!=null">
+                    and username = #{username}
+                </if>
+            </where>
+    </select>
+
+    <!--多值查询：演示foreach-->
+    <select id="findByIds" parameterType="list" resultType="user">
+        <include refid="selectUser"></include>
+        <where>
+            <foreach collection="array" open="id in (" close=")" item="id" separator=",">
+                #{id}
+            </foreach>
+        </where>
+    </select>
 
 
 </mapper>
