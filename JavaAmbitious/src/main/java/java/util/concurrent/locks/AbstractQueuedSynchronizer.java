@@ -414,7 +414,7 @@ public abstract class AbstractQueuedSynchronizer
          *               nothing to do with the other uses of the
          *               field, but simplifies mechanics.)
          *   PROPAGATE:  A releaseShared should be propagated to other
-         *               nodes. This is set (for head node only) in
+         *               nodes. This is set (for head node only) i
          *               doReleaseShared to ensure propagation
          *               continues, even if other operations have
          *               since intervened.
