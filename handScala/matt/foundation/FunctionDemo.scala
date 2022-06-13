@@ -1,5 +1,7 @@
 package matt.foundation
 
+import scala.util.control.NoStackTrace
+
 
 /**
  * @author Matthew
@@ -199,3 +201,48 @@ A companion object and its class can access each other’s private members
 A companion object’s apply method lets you create new instances of a class without using the new keyword
 A companion object’s unapply method lets you de-construct an instance of a class into its individual components
  */
+
+abstract class ActorRef {
+
+  def !(message: Any)(sender: String) : Unit;
+}
+
+// 测试MIXIN
+object ShutDownSignal extends RuntimeException with NoStackTrace
+
+/**
+ * 启动参数 scala.control.noTraceSuppression = true 就会有Exception fill stackTrace;
+ */
+object testShutDownSignal extends App{
+
+  throw ShutDownSignal
+}
+
+abstract class MixInA{
+  val fill: String = "HHHA"
+
+  def fillInStackTrace(): String
+}
+
+class MixIntB extends MixInA{
+  val fill1: String = "BB"
+
+  def dd() ={
+    fillInStackTrace
+  }
+
+  override def fillInStackTrace(): String = "我是B啊"
+}
+
+trait  MixInC extends MixInA{
+  override def fillInStackTrace(): String = "我是C啊"
+
+}
+
+class MIXDEMO extends MixIntB with MixInC
+
+object demo extends App{
+  val mix = new MIXDEMO
+  println(mix.fillInStackTrace())
+  println(mix.dd())
+}

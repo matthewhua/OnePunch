@@ -15,6 +15,9 @@
         <!--<module>mybatis_multitable</module>-->
         <module>JPA-with-Hibernate</module>
         <module>mini-guice</module>
+        <module>redis</module>
+        <module>redis/lettuce</module>
+        <module>redis/redisson</module>
     </modules>
 
     <properties>

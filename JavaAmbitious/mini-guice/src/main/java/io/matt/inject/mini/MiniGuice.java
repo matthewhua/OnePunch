@@ -284,7 +284,7 @@ public class MiniGuice {
         for (int i = 0; i < parameterKeys.length; i++) {
             parameters[i] = bindings.get(parameterKeys[i]).get();
         }
-        return parameterKeys;
+        return parameters;
     }
 
     private Key[] parametersToKeys(Member member, Type[] types, Annotation[][] annotations) {
@@ -311,6 +311,10 @@ public class MiniGuice {
         return new Key(type, bindingAnnotation);
     }
 
+    private static boolean equal(Object a, Object b) {
+        return Objects.equals(a, b);
+    }
+
     private static final class Key {
 
         final Type type;
@@ -324,10 +328,9 @@ public class MiniGuice {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Key key = (Key) o;
-            return type.equals(key.type) && annotation.equals(key.annotation);
+            return o instanceof Key
+                    && ((Key) o).type.equals(type)
+                    && equal(annotation, ((Key) o).annotation);
         }
 
         @Override
