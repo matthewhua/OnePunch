@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Title</title>
+</head>
+<body>
+
+    <script>
+        // getSalary(12000, 2000)
+        // getSalary(15000, 3000)
+        // getSalary(15000, 4000)
+
+        function makerSalary (base) {
+            return function (performance) {
+                return base + performance
+            }
+        }
+
+        let makerSalary1 = makerSalary(12000);
+        let makerSalary2 = makerSalary(15000);
+
+        console.log(makerSalary1(2000))
+        console.log(makerSalary2(3000))
+
+    </script>
+
+</body>
+</html>
