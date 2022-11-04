@@ -11,7 +11,7 @@
         user.setId(1);
         user.setUsername("zhangsan")
     -->
-    <select id="findByCondition" resultType="io.matt.pojo.User" parameterType="io.matt.pojo.User">
+    <select id="findByCondition"  resultType="io.matt.pojo.User" parameterType="io.matt.pojo.User">
         select * from user where id = #{id} and userName = #{userName}
     </select>
 

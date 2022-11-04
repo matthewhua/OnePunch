@@ -4,12 +4,12 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="io.matt.mapper.IOrderMapper">
-    <resultMap id="orderMap" type="io.matt.pojo.Order">
+    <resultMap id="orderMap" type="Order">
         <result property="id" column="id"/>
         <result property="orderTime" column="orderTime"/>
         <result property="total" column="total"/>
 
-        <association property="user" javaType="io.matt.pojo.User">
+        <association property="user" javaType="User">
             <result property="id" column="uid"/>
             <result property="username" column="username"/>
         </association>

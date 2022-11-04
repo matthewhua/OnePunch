@@ -1,3 +1,4 @@
+/*
 package org.matt.example
 package com.example
 
@@ -75,3 +76,4 @@ object AkkaQuickstart extends App{
   greeterMain ! SayHello("Charles")
 }
 
+*/

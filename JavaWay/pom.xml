@@ -12,6 +12,7 @@
         <module>ExcelRobot</module>
         <module>javassistDemo</module>
         <module>javaOOP</module>
+        <module>redPacket</module>
     </modules>
 
     <properties>
