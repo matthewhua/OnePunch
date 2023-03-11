@@ -1,4 +1,4 @@
-package io.matt.struct.component.order;
+package io.matt.struct.composite.order;
 
 public class MainDemo {
 

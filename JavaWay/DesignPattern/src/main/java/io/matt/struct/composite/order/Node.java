@@ -1,4 +1,4 @@
-package io.matt.struct.component.order;
+package io.matt.struct.composite.order;
 
 import java.util.ArrayList;
 import java.util.List;

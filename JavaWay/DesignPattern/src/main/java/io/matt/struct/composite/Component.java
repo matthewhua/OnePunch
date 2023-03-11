@@ -1,4 +1,4 @@
-package io.matt.struct.component;
+package io.matt.struct.composite;
 
 public abstract class Component {
 

@@ -1,6 +1,7 @@
 package io.matt.struct.decorator;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 
@@ -27,6 +28,11 @@ public class BaseFileDataLoader implements DataLoader {
 
     @Override
     public void write(String data) {
-
+        File file = new File(filePath);
+        try (FileOutputStream fos = new FileOutputStream(file)){
+            fos.write(data.getBytes(), 0, data.length());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
