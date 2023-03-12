@@ -1,4 +1,7 @@
-package io.matt.behavior;
+package io.matt.behavior.visitor;
+
+import io.matt.behavior.visitor.pattern.Apple;
+import io.matt.behavior.visitor.pattern.Book;
 
 public class VisitorBehavior implements Visitor {
 
@@ -16,5 +19,15 @@ public class VisitorBehavior implements Visitor {
         x++;
         System.out.println("=== 当前B的state为：" + x);
         elementB.setStateForB(x);
+    }
+
+    @Override
+    public void visit(Apple apple) {
+
+    }
+
+    @Override
+    public void visit(Book book) {
+
     }
 }

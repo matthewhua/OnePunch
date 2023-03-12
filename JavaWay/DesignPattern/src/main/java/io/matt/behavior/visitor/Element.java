@@ -1,4 +1,4 @@
-package io.matt.behavior;
+package io.matt.behavior.visitor;
 
 public interface Element {
 
