@@ -9,7 +9,7 @@ Shape = {area = 0}
 -- 基础类方法 new
 function Shape:new (o,side)
     o = o or {}
-    setmetatable(o, self)
+    set-metatable(o, self)
     self._index = self
     side = side or 0
     self.area = side*side;
@@ -22,6 +22,6 @@ function Shape:printArea ()
 end
 
 -- 创建对象
-myshape = Shape:new(nil,10)
+shape = Shape:new(nil,10)
 
-myshape:printArea()
+shape:printArea()

@@ -19,7 +19,7 @@ import java.lang.reflect.Proxy;
 import java.text.DecimalFormat;
 
 /**
- * 浅浅的对比一下 DynamicJDK， cglib， Javassist， asm
+ * 浅浅的对比一下(各种代理) DynamicJDK， cglib， Javassist， asm
  * @author Administrator
  */
 public class DynamicProxyPerformanceTest {

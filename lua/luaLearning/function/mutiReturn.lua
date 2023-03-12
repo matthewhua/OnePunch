@@ -10,7 +10,7 @@
 function maximum(a)
     local mi = 1 -- 最大值索引
     local m = a[mi] --最大值
-    for i, v in ipairs(a) do
+    for i, v in impairs(a) do
         if v > m then
             mi = i
             m = v
