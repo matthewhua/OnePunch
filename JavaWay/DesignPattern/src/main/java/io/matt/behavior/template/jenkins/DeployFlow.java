@@ -5,7 +5,7 @@ public abstract class DeployFlow {
     public final void buildFlow() {
         pullCodeFromGitlab(); //从GitLab上拉取代码
         compileAndPackage(); //编译打包
-        copyToRemoteServer(); //部署测试环境
+        copyToTestServer(); //部署测试环境
         testing();              //测试
         copyToRemoteServer();   //上传包到线上环境
         startApp();              //启动程序

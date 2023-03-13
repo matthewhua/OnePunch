@@ -9,6 +9,10 @@ public class Primary extends Level {
         this.setGameAccount(gameAccount);
     }
 
+    public Primary(Level level) {
+        this.setGameAccount(level.getGameAccount());
+    }
+
 
     @Override
     void doubleScore() {
@@ -27,7 +31,12 @@ public class Primary extends Level {
 
     @Override
     void upGraderLevel() {
-
+        if (this.getGameAccount().getScore() > 150) {
+            this.getGameAccount().setLevel(new Secondary(this));
+            System.out.printf("\t升级！！ 级别：SECONDARY\n\n");
+        } else {
+            System.out.printf("\n");
+        }
     }
 
 
