@@ -1,0 +1,123 @@
+[2023-05-12 13:58:52,246] [INFO] [akka.event.slf4j.Slf4jLogger] [] [hello-akka.actor.default-dispatcher-3] - Slf4jLogger started MDC: {}
+[2023-05-12 13:58:52,337] [INFO] [HelloWorld$] [] [hello-akka.actor.default-dispatcher-6] - Hello world! MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 13:58:52,339] [INFO] [HelloWorld$] [] [hello-akka.actor.default-dispatcher-6] - Hello Akka! MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 13:58:52,340] [INFO] [HelloWorldBot$] [] [hello-akka.actor.default-dispatcher-7] - Greeting 1 Akka MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/Akka, sourceActorSystem=hello}
+[2023-05-12 13:58:52,340] [INFO] [HelloWorldBot$] [] [hello-akka.actor.default-dispatcher-3] - Greeting 1 world MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/world, sourceActorSystem=hello}
+[2023-05-12 13:58:52,340] [INFO] [HelloWorld$] [] [hello-akka.actor.default-dispatcher-6] - Hello Akka! MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 13:58:52,340] [INFO] [HelloWorld$] [] [hello-akka.actor.default-dispatcher-6] - Hello world! MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 13:58:52,340] [INFO] [HelloWorldBot$] [] [hello-akka.actor.default-dispatcher-7] - Greeting 2 Akka MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/Akka, sourceActorSystem=hello}
+[2023-05-12 13:58:52,341] [INFO] [HelloWorld$] [] [hello-akka.actor.default-dispatcher-6] - Hello Akka! MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 13:58:52,341] [INFO] [HelloWorldBot$] [] [hello-akka.actor.default-dispatcher-3] - Greeting 2 world MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/world, sourceActorSystem=hello}
+[2023-05-12 13:58:52,341] [INFO] [HelloWorldBot$] [] [hello-akka.actor.default-dispatcher-7] - Greeting 3 Akka MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/Akka, sourceActorSystem=hello}
+[2023-05-12 13:58:52,341] [INFO] [HelloWorld$] [] [hello-akka.actor.default-dispatcher-6] - Hello world! MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 13:58:52,341] [INFO] [HelloWorldBot$] [] [hello-akka.actor.default-dispatcher-8] - Greeting 3 world MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/world, sourceActorSystem=hello}
+[2023-05-12 14:58:26,161] [INFO] [akka.event.slf4j.Slf4jLogger] [] [hello-akka.actor.default-dispatcher-3] - Slf4jLogger started MDC: {}
+[2023-05-12 14:58:26,251] [INFO] [io.matt.simple.HelloWorld$] [] [hello-akka.actor.default-dispatcher-6] - Hello world! MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 14:58:26,253] [INFO] [io.matt.simple.HelloWorld$] [] [hello-akka.actor.default-dispatcher-6] - Hello Akka! MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 14:58:26,254] [INFO] [io.matt.simple.HelloWorldBot$] [] [hello-akka.actor.default-dispatcher-7] - Greeting 1 world MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/world, sourceActorSystem=hello}
+[2023-05-12 14:58:26,254] [INFO] [io.matt.simple.HelloWorldBot$] [] [hello-akka.actor.default-dispatcher-3] - Greeting 1 Akka MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/Akka, sourceActorSystem=hello}
+[2023-05-12 14:58:26,255] [INFO] [io.matt.simple.HelloWorld$] [] [hello-akka.actor.default-dispatcher-6] - Hello world! MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 14:58:26,255] [INFO] [io.matt.simple.HelloWorld$] [] [hello-akka.actor.default-dispatcher-6] - Hello Akka! MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 14:58:26,255] [INFO] [io.matt.simple.HelloWorldBot$] [] [hello-akka.actor.default-dispatcher-3] - Greeting 2 world MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/world, sourceActorSystem=hello}
+[2023-05-12 14:58:26,255] [INFO] [io.matt.simple.HelloWorldBot$] [] [hello-akka.actor.default-dispatcher-7] - Greeting 2 Akka MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/Akka, sourceActorSystem=hello}
+[2023-05-12 14:58:26,255] [INFO] [io.matt.simple.HelloWorld$] [] [hello-akka.actor.default-dispatcher-6] - Hello world! MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 14:58:26,255] [INFO] [io.matt.simple.HelloWorldBot$] [] [hello-akka.actor.default-dispatcher-7] - Greeting 3 world MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/world, sourceActorSystem=hello}
+[2023-05-12 14:58:26,255] [INFO] [io.matt.simple.HelloWorld$] [] [hello-akka.actor.default-dispatcher-6] - Hello Akka! MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 14:58:26,255] [INFO] [io.matt.simple.HelloWorldBot$] [] [hello-akka.actor.default-dispatcher-3] - Greeting 3 Akka MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/Akka, sourceActorSystem=hello}
+[2023-05-12 15:38:47,863] [INFO] [akka.event.slf4j.Slf4jLogger] [] [hello-akka.actor.default-dispatcher-3] - Slf4jLogger started MDC: {}
+[2023-05-12 15:38:47,967] [ERROR] [akka.actor.LocalActorRefProvider] [] [hello-akka.actor.default-dispatcher-3] - guardian failed, shutting down system MDC: {akkaAddress=akka://hello, akkaUid=-1708432945584453173, sourceThread=hello-akka.actor.internal-dispatcher-4, akkaSource=LocalActorRefProvider, sourceActorSystem=hello, akkaTimestamp=07:38:47.963UTC}
+java.lang.NullPointerException: null
+	at akka.actor.typed.javadsl.AbstractBehavior.receive(AbstractBehavior.scala:64)
+	at akka.actor.typed.Behavior$.interpret(Behavior.scala:281)
+	at akka.actor.typed.Behavior$.interpretMessage(Behavior.scala:237)
+	at akka.actor.typed.internal.InterceptorImpl$$anon$2.apply(InterceptorImpl.scala:57)
+	at akka.actor.typed.internal.adapter.GuardianStopInterceptor.aroundReceive(GuardianStartupBehavior.scala:59)
+	at akka.actor.typed.internal.InterceptorImpl.receive(InterceptorImpl.scala:85)
+	at akka.actor.typed.Behavior$.interpret(Behavior.scala:281)
+	at akka.actor.typed.Behavior$.interpretMessage(Behavior.scala:237)
+	at akka.actor.typed.internal.adapter.ActorAdapter.handleMessage(ActorAdapter.scala:130)
+	at akka.actor.typed.internal.adapter.ActorAdapter.aroundReceive(ActorAdapter.scala:106)
+	at akka.actor.ActorCell.receiveMessage(ActorCell.scala:579)
+	at akka.actor.ActorCell.invoke(ActorCell.scala:547)
+	at akka.dispatch.Mailbox.processMailbox(Mailbox.scala:270)
+	at akka.dispatch.Mailbox.run(Mailbox.scala:231)
+	at akka.dispatch.Mailbox.exec(Mailbox.scala:243)
+	at java.base/java.util.concurrent.ForkJoinTask.doExec(ForkJoinTask.java:290)
+	at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1020)
+	at java.base/java.util.concurrent.ForkJoinPool.scan(ForkJoinPool.java:1656)
+	at java.base/java.util.concurrent.ForkJoinPool.runWorker(ForkJoinPool.java:1594)
+	at java.base/java.util.concurrent.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:183)
+[2023-05-12 15:38:47,967] [ERROR] [akka.actor.OneForOneStrategy] [] [hello-akka.actor.default-dispatcher-3] - null MDC: {akkaAddress=akka://hello, akkaUid=-1708432945584453173, sourceThread=hello-akka.actor.internal-dispatcher-4, akkaSource=akka://hello/user, sourceActorSystem=hello, akkaTimestamp=07:38:47.964UTC}
+java.lang.NullPointerException: null
+	at akka.actor.typed.javadsl.AbstractBehavior.receive(AbstractBehavior.scala:64)
+	at akka.actor.typed.Behavior$.interpret(Behavior.scala:281)
+	at akka.actor.typed.Behavior$.interpretMessage(Behavior.scala:237)
+	at akka.actor.typed.internal.InterceptorImpl$$anon$2.apply(InterceptorImpl.scala:57)
+	at akka.actor.typed.internal.adapter.GuardianStopInterceptor.aroundReceive(GuardianStartupBehavior.scala:59)
+	at akka.actor.typed.internal.InterceptorImpl.receive(InterceptorImpl.scala:85)
+	at akka.actor.typed.Behavior$.interpret(Behavior.scala:281)
+	at akka.actor.typed.Behavior$.interpretMessage(Behavior.scala:237)
+	at akka.actor.typed.internal.adapter.ActorAdapter.handleMessage(ActorAdapter.scala:130)
+	at akka.actor.typed.internal.adapter.ActorAdapter.aroundReceive(ActorAdapter.scala:106)
+	at akka.actor.ActorCell.receiveMessage(ActorCell.scala:579)
+	at akka.actor.ActorCell.invoke(ActorCell.scala:547)
+	at akka.dispatch.Mailbox.processMailbox(Mailbox.scala:270)
+	at akka.dispatch.Mailbox.run(Mailbox.scala:231)
+	at akka.dispatch.Mailbox.exec(Mailbox.scala:243)
+	at java.base/java.util.concurrent.ForkJoinTask.doExec(ForkJoinTask.java:290)
+	at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1020)
+	at java.base/java.util.concurrent.ForkJoinPool.scan(ForkJoinPool.java:1656)
+	at java.base/java.util.concurrent.ForkJoinPool.runWorker(ForkJoinPool.java:1594)
+	at java.base/java.util.concurrent.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:183)
+[2023-05-12 15:38:47,972] [ERROR] [akka.actor.typed.internal.adapter.ActorAdapter] [] [hello-akka.actor.default-dispatcher-7] - null MDC: {akkaAddress=akka://hello, akkaUid=-1708432945584453173, sourceThread=hello-akka.actor.default-dispatcher-3, akkaSource=akka://hello/user, sourceActorSystem=hello, akkaTimestamp=07:38:47.972UTC}
+java.lang.NullPointerException: null
+	at akka.actor.typed.javadsl.AbstractBehavior.receiveSignal(AbstractBehavior.scala:70)
+	at akka.actor.typed.Behavior$.interpret(Behavior.scala:280)
+	at akka.actor.typed.Behavior$.interpretSignal(Behavior.scala:243)
+	at akka.actor.typed.internal.InterceptorImpl$$anon$3.apply(InterceptorImpl.scala:67)
+	at akka.actor.typed.internal.adapter.GuardianStopInterceptor.aroundSignal(GuardianStartupBehavior.scala:67)
+	at akka.actor.typed.internal.InterceptorImpl.receiveSignal(InterceptorImpl.scala:92)
+	at akka.actor.typed.Behavior$.interpret(Behavior.scala:280)
+	at akka.actor.typed.Behavior$.interpretSignal(Behavior.scala:243)
+	at akka.actor.typed.internal.adapter.ActorAdapter.postStop(ActorAdapter.scala:318)
+	at akka.actor.Actor.aroundPostStop(Actor.scala:556)
+	at akka.actor.Actor.aroundPostStop$(Actor.scala:556)
+	at akka.actor.typed.internal.adapter.ActorAdapter.aroundPostStop(ActorAdapter.scala:282)
+	at akka.actor.dungeon.FaultHandling.finishTerminate(FaultHandling.scala:242)
+	at akka.actor.dungeon.FaultHandling.handleChildTerminated(FaultHandling.scala:331)
+	at akka.actor.dungeon.FaultHandling.handleChildTerminated$(FaultHandling.scala:310)
+	at akka.actor.ActorCell.handleChildTerminated(ActorCell.scala:410)
+	at akka.actor.dungeon.DeathWatch.watchedActorTerminated(DeathWatch.scala:102)
+	at akka.actor.dungeon.DeathWatch.watchedActorTerminated$(DeathWatch.scala:87)
+	at akka.actor.ActorCell.watchedActorTerminated(ActorCell.scala:410)
+	at akka.actor.ActorCell.invokeAll$1(ActorCell.scala:512)
+	at akka.actor.ActorCell.systemInvoke(ActorCell.scala:535)
+	at akka.dispatch.Mailbox.processAllSystemMessages(Mailbox.scala:295)
+	at akka.dispatch.Mailbox.run(Mailbox.scala:230)
+	at akka.dispatch.Mailbox.exec(Mailbox.scala:243)
+	at java.base/java.util.concurrent.ForkJoinTask.doExec(ForkJoinTask.java:290)
+	at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1020)
+	at java.base/java.util.concurrent.ForkJoinPool.scan(ForkJoinPool.java:1656)
+	at java.base/java.util.concurrent.ForkJoinPool.runWorker(ForkJoinPool.java:1594)
+	at java.base/java.util.concurrent.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:183)
+[2023-05-12 15:38:47,981] [INFO] [akka.actor.LocalActorRef] [akkaDeadLetter] [hello-akka.actor.default-dispatcher-3] - Message [io.matt.simple.introTest.HelloWorldMain$sayHello] to Actor[akka://hello/user] was not delivered. [1] dead letters encountered. If this is not an expected behavior then Actor[akka://hello/user] may have terminated unexpectedly. This logging can be turned off or adjusted with configuration settings 'akka.log-dead-letters' and 'akka.log-dead-letters-during-shutdown'. MDC: {akkaAddress=akka://hello, akkaUid=-1708432945584453173, sourceThread=hello-akka.actor.default-dispatcher-7, akkaSource=akka://hello/user, sourceActorSystem=hello, akkaMessageClass=io.matt.simple.introTest.HelloWorldMain$sayHello, akkaTimestamp=07:38:47.977UTC}
+[2023-05-12 16:10:13,870] [INFO] [akka.event.slf4j.Slf4jLogger] [] [hello-akka.actor.default-dispatcher-3] - Slf4jLogger started MDC: {}
+[2023-05-12 16:10:13,957] [INFO] [io.matt.simple.introTest.HelloWorld] [] [hello-akka.actor.default-dispatcher-6] - Hello World MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 16:10:13,959] [INFO] [io.matt.simple.introTest.HelloWorld] [] [hello-akka.actor.default-dispatcher-6] - Hello Akka MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 16:10:13,960] [INFO] [io.matt.simple.introTest.HelloWorldBot] [] [hello-akka.actor.default-dispatcher-3] - Greeting 1 for Akka MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/Akka, sourceActorSystem=hello}
+[2023-05-12 16:10:13,960] [INFO] [io.matt.simple.introTest.HelloWorldBot] [] [hello-akka.actor.default-dispatcher-7] - Greeting 1 for World MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/World, sourceActorSystem=hello}
+[2023-05-12 16:10:13,960] [INFO] [io.matt.simple.introTest.HelloWorld] [] [hello-akka.actor.default-dispatcher-6] - Hello Akka MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 16:10:13,960] [INFO] [io.matt.simple.introTest.HelloWorld] [] [hello-akka.actor.default-dispatcher-6] - Hello World MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 16:10:13,960] [INFO] [io.matt.simple.introTest.HelloWorldBot] [] [hello-akka.actor.default-dispatcher-7] - Greeting 2 for Akka MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/Akka, sourceActorSystem=hello}
+[2023-05-12 16:10:13,960] [INFO] [io.matt.simple.introTest.HelloWorld] [] [hello-akka.actor.default-dispatcher-6] - Hello Akka MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 16:10:13,960] [INFO] [io.matt.simple.introTest.HelloWorldBot] [] [hello-akka.actor.default-dispatcher-3] - Greeting 2 for World MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/World, sourceActorSystem=hello}
+[2023-05-12 16:10:13,960] [INFO] [io.matt.simple.introTest.HelloWorldBot] [] [hello-akka.actor.default-dispatcher-7] - Greeting 3 for Akka MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/Akka, sourceActorSystem=hello}
+[2023-05-12 16:10:13,960] [INFO] [io.matt.simple.introTest.HelloWorld] [] [hello-akka.actor.default-dispatcher-6] - Hello World MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/greeter, sourceActorSystem=hello}
+[2023-05-12 16:10:13,960] [INFO] [io.matt.simple.introTest.HelloWorldBot] [] [hello-akka.actor.default-dispatcher-6] - Greeting 3 for World MDC: {akkaAddress=akka://hello, akkaSource=akka://hello/user/World, sourceActorSystem=hello}
+[2023-05-12 16:10:16,962] [INFO] [akka.actor.CoordinatedShutdown] [] [hello-akka.actor.default-dispatcher-3] - Running CoordinatedShutdown with reason [ActorSystemTerminateReason] MDC: {akkaAddress=akka://hello, akkaUid=8698052785899630723, sourceThread=main, akkaSource=CoordinatedShutdown(akka://hello), sourceActorSystem=hello, akkaTimestamp=08:10:16.960UTC}
+[2023-05-12 17:21:08,040] [INFO] [akka.event.slf4j.Slf4jLogger] [] [ChatRoomDemo-akka.actor.default-dispatcher-3] - Slf4jLogger started MDC: {}
+[2023-05-12 17:21:08,127] [INFO] [io.matt.simple.introTest.ChatRoomDemo$Gabbler] [] [ChatRoomDemo-akka.actor.default-dispatcher-3] - message has been posted by 'ol' Gabbler': Hello World! MDC: {akkaAddress=akka://ChatRoomDemo, akkaSource=akka://ChatRoomDemo/user/gabbler, sourceActorSystem=ChatRoomDemo}
+[2023-05-12 17:21:08,155] [INFO] [akka.actor.CoordinatedShutdown] [] [ChatRoomDemo-akka.actor.default-dispatcher-3] - Running CoordinatedShutdown with reason [ActorSystemTerminateReason] MDC: {akkaAddress=akka://ChatRoomDemo, akkaUid=3120438291513665719, sourceThread=ChatRoomDemo-akka.actor.default-dispatcher-7, akkaSource=CoordinatedShutdown(akka://ChatRoomDemo), sourceActorSystem=ChatRoomDemo, akkaTimestamp=09:21:08.153UTC}
+[2023-05-12 17:50:55,466] [INFO] [akka.event.slf4j.Slf4jLogger] [] [ChatRoomDemo-akka.actor.default-dispatcher-3] - Slf4jLogger started MDC: {}
+[2023-05-12 17:50:55,557] [INFO] [io.matt.simple.introTest.ChatRoomDemo$Gabbler] [] [ChatRoomDemo-akka.actor.default-dispatcher-3] - message has been posted by 'ol' Gabbler': Hello World! MDC: {akkaAddress=akka://ChatRoomDemo, akkaSource=akka://ChatRoomDemo/user/gabbler, sourceActorSystem=ChatRoomDemo}
+[2023-05-12 17:50:55,581] [INFO] [akka.actor.CoordinatedShutdown] [] [ChatRoomDemo-akka.actor.default-dispatcher-3] - Running CoordinatedShutdown with reason [ActorSystemTerminateReason] MDC: {akkaAddress=akka://ChatRoomDemo, akkaUid=135769409137060054, sourceThread=ChatRoomDemo-akka.actor.default-dispatcher-5, akkaSource=CoordinatedShutdown(akka://ChatRoomDemo), sourceActorSystem=ChatRoomDemo, akkaTimestamp=09:50:55.580UTC}
