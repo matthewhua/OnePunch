@@ -22,7 +22,8 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
-import io.netty.handler.ssl.SslContext;
+import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.handler.timeout.IdleStateHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -35,22 +36,18 @@ public class WebSocketServerInitializer extends ChannelInitializer<SocketChannel
 
 
     private static final String WEBSOCKET_PATH = "/websocket";
-    private final SslContext sslCtx;
+
     @Autowired
     private WebSocketHandler webSocketHandler;
+
     @Value("${websocket.url}")
     private String websocketUrl;
 
-    public WebSocketServerInitializer(SslContext sslCtx) {
-        this.sslCtx = sslCtx;
-    }
+
 
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
-        if (sslCtx != null) {
-            pipeline.addLast(sslCtx.newHandler(ch.alloc()));
-        }
         //因为基于http协议，使用http的编码和解码器
         pipeline.addLast(new HttpServerCodec());
          /*说明
@@ -58,9 +55,16 @@ public class WebSocketServerInitializer extends ChannelInitializer<SocketChannel
           2. 这就就是为什么，当浏览器发送大量数据时，就会发出多次http请求
         */
         pipeline.addLast(new HttpObjectAggregator(65536));
-
+        // 对写大数据流的支持
+        pipeline.addLast(new ChunkedWriteHandler());
         pipeline.addLast(new WebSocketServerCompressionHandler());
-        pipeline.addLast(new WebSocketServerProtocolHandler(WEBSOCKET_PATH, null, true));
+        pipeline.addLast(new WebSocketServerProtocolHandler("/ws"));
+
+        // 添加Netty空闲超时检查的支持
+        // 1. 读空闲超时（超过一定的时间会发送对应的事件消息）
+        // 2. 写空闲超时
+        // 3. 读写空闲超时
+        pipeline.addLast(new IdleStateHandler(4, 8, 12));
         //自定义的handler ，处理业务逻辑
         pipeline.addLast(webSocketHandler);
     }

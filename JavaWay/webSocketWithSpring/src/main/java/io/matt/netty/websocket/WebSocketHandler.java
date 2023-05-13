@@ -60,6 +60,8 @@ public class WebSocketHandler extends SimpleChannelInboundHandler<TextWebSocketF
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame msg) throws Exception {
+        String text = msg.text();
+        System.out.println(text);
         try {
             //接受客户端发送的消息
             MessageRequest messageRequest = JSON.parseObject(msg.text(), MessageRequest.class);
