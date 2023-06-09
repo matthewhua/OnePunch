@@ -65,7 +65,6 @@
 			<groupId>org.scalatestplus</groupId>
 			<artifactId>mockito-4-6_2.13</artifactId>
 			<version>3.2.15.0</version>
-			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
