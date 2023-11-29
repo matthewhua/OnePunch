@@ -2,14 +2,15 @@ package net
 
 type HandlerFunc func()
 
-type Server struct {
-	addr   string
-	router *Router
+type WsServer struct {
+	Server
 }
 
-func NewServer(addr string) *Server {
-	return &Server{
-		addr: addr,
+func NewServer(addr string) *WsServer {
+	return &WsServer{
+		Server{
+			Name: addr,
+		},
 	}
 }
 
