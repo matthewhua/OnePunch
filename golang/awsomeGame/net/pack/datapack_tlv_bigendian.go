@@ -1,12 +1,11 @@
 package pack
 
 import (
+	"awsomeGame/conf"
 	"awsomeGame/iface"
 	"bytes"
 	"encoding/binary"
 	"errors"
-
-	"github.com/aceld/zinx/zconf"
 )
 
 var defaultHeaderLen uint32 = 8
@@ -73,7 +72,7 @@ func (dp *DataPack) Unpack(binaryData []byte) (iface.IMessage, error) {
 
 	// Check whether the data length exceeds the maximum allowed packet size
 	// (判断dataLen的长度是否超出我们允许的最大包长度)
-	if zconf.GlobalObject.MaxPacketSize > 0 && msg.GetDataLen() > zconf.GlobalObject.MaxPacketSize {
+	if conf.GlobalObject.MaxPacketSize > 0 && msg.GetDataLen() > conf.GlobalObject.MaxPacketSize {
 		return nil, errors.New("too large msg data received")
 	}
 
