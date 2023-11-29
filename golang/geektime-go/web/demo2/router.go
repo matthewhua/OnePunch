@@ -1,11 +1,9 @@
-package demon2
+package demo
 
 import "strings"
 
 // 代表路由
 type router struct {
-
-	// 路由树
 	// trees 代表的是森林， HTTP method => 树的根节点
 	trees map[string]*node
 }
@@ -96,8 +94,8 @@ func (n *node) childOrCreate(path string) *node {
 		return n.starChild
 	}
 	if path[0] == ':' {
-		if n.starChild == nil {
-			n.starChild = &node{
+		if n.paramChild == nil {
+			n.paramChild = &node{
 				path: path,
 			}
 		}

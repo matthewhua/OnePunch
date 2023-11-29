@@ -1,4 +1,4 @@
-package demon2
+package demo
 
 import (
 	"fmt"
