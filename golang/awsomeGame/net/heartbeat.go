@@ -173,7 +173,7 @@ func (h *HeartbeatChecker) SetOnRemoteNotAlive(f iface.OnRemoteNotAlive) {
 	}
 }
 
-func (h *HeartbeatChecker) MsgId() uint32 {
+func (h *HeartbeatChecker) MsgID() uint32 {
 	return h.msgID
 }
 

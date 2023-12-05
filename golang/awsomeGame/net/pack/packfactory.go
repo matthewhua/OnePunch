@@ -23,6 +23,23 @@ func Factory() *PACK_FACTORY {
 	return factoryInstance
 }
 
-func (f *PACK_FACTORY) NewPack() iface.IDataPack {
-	return NewDataPack()
+// NewPack creates a concrete packaging and unpackaging object
+// (NewPack 创建一个具体的拆包解包对象)
+func (f *PACK_FACTORY) NewPack(kind string) iface.IDataPack {
+	var dataPack iface.IDataPack
+
+	switch kind {
+	// Zinx standard default packaging and unpackaging method
+	// (Zinx 标准默认封包拆包方式)
+	case iface.ZinxDataPack:
+		dataPack = NewDataPack()
+	case iface.ZinxDataPackOld:
+		dataPack = NewDataPackLtv()
+		// case for custom packaging and unpackaging methods
+		// (case 自定义封包拆包方式case)
+	default:
+		dataPack = NewDataPack()
+	}
+
+	return dataPack
 }

@@ -14,7 +14,7 @@ type IChain interface {
 	Request() IcReq        // Get the request data in the current chain (current interceptor)-获取当前责任链中的请求数据(当前拦截器)
 	GetIMessage() IMessage // Get IMessage from Chain (从Chain中获取IMessage)
 	Proceed(IcReq) IcResp  // Enter and execute the next interceptor, and pass the request data to the next interceptor (进入并执行下一个拦截器，且将请求数据传递给下一个拦截器)
-	ProceedWithMessage(IMessage, IcReq) IcResp
+	ProceedWithIMessage(IMessage, IcReq) IcResp
 }
 
 // IInterceptor

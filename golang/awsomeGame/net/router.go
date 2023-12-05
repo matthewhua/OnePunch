@@ -51,4 +51,55 @@ func (r *RouterSlices) AddHandler(MsgId uint32, handlers ...iface.RouterHandler)
 	if _, ok := r.Apis[MsgId]; ok {
 		panic("repeated api, msgId = " + strconv.Itoa(int(MsgId)))
 	}
+	finalSize := len(r.Handlers) + len(handlers)
+	mergedHandlers := make([]iface.RouterHandler, finalSize)
+	copy(mergedHandlers, r.Handlers)
+	copy(mergedHandlers[len(r.Handlers):], handlers)
+	r.Apis[MsgId] = append(r.Apis[MsgId], mergedHandlers...)
+}
+
+func (r *RouterSlices) GetHandlers(MsgId uint32) ([]iface.RouterHandler, bool) {
+	r.RLock()
+	defer r.RUnlock()
+	handlers, ok := r.Apis[MsgId]
+	return handlers, ok
+}
+
+func (r *RouterSlices) Group(start, end uint32, Handlers ...iface.RouterHandler) iface.IGroupRouterSlices {
+	return NewGroup(start, end, r, Handlers...)
+}
+
+type GroupRouter struct {
+	start    uint32
+	end      uint32
+	Handlers []iface.RouterHandler
+	router   iface.IRouterSlices
+}
+
+func NewGroup(start, end uint32, router *RouterSlices, Handlers ...iface.RouterHandler) *GroupRouter {
+	g := &GroupRouter{
+		start:    start,
+		end:      end,
+		Handlers: make([]iface.RouterHandler, 0, len(Handlers)),
+		router:   router,
+	}
+	g.Handlers = append(g.Handlers, Handlers...)
+	return g
+}
+
+func (g *GroupRouter) Use(Handlers ...iface.RouterHandler) {
+	g.Handlers = append(g.Handlers, Handlers...)
+}
+
+func (g *GroupRouter) AddHandler(MsgId uint32, Handlers ...iface.RouterHandler) {
+	if MsgId < g.start || MsgId > g.end {
+		panic("add router to group err in msgId:" + strconv.Itoa(int(MsgId)))
+	}
+
+	finalSize := len(g.Handlers) + len(Handlers)
+	mergedHandlers := make([]iface.RouterHandler, finalSize)
+	copy(mergedHandlers, g.Handlers)
+	copy(mergedHandlers[len(g.Handlers):], Handlers)
+
+	g.router.AddHandler(MsgId, mergedHandlers...)
 }

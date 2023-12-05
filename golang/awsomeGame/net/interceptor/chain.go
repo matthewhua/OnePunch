@@ -47,10 +47,10 @@ func (c *Chain) GetIMessage() iface.IMessage {
 	return iRequest.GetMessage()
 }
 
-// ProceedWithMessage Next 通过IMessage和解码后数据进入下一个责任链任务
+// ProceedWithIMessage Next 通过IMessage和解码后数据进入下一个责任链任务
 // iMessage 为解码后的IMessage
 // response 为解码后的数据
-func (c *Chain) ProceedWithMessage(iMessage iface.IMessage, response iface.IcReq) iface.IcResp {
+func (c *Chain) ProceedWithIMessage(iMessage iface.IMessage, response iface.IcReq) iface.IcResp {
 	if iMessage == nil || response == nil {
 		return c.Proceed(c.Request())
 	}
