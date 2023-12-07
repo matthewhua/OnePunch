@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package pb4server;
+
+import "client2server.proto";
+
+option java_package = "pb4server";
+option java_outer_classname = "InternalGkt"; // 网关
+option java_multiple_files = true;
+
+message Login2GateTell {
+    int32 clientMsgNo = 1;
+
+    oneof msg {
+        LoginDealAtLoginRt loginDealAtLoginRt = 11;
+        HomeHuaweiyunTextCheckResp homeHuaweiyunTextCheckResp = 12;
+        QueryLoginPlayerResp queryLoginPlayerResp = 13;
+    }
+}
+
+message LoginDealAtLoginRt {
+    client2server.LoginRt loginRt = 1; // 登录消息
+}
+
+message HomeHuaweiyunTextCheckResp {
+    int32 rt = 1;
+    string message = 2; // 聊天对象内容
+    int32 checkNo = 3; // 在网关里的序号
+}
+
+message QueryLoginPlayerResp {
+    client2server.QueryLoginPlayersRt queryLoginPlayersRt = 1;
+}
+
+message Home2GateTell {
+    int64 playerId = 1;
+
+    oneof msg {
+        HomePassivateTell homePassivateTell = 11;
+        ChannelRegisteredTell channelRegisteredTell = 12;
+    }
+}
+
+// home服playeractor钝化消息
+message HomePassivateTell {
+}
+
+//channel已注册消息
+message ChannelRegisteredTell {
+}

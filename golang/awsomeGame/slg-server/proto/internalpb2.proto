@@ -1,0 +1,245 @@
+syntax = "proto3";
+
+package pb4server;
+
+import "client2server.proto";
+import "systemMsg.proto";
+
+option java_package = "pb4server";
+option java_outer_classname = "InternalPb2Pkt";
+option java_multiple_files = true;
+
+// 广播消息
+message MulticastEnvelopeMsg {
+    int32 msgType = 1;
+    string channel = 2;
+    repeated int64 excludePlayerIds = 3;
+
+    oneof csMsg {
+        SubscribeCmd subscribeCmd = 11;
+        UnsubscribeCmd unsubscribeCmd = 12;
+        client2server.NewChatMessage newChatMsg = 13;
+        client2server.GroupChatInfo groupChatMsg = 14;
+        AddMulticastBlackList addMulticastBlackList = 15;
+        DelMulticastBlackList delMulticastBlackList = 16;
+        client2server.NoticeInfo marqueeNotice = 17;
+        GateNoticeInfo gateMarqueeNotice = 18;
+        GateChatMsg gateChatMsg = 19;
+        client2server.CleanPlayerChatRecordsNotice cleanPlayerChatRecordsNotice = 20;
+        WorldRebootMsg worldRebootMsg = 21;
+        client2server.NewMailNotice newMailNotice = 22;
+    }
+}
+
+
+message SyncCreditLimitMsg {
+    repeated CreditLimitGroupPbData creditLimitGroupPbDatas = 1;
+}
+
+message CreditLimitGroupPbData {
+    string scene_id = 1;
+    repeated CreditLimitPbData creditLimitPbDatas = 2;
+}
+
+message CreditLimitPbData {
+    int32 threshold_lo = 1; // 	通用信用分限制下界（包含）
+    int32 threshold_hi = 2; // 	通用信用分限制上界（包含）
+    int32 is_tag_used = 3; //	命中分数区间是否需要进一步判断标签限制，need_tag=1时返回  0：无须判断	1：进一步判断
+    string tag_type = 4; // 	标签类型 need_tag=1&&is_tag_used=1返回，返回接入方接入的标签。如tag_black、tag_ugc等
+    int32 tag_hi = 5; // 	标签区间上界（包含） need_tag=1&&is_tag_used=1时返回
+    int32 tag_lo = 6; // 	标签区间下界（包含） need_tag=1&&is_tag_used=1时返回
+    int32 group_id = 7; // 	命中所有维度限制的用户群体编号
+}
+
+
+message SubscribeCmd {
+    string channel = 1;
+}
+
+message UnsubscribeCmd {
+    string channel = 1;
+}
+
+message AddMulticastBlackList {
+    int64 blackPlayerId = 1;
+}
+
+message DelMulticastBlackList {
+    int64 blackPlayerId = 1;
+}
+
+// 多语言走马灯
+message GateNoticeInfo {
+    repeated GateNotice noticeInfos = 1; // 多语言公告内容
+}
+
+message GateNotice {
+    int32 lanType = 1;
+    client2server.NoticeInfo marqueeNotice = 2; // 多语言公告内容
+}
+
+// 多语言聊天公告
+message GateChatMsg {
+    repeated GateChatInfo chatInfos = 1;
+}
+
+message GateChatInfo {
+    int32 lanType = 1;
+    client2server.NewChatMessage newChatMsg = 2; // 多语言公告内容
+}
+
+//世界重启消息
+message WorldRebootMsg {
+    int64 worldId = 1;
+}
+
+// 玩家Actor广播
+message PlayerActorMultiMsg {
+    oneof msg {
+        MulticastSysMail multicastSysMail = 11;
+        MulticastActivityLottery multicastActivityLottery = 12;
+        MulticastActivity multicastActivity = 13;
+        MulticastFunctionBan multicastFunctionBan = 14;
+        MulticastSurvey multicastSurvey = 15;
+    }
+
+    int32 changeType = 1;
+}
+
+// 广播功能封禁
+message MulticastFunctionBan {
+    string functionBan = 1;
+}
+
+// 广播邮件
+message MulticastSysMail {
+    int64 sysMailId = 1;
+    LogVo log = 11;
+}
+
+// 广播抽奖活动
+message MulticastActivityLottery {
+    string lottery = 1;
+}
+
+// 补丁包消息
+message PatchEnvelopeMsg {
+    int32 processType = 1;
+    int64 processId = 2;
+    bytes scriptData = 3;
+}
+
+// 世界状态上报消息
+message WorldStateReportMsg {
+    int64 worldId = 1;
+    int32 areaState = 2;
+    int32 playerNum = 3;
+    int64 clusterId = 4;
+    int32 bigWonderState = 5;
+    int64 initTime = 6;
+    string process = 7;
+    int32 onlinePlayerNum = 8;
+    int32 dau = 9;
+    int32 wau = 10;
+    int32 mau = 11;
+}
+
+// 世界Actor广播
+message WorldActorMultiMsg {
+    oneof msg {
+        MulticastActivity multicastActivity = 11;
+        MulticastAllianceFightStart multicastAllianceFightStart = 12;
+    }
+    int32 changeType = 1;
+}
+
+//活动广播
+message MulticastAllianceFightStart {
+    int32 noticeType = 1;
+    int32 readType = 2;
+    string lanId = 3;
+    repeated string params = 4;
+}
+
+//活动广播
+message MulticastActivity {
+    string activityData = 2;
+}
+
+// 联盟排行
+message AllianceRankMultiMsg {
+    repeated AllianceRankData ranks = 1;
+}
+
+message AllianceRankData {
+    int32 rankType = 1;
+    repeated AllianceRankItemData rankItems = 2;
+}
+
+message AllianceRankItemData {
+    int64 allianceId = 1;
+    string allianceName = 2;
+    int32 rank = 3;
+    int64 score = 4;
+    string leaderName = 5;
+}
+
+message PublishTell {
+    repeated client2server.IntToStringKV datas = 1; //数据类类型-json数据
+}
+
+//订阅消息
+message SubscribeTell {
+    int32 subscriberRegion = 1; //订阅者的分片类型
+    int64 subscriberShardId = 2; //订阅者的分片Id
+    int64 subscriberId = 3; //订阅者Id
+
+    int32 dataType = 11; //数据类类型
+    int64 dataId = 12; //数据唯一Id
+
+    int32 publishOnSubscribe = 100; //订阅时发布一次，默认是要的
+}
+
+//取消订阅消息
+message UnSubscribeTell {
+    int32 subscriberRegion = 1; //订阅者的分片类型
+    int64 subscriberShardId = 2; //订阅者的分片Id
+    int64 subscriberId = 3; //订阅者Id
+
+    int32 dataType = 11; //数据类类型
+    int64 dataId = 12; //数据唯一Id
+}
+
+// 节点状态
+message NodeState {
+    string addr = 1;
+    int32 gameActorNum = 2; // 游戏逻辑用Actor的数量
+    int32 aliveShardProxyNum = 3; // 当前进程拥有的shardProxy的存活数量
+    repeated ServiceInfo serviceInfo = 4;
+}
+
+message ServiceInfo {
+    string name = 1;
+    string state = 2;
+}
+
+message UpdateWorldOpenTimeTell {
+    int32 oponTime = 1; // 新的开服时间
+    int64 worldId = 2;
+}
+
+// 广播调查问卷
+message MulticastSurvey {
+    repeated SurveyQuestionnaireData SQData = 1;  //问卷调查数据变更列表
+}
+
+//问卷调查数据
+message SurveyQuestionnaireData {
+  uint64 surveyId = 1;      //问卷id
+  Opt opt = 2;             //操作类型
+  enum Opt {
+    UPDATE = 0;            //发布
+    DElETE = 1;            //删除
+  }
+}
+

@@ -1,0 +1,3332 @@
+syntax = "proto3";
+
+package pb4server;
+
+import "client2server.proto";
+import "internalpb2.proto";
+// import "internal2home.proto";
+import "systemMsg.proto";
+
+option java_package = "pb4server";
+option java_outer_classname = "InternalPkt";
+option java_multiple_files = true;
+
+message ToAllianceTell {
+    int64 allianceId = 1;
+
+    oneof msg {
+        World2AllianceTell fromWorld = 11;
+        Pub2AllianceTell fromPub = 12;
+        Home2AllianceTell fromHome = 13;
+        PubMgr2AllianceTell fromPubMgr = 14;
+    }
+}
+
+
+message ToAllianceAsk {
+    int64 toId = 2;
+
+    oneof msg {
+        Home2AllianceAskReq fromHome = 11;
+        World2AllianceAskReq fromWorld = 12;
+        PubMgr2AllianceAskReq fromPubMgr = 13;
+        Mgr2AllianceAskReq fromMgr = 14;
+    }
+}
+
+// Home到Pub的ask请求
+message Home2AllianceAskReq {
+    int64 fromId = 1;
+    int32 clientMsgNo = 2;
+
+    oneof msg {
+        SetAllianceFlagAskReq setAllianceFlagAskReq = 11;
+        RemoveAllianceHelpAskReq removeAllianceHelpAskReq = 12;
+        AllianceImpeachAskReq allianceImpeachAskReq = 13;
+        SetAllianceNameAskReq setAllianceNameAskReq = 15;
+        OpenAllianceCompetitionMainAskReq openAllianceCompetitionMainAskReq = 19;
+        GetAllianceCompetitionQuestAskReq getAllianceCompetitionQuestAskReq = 20;
+        RewardAllianceCompetitionQuestAskReq rewardAllianceCompetitionQuestAskReq = 21;
+        CancelAllianceCompetitionQuestAskReq cancelAllianceCompetitionQuestAskReq = 22;
+        GetAllianceCompetitionRewardAskReq getAllianceCompetitionRewardAskReq = 23;
+        QueryAllianceCompetitionScoreAskReq queryAllianceCompetitionScoreAskReq = 24;
+        GetCasinoAskReq getCasinoAskReq = 25;
+        DrawCasinoAskReq drawCasinoAskReq = 26;
+        QueryAllianceCompetitionTaskAskReq queryAllianceCompetitionTaskAskReq = 27;
+
+        
+        SendAllianceChatAskReq sendAllianceChatAskReq = 37;
+        SendRoomMsgAskReq sendRoomMsgAskReq = 38;
+        GetChatroomAskReq getChatroomAskReq = 40;
+        DistributeAllianceGiftAskReq distributeAllianceGiftAskReq = 41;
+        RemoveAllianceWaijiaoReq removeAllianceWaijiaoReq = 42;
+        JoinAllianceByIdAskReq joinAllianceByIdAskReq = 44;
+        AllianceJoinCancelAskReq allianceJoinCancelAskReq = 45;
+        QueryApplyAllianceListAskReq queryApplyAllianceListAskReq = 46;
+        JoinAllianceByInvateReq joinAllianceByInvateReq = 47;
+        BeginFightAllianceBossAskReq beginFightAllianceBossAskReq = 48;
+        AllianceBossRankAskReq allianceBossRankAskReq = 49;
+        OpenAllianceBagAskReq openAllianceBagAskReq = 50;
+        DonateAllianceBagAskReq donateAllianceBagAskReq = 51;
+        ExchangeAllianceBagAskReq exchangeAllianceBagAskReq = 52;
+        ChangeAllianceBagSetAskReq changeAllianceBagSetAskReq = 53;
+        AllianceFightApplyReq allianceFightApplyReq = 55;
+        QueryAllianceFightLogsReq queryAllianceFightLogsReq = 56;
+        AllianceBigGiftOpenReq allianceBigGiftOpenReq = 57;
+        SendAllianceMailAskReq sendAllianceMailAskReq = 58;
+
+        WorldChatAskReq worldChatAskReq = 61;
+
+        OpenAllianceGiftAskReq openAllianceGiftAskReq = 63;
+        QueryAllianceCmpttRewardReq queryAllianceCmpttRewardReq = 64;
+        ReceiveAllianceCmpttRewardReq receiveAllianceCmpttRewardReq = 65;
+        DrawGiftKeyReq drawGiftKeyReq = 66;
+        RefreshAllianceCompetitionQuestAskReq refreshAllianceCompetitionQuestAskReq = 67;
+    }
+}
+
+// 世界到公共的ask请求
+message World2AllianceAskReq {
+    int64 fromId = 1;
+    int64 playerId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+        CreateAllianceAskReq createAllianceAskReq = 11;
+        JoinAllianceByIdAskReq joinAllianceByIdAskReq = 12;
+        DealJoinAllianceAskReq dealJoinAllianceAskReq = 13;
+        CheckAllianceNameAskReq checkAllianceNameAskReq = 14;
+        AllianceInviteAskReq allianceInviteAskReq = 15;
+        OpenAllianceGiftAskReq openAllianceGiftAskReq = 16;
+        AllianceRecallPosAskReq allianceRecallPosAskReq = 17;
+        SetAlliancePowerLimitAskReq setAlliancePowerLimitAskReq = 18;
+        AllianceJoinCancelAskReq allianceJoinCancelAskReq = 19;
+        WriteAllianceWaijiaoAskReq writeAllianceWaijiaoAskReq = 20;
+        OpenAllianceWaijiaoAskReq openAllianceWaijiaoAskReq = 21;
+        QueryAllianceLogAskReq queryAllianceLogAskReq = 27;
+        SetAllianceDescptAskReq setAllianceDescptAskReq = 28;
+        AllianceDismissAskReq allianceDismissAskReq = 31;
+        ResetAlliancePosAskReq resetAlliancePosAskReq = 32;
+        RemoveAllianceMemberAskReq removeAllianceMemberAskReq = 33;
+        GetAllianceGiftAskReq getAllianceGiftAskReq = 34;
+        QueryAllianceMemberAskReq queryAllianceMemberAskReq = 35;
+        QueryAllianceReqListAskReq queryAllianceReqListAskReq = 37;
+        QueryAllianceInfoAskReq queryAllianceInfoAskReq = 38;
+        QueryAllianceListAskReq queryAllianceListAskReq = 39;
+        SummonAllianceBossAskReq summonAllianceBossAskReq = 40;
+        QueryAllianceBossLivenessAskReq queryAllianceBossLivenessAskReq = 41;
+        RemoveAllianceBossAskReq removeAllianceBossAskReq = 43;
+        QueryInAllianceRankReq queryInAllianceRankReq = 44;
+        QueryAllianceRankAskReq queryAllianceRankAskReq = 45;
+        QueryAllianceRankFirstAskReq queryAllianceRankFirstAskReq = 46;
+        AllianceActivityScoreAddAskReq allianceActivityScoreAddAskReq = 48;
+        SeleteAllianceActivityInfosReq seleteAllianceActivityInfosReq = 49;
+        OpenActivityAskReq openActivityAskReq = 51;
+        SelectActivityRankAskReq selectActivityRankAskReq = 52;
+        SelectNowRankReq selectNowRankReq = 53;
+        SendAllianceMassAskReq sendAllianceMassAskReq = 57;
+        ReloadPublicConfigAskReq reloadPublicConfigAskReq = 58;
+        GmOverAllianceActivityAskReq gmOverAllianceActivityAskReq = 59;
+        SendWonderAwardAskReq sendWonderAwardAskReq = 60;
+        QueryWonderAwardRecordAskReq queryWonderAwardRecordAskReq = 61;
+        ClearWonderAwardRecordAskReq clearWonderAwardRecordAskReq = 62;
+        QueryOccupyInfoAskReq queryOccupyInfoAskReq = 64;
+        HunterInviteAskReq hunterInviteAskReq = 65;
+        UpdateHunterInviteAskReq updateHunterInviteAskReq = 66;
+        SetPublicMoveServerStateReq setPublicMoveServerStateReq = 67;
+        QueryApplyAllianceListAskReq queryApplyAllianceListAskReq = 68;
+        AllianceMemberQuitAskReq allianceMemberQuitAskReq = 69;
+        SendWorldAllianceChatAskReq sendWorldAllianceChatAskReq = 71;
+        OpenAllianceBossAskReq openAllianceBossAskReq = 72;
+        EndFightAllianceBossAskReq endFightAllianceBossAskReq = 73;
+        QueryInAllianceFirstRankReq queryInAllianceFirstRankReq = 74;
+        OpenAllianceFightMainReq openAllianceFightMainReq = 75;
+        QueryAllianceFightArmyReq queryAllianceFightArmyReq = 76;
+        BeginAllianceFightReq beginAllianceFightReq = 77;
+        OpenAllianceFightReq openAllianceFightReq = 78;
+        QueryAllianceBuildsAskReq queryAllianceBuildsAskReq = 79;
+        CheckCreateAllianceBuildAskReq checkCreateAllianceBuildAskReq = 80;
+        OpenFightDayEliminateReq openFightDayEliminateReq = 81;
+        AllianceSetApplyPowerReq allianceSetApplyPowerReq = 82;
+        ApplyAllianceOfficerReq applyAllianceOfficerReq = 83;
+        QueryApplyAllianceOfficerReq queryApplyAllianceOfficerReq = 84;
+        DeleteApplyAllianceOfficerReq deleteApplyAllianceOfficerReq = 85;
+        BeginFightAllianceBossAskReq beginFightAllianceBossAskReq = 86;
+        QueryJjcOppAskReq queryJjcOppAskReq = 87;
+        UnregisterAccount2PubReq unregisterAccount2PubReq = 93;
+    }
+}
+
+// PubMgr到Pub的ask请求
+message PubMgr2AllianceAskReq {
+    int64 fromId = 1;
+
+    oneof msg {
+        // CreateAllianceAskReq createAllianceAskReq = 11;
+        QueryAllianceBelongWorldInfoReq queryAllianceBelongWorldInfoReq = 12;
+    }
+}
+
+
+message Mgr2AllianceAskReq {
+    int64 fromId = 1;
+
+    oneof msg {
+        EvalScriptReq evalScriptReq = 11;
+        QueryAllianceInfoReq queryAllianceInfoReq = 12;
+        CreateGiftKeyAskReq createGiftKeyAskReq = 13;
+        IdipPubReq idipPubReq = 14;
+        QueryGiftKeyAskReq queryGiftKeyAskReq = 18;
+        DeleteGiftKeyAskReq deleteGiftKeyAskReq = 19;
+    }
+}
+
+message World2AllianceTell {
+    oneof msg {
+        InsertAllianceLogTell insertAllianceLogTell = 11;
+        MoveServerLockAllianceReqTell moveServerLockAllianceReqTell = 12;
+        MoveServerUnLockAllianceReqTell moveServerUnLockAllianceReqTell = 13;
+        AllianceFightArmyChangeTell allianceFightArmyChangeTell = 14;
+        AllianceBeFightTell allianceBeFightTell = 15; // 联盟战被进攻推送
+        AllianceFightOverForAtkTell allianceFightOverForAtkTell = 16;
+        AllianceFightOverForDefTell allianceFightOverForDefTell = 17;
+        UpdateWorldCheckPointTell updateWorldCheckPointTell = 18;
+        UpdateResTell updateResTell = 19;
+        UpdateWonderTell updateWonderTell = 20;
+        AddAllianceExpTell addAllianceExpTell = 21;
+        SyncDayEliminateTell syncDayEliminateTell = 23;
+        SyncAllianceUpLvTell syncAllianceUpLvTell = 24;
+        SyncAllianceEffectWorldTell syncAllianceEffectWorldTell = 25;
+        WorldAllianceCountryTell allianceCountryTell = 26;
+        AllianceFilialeTell allianceFilialeTell = 27;
+        BornStateChangeTell bornStateChangeTell = 28;
+        UpdateHieronTell updateHieronTell = 29;
+        UpdateAllianceMemberInfoFromWorldTell updateAllianceMemberInfoFromWorldTell = 30;
+        DistributeAllianceGiftAskReq distributeAllianceGiftAskReq = 31;
+        ReceiveAllianceGiftTell receiveAllianceGiftTell = 34;
+        SyncAllianceUnit syncAllianceUnit = 35;
+        AllianceCompetitionScoreSyncTell competitionScoreTell = 38;
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+    }
+}
+
+// 联盟到联盟的tell消息
+message Pub2AllianceTell {
+    oneof msg {
+        AllianceFightSyncInfoToOppTell allianceFightSyncInfoToOppTell = 11; // 同步联盟战数据给对手
+        OppAllianceArmyPlansTell queryOppAllianceArmyPlansTell = 12; // 联盟战结束的时候一次性上报数据给对手用来展示期查询
+        AllianceFightAllReviveTell allianceFightAllReviveTell = 13; // 通知对手我方触发了全部复活
+        AllianceCompetitionStateTell competitionStateTell = 14; // 联盟总动员活动状态变化
+        AllianceCmpttStatByWorldTell cmpttStatByWorldTell = 15; // 联盟总动员活动状态变化（根据世界分组）
+
+        WorldChatTell worldChatTell = 16;
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+    }
+}
+
+// Home到Public的Tell
+message Home2AllianceTell {
+    int64 fromId = 1;
+
+    oneof msg {
+        RemoveReqTell removeReqTell = 11;
+        UpdateAllianceMemberInfoFromHomeTell updateAllianceMemberInfoFromHomeTell = 12;
+        
+        CleanRoomChatMsgTell cleanRoomChatMsgTell = 16;
+        
+        Gm4AllianceCompetitionTell gm4AllianceCompetitionTell = 18;
+        SyncAllianceCompetitionPersonalTell syncAllianceCompetitionPersonalTell = 19;
+        SyncAllianceCompetitionRewardTell syncAllianceCompetitionRewardTell = 20;
+        
+        ReqAllianceDataTell reqAllianceDataTell = 24;
+        AddAllianceGiftTell addAllianceGiftTell = 25;
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+    }
+}
+
+
+// 联盟管理节点到普通联盟节点的tell消息
+message PubMgr2AllianceTell {
+    oneof msg {
+        // AllianceFightGetOppTell allianceFightGetOppTell = 12; // 联盟战匹配到对手
+        // AllianceFightOverTell allianceFightOverTell = 13; // 联盟战结束通知大家各自结算
+        // CleanAllianceFightTell cleanAllianceFightTell = 14; // 新的一届联盟赛开始了 清理联盟数据
+        AllianceFightGoingTell allianceFightGoingTell = 15; // 联盟战开打
+        // AllianceCompetitionOpenTell allianceCompetitionOpenTell = 16; // 联盟总动员状态修改
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+    }
+}
+
+
+message ToPubTell {
+    int64 toId = 1;
+
+    oneof msg {
+        World2PubTell fromWorld = 11;
+        Pub2PubTell fromPub = 12;
+        Home2PubTell fromHome = 13;
+        PubMgr2PubTell fromPubMgr = 14;
+    }
+}
+
+message ToPubAsk {
+    int64 toId = 2;
+
+    oneof msg {
+        Home2PubAskReq fromHome = 11;
+        World2PubAskReq fromWorld = 12;
+        PubMgr2PubAskReq fromPubMgr = 13;
+        Mgr2PubAskReq fromMgr = 14;
+    }
+}
+
+// Home到Pub的ask请求
+message Home2PubAskReq {
+    int64 fromId = 1;
+    int32 clientMsgNo = 2;
+
+    oneof msg {
+         SetAllianceFlagAskReq setAllianceFlagAskReq = 11;
+         RemoveAllianceHelpAskReq removeAllianceHelpAskReq = 12;
+         AllianceImpeachAskReq allianceImpeachAskReq = 13;
+         SetAllianceNameAskReq setAllianceNameAskReq = 15;
+         OpenAllianceCompetitionMainAskReq openAllianceCompetitionMainAskReq = 19;
+         GetAllianceCompetitionQuestAskReq getAllianceCompetitionQuestAskReq = 20;
+         RewardAllianceCompetitionQuestAskReq rewardAllianceCompetitionQuestAskReq = 21;
+         CancelAllianceCompetitionQuestAskReq cancelAllianceCompetitionQuestAskReq = 22;
+         GetAllianceCompetitionRewardAskReq getAllianceCompetitionRewardAskReq = 23;
+         QueryAllianceCompetitionScoreAskReq queryAllianceCompetitionScoreAskReq = 24;
+         GetCasinoAskReq getCasinoAskReq = 25;
+         DrawCasinoAskReq drawCasinoAskReq = 26;
+         QueryAllianceCompetitionTaskAskReq queryAllianceCompetitionTaskAskReq = 27;
+
+        
+         SendAllianceChatAskReq sendAllianceChatAskReq = 37;
+         SendRoomMsgAskReq sendRoomMsgAskReq = 38;
+        
+         GetChatroomAskReq getChatroomAskReq = 40;
+         DistributeAllianceGiftAskReq distributeAllianceGiftAskReq = 41;
+         RemoveAllianceWaijiaoReq removeAllianceWaijiaoReq = 42;
+         JoinAllianceByIdAskReq joinAllianceByIdAskReq = 44;
+         AllianceJoinCancelAskReq allianceJoinCancelAskReq = 45;
+         QueryApplyAllianceListAskReq queryApplyAllianceListAskReq = 46;
+         JoinAllianceByInvateReq joinAllianceByInvateReq = 47;
+         BeginFightAllianceBossAskReq beginFightAllianceBossAskReq = 48;
+         AllianceBossRankAskReq allianceBossRankAskReq = 49;
+         OpenAllianceBagAskReq openAllianceBagAskReq = 50;
+         DonateAllianceBagAskReq donateAllianceBagAskReq = 51;
+         ExchangeAllianceBagAskReq exchangeAllianceBagAskReq = 52;
+         ChangeAllianceBagSetAskReq changeAllianceBagSetAskReq = 53;
+         AllianceFightApplyReq allianceFightApplyReq = 55;
+         QueryAllianceFightLogsReq queryAllianceFightLogsReq = 56;
+         AllianceBigGiftOpenReq allianceBigGiftOpenReq = 57;
+         SendAllianceMailAskReq sendAllianceMailAskReq = 58;
+
+         OpenAllianceGiftAskReq openAllianceGiftAskReq = 63;
+         QueryAllianceCmpttRewardReq queryAllianceCmpttRewardReq = 64;
+         ReceiveAllianceCmpttRewardReq receiveAllianceCmpttRewardReq = 65;
+
+
+        RoomOwnerChangeAskReq roomOwnerChangeAskReq = 28;
+        CreateRoomAskReq createRoomAskReq = 29;
+        DissmissChatRoomAskReq dissmissChatRoomAskReq = 30;
+        InviteJoinChatAskReq inviteJoinChatAskReq = 32;
+        KickOutChatRoomAskReq kickOutChatRoomAskReq = 33;
+        QueryMemberInRoomAskReq queryMemberInRoomAskReq = 34;
+        QuitOneRoomAskReq quitOneRoomAskReq = 35;
+        RenameChatRoomAskReq renameChatRoomAskReq = 36;
+        GetChatHistoryAskReq getChatHistoryAskReq = 39;
+        OpenAfterAllianceCompetitionAskReq openAfterAllianceCompetitionAskReq = 59;
+        QueryAllianceCompetitionRankReq queryAllianceCompetitionRankReq = 60;
+        WorldChatAskReq worldChatAskReq = 61;
+        GetChatInfoAskReq getChatInfoAskReq = 62;
+        DrawGiftKeyReq drawGiftKeyReq = 66;
+        RefreshAllianceCompetitionQuestAskReq refreshAllianceCompetitionQuestAskReq = 67;
+        RemoveAllianceCompetitionQuestAskReq removeAllianceCompetitionQuestAskReq = 68;
+
+    }
+}
+
+// Home到Public的ask返回
+message Home2PubAskResp {
+    int64 playerId = 1;
+    int32 clientMsgNo = 2;
+
+    oneof msg {
+        SetAllianceFlagAskRt setAllianceFlagAskRt = 11;
+        RemoveAllianceHelpAskRt removeAllianceHelpAskRt = 12;
+        AllianceImpeachAskRt allianceImpeachAskRt = 13;
+        SetAllianceNameAskRt setAllianceNameAskRt = 15;
+        OpenAllianceCompetitionMainAskRt openAllianceCompetitionMainAskRt = 19;
+        GetAllianceCompetitionQuestAskRt getAllianceCompetitionQuestAskRt = 20;
+        RewardAllianceCompetitionQuestAskRt rewardAllianceCompetitionQuestAskRt = 21;
+        CancelAllianceCompetitionQuestAskRt cancelAllianceCompetitionQuestAskRt = 22;
+        GetAllianceCompetitionRewardAskRt getAllianceCompetitionRewardAskRt = 23;
+        QueryAllianceCompetitionScoreAskRt queryAllianceCompetitionScoreAskRt = 24;
+        GetCasinoAskRt getCasinoAskRt = 25;
+        DrawCasinoAskRt drawCasinoAskRt = 26;
+        QueryAllianceCompetitionTaskAskRt queryAllianceCompetitionTaskAskRt = 27;
+        RoomOwnerChangeAskRt roomOwnerChangeAskRt = 28;
+        CreateRoomAskRt createRoomAskRt = 29;
+        DissmissChatRoomAskRt dissmissChatRoomAskRt = 30;
+        InviteJoinChatAskRt inviteJoinChatAskRt = 32;
+        KickOutChatRoomAskRt kickOutChatRoomAskRt = 33;
+        QueryMemberInRoomAskRt queryMemberInRoomAskRt = 34;
+        QuitOneRoomAskRt quitOneRoomAskRt = 35;
+        RenameChatRoomAskRt renameChatRoomAskRt = 36;
+        SendAllianceChatAskRt sendAllianceChatAskRt = 37;
+        SendRoomMsgAskRt sendRoomMsgAskRt = 38;
+        GetChatHistoryAskRt getChatHistoryAskRt = 39;
+        GetChatroomAskRt getChatroomAskRt = 40;
+        DistributeAllianceGiftAskRt distributeAllianceGiftAskRt = 41;
+        RemoveAllianceWaijiaoRt removeAllianceWaijiaoRt = 42;
+        JoinAllianceByIdAskRt joinAllianceByIdAskRt = 44;
+        AllianceJoinCancelAskRt allianceJoinCancelAskRt = 45;
+        QueryApplyAllianceListAskRt queryApplyAllianceListAskRt = 46;
+        JoinAllianceByInvateRt joinAllianceByInvateRt = 47;
+        BeginFightAllianceBossAskRt BeginFightAllianceBossAskRt = 48;
+        AllianceBossRankAskRt allianceBossRankAskRt = 49;
+        OpenAllianceBagAskRt openAllianceBagAskRt = 50;
+        DonateAllianceBagAskRt donateAllianceBagAskRt = 51;
+        ExchangeAllianceBagAskRt exchangeAllianceBagAskRt = 52;
+        ChangeAllianceBagSetAskRt changeAllianceBagSetAskRt = 53;
+        AllianceFightApplyResp allianceFightApplyResp = 55;
+        QueryAllianceFightLogsResp queryAllianceFightLogsResp = 56;
+        AllianceBigGiftOpenResp allianceBigGiftOpenResp = 57;
+        SendAllianceMailAskRt sendAllianceMailAskRt = 58;
+        OpenAfterAllianceCompetitionAskRt openAfterAllianceCompetitionAskRt = 59;
+        QueryAllianceCompetitionRankResp queryAllianceCompetitionRankResp = 60;
+        WorldChatAskRt worldChatAskRt = 61;
+        GetChatInfoAskRt getChatInfoAskRt = 62;
+        OpenAllianceGiftAskRt openAllianceGiftAskRt = 63;
+        QueryAllianceCmpttRewardResp queryAllianceCmpttRewardResp = 64;
+        ReceiveAllianceCmpttRewardResp receiveAllianceCmpttRewardResp = 65;
+        DrawGiftKeyResp drawGiftKeyResp = 66;
+        RefreshAllianceCompetitionQuestAskRt refreshAllianceCompetitionQuestAskRt = 67;
+        RemoveAllianceCompetitionQuestAskReqRt  removeAllianceCompetitionQuestAskReqRt = 68;
+
+    }
+}
+
+// 领取礼品码
+message DrawGiftKeyReq {
+    string keyCode = 1;
+    int64 playerId = 2;
+    repeated int64 cdkGroupIds = 3;//玩家已领取的cdk组id
+}
+message DrawGiftKeyResp {
+    int32 rt = 1;
+    string attach = 2;
+    int64 cdkGroupId = 3;
+}
+
+// 联盟总动员可领取奖励查询
+message QueryAllianceCmpttRewardReq {
+    // pass
+}
+
+message QueryAllianceCmpttRewardResp {
+    int32 rt = 1;
+    int32 rankLv = 2;
+    repeated int32 allianceLv = 3;
+    repeated int32 personalLv = 4;
+    repeated int32 allianceReadyLv = 5; // 联盟积分奖励, 玩家已经领取的阶段
+    repeated int32 personalReadyLv = 6; // 个人积分奖励, 玩家已经领取的阶段
+}
+
+// 联盟总动员奖励领取
+message ReceiveAllianceCmpttRewardReq {
+    ReceiveType type = 1;
+    repeated int32 allianceLv = 2; // 领取联盟积分档
+    repeated int32 personalLv = 3; // 领取个人积分档
+
+    enum ReceiveType {
+        ALL = 0;
+        SINGLE = 1;
+    }
+}
+
+message ReceiveAllianceCmpttRewardResp {
+    int32 rt = 1;
+    int32 rankLv = 2;
+    repeated int32 allianceLvReceived = 3; // 领取的联盟积分档
+    repeated int32 personalLvReceived = 4; // 领取的个人积分档
+    repeated int32 allianceLvCan = 5; // 可以领取的联盟积分档
+    repeated int32 personalLvCan = 6; // 可以领取的领取个人积分档
+}
+
+// 领取礼包码
+message DrawGiftKeyAskReq {
+    string keyCode = 1;
+    repeated int64 cfgId = 2; // 当前已领取的配置id
+}
+
+message DrawGiftKeyAskResp {
+    int32 rt = 1;
+    string gift = 2;
+    int64 cfgId = 3; // 礼品码配置组id
+    int32 overTime = 4; // 结束时间
+}
+
+// 世界聊天每秒总数验证且存数据
+message WorldChatAskReq {
+    client2server.ChatInfo chatInfo = 1;
+}
+
+message WorldChatAskRt {
+    int32 rt = 2;
+}
+
+// 联盟总动员排行榜
+message QueryAllianceCompetitionRankReq {
+    client2server.QueryAllianceCompetitionRank req = 1;
+    int64 allianceId = 3;
+    int32 flagColor = 4; //旗帜的颜色模版ID
+    int32 flagStyle = 5; //旗帜的样式模版ID
+    int32 flagEffect = 6; //旗帜的图案模版ID
+    string allianceName = 7; //联盟名称
+    string allianceShortName = 8; //联盟简称
+}
+
+message QueryAllianceCompetitionRankResp {
+    int32 rt = 1;
+    client2server.QueryAllianceCompetitionRankRt resp = 2;
+}
+
+// 打开联盟总动员主界面
+message QueryAllianceCompetitionTaskAskReq {
+}
+
+message QueryAllianceCompetitionTaskAskRt {
+    int32 rt = 1;
+    client2server.QueryAllianceCompetitionTaskRt msg = 2;
+}
+
+// 打开联盟总动员主界面
+message OpenAllianceCompetitionMainAskReq {
+    bool removeNowCompetitionTask = 1; //是否因为任务过期清除目前联盟任务
+}
+
+message OpenAllianceCompetitionMainAskRt {
+    int32 rt = 1;
+    int32 nowScore = 2; // 当前积分
+    int32 joinPlayerNum = 3; // 参与人数
+    int32 rewardTime = 4; // 领奖时间
+    repeated AllianceCompetitionQuestVo quests = 5; // 联盟总动员任务信息
+    int32 nowCompetitionQuestProtoId = 6; // 当前正在进行的总动员任务配置id
+    int32 allianceRankLv = 7; // 所处段位
+    repeated client2server.AllianceOtherQuest others = 8; // 该任务被领取玩家信息
+    client2server.IntToIntKV myQuestTotal = 9; // 我的任务的完成次数和接收次数
+    int32 ticket = 10;
+    int64 tickValidTime = 11;
+    int64 groupId = 12;
+    int32 personalRankIndex = 13;  //在个人排名中的名次
+    uint32 allianceRankIndex = 14; //联盟在联盟排名中的名次
+}
+
+message AllianceCompetitionQuestVo {
+    int32 index = 1; // 任务排序
+    int32 questId = 2; // 被领取之后就是0
+    int32 refTime = 3; // 任务刷新倒计时,只有任务ID是0的时候这个才不为zeroTime
+}
+
+// 领取联盟总动员任务
+message GetAllianceCompetitionQuestAskReq {
+    int32 index = 1; // 领取的任务位置
+    int32 taskType = 2;
+}
+
+message GetAllianceCompetitionQuestAskRt {
+    int32 rt = 1;
+    int32 questId = 2; // 领到的任务ID
+    int32 nowCompetitionQuestProtoId = 3; // 当前正在进行的总动员任务配置id
+    AllianceCompetitionQuestVo addQuest = 4; // 新增总动员任务配置
+}
+
+// 领取联盟总动员任务奖励
+message RewardAllianceCompetitionQuestAskReq {
+    int32 taskType = 1;
+    int32 addScore = 3;
+    int32 index = 4; //领取奖励的Index
+}
+
+message RewardAllianceCompetitionQuestAskRt {
+    int32 rt = 2;
+    int32 addScore = 3;
+    int64 allianceScore = 4;
+}
+
+// 取消联盟总动员任务
+message CancelAllianceCompetitionQuestAskReq {
+    int32 index = 1; // 领取的任务位置
+}
+
+message CancelAllianceCompetitionQuestAskRt {
+    int32 rt = 1;
+}
+
+// 刷新联盟总动员任务
+message RefreshAllianceCompetitionQuestAskReq {
+    int32 index = 1; // 领取的任务位置
+}
+
+message RefreshAllianceCompetitionQuestAskRt {
+    int32 rt = 1;
+    AllianceCompetitionQuestVo addQuest = 2;  // 新增总动员任务配置
+}
+
+// 放弃联盟总动员任务
+message RemoveAllianceCompetitionQuestAskReq {
+    int32 index = 1; // 领取的任务位置
+}
+
+message RemoveAllianceCompetitionQuestAskReqRt {
+    int32 rt = 1;
+}
+
+// 领取联盟总动员阶段奖励
+message GetAllianceCompetitionRewardAskReq {
+    int32 maxScore = 1; // 客户端来领取的任务的最大score值
+}
+
+message GetAllianceCompetitionRewardAskRt {
+    int32 rt = 1;
+}
+
+// 查询联盟总动员积分
+message QueryAllianceCompetitionScoreAskReq {
+}
+
+message QueryAllianceCompetitionScoreAskRt {
+    int32 rt = 1;
+    int32 allianceScore = 2;
+}
+
+message AllianceBigGiftOpenReq {
+}
+
+message AllianceBigGiftOpenResp {
+    int32 rt = 1;
+    repeated int32 bigGiftResStrings = 2;
+}
+
+message QueryAllianceFightLogsReq {
+}
+
+message QueryAllianceFightLogsResp {
+    int32 rt = 1;
+    client2server.QueryAllianceFightLogsRt queryLogRt = 2;
+}
+
+message AllianceFightApplyReq {
+    int32 dealType = 1; // 1-报名 2-取消报名
+}
+
+message AllianceFightApplyResp {
+    int32 rt = 1;
+}
+
+message OpenAllianceFightReq {
+}
+
+message OpenAllianceFightResp {
+    int32 rt = 1;
+    client2server.AllianceFightMainVo openAllianceFightMainVo = 2; // 联盟的一些数据
+    int32 allianceFightMyApply = 3; // 我的参战状态 0-未参赛 1-参赛中
+}
+
+// 打开联盟仓库
+message OpenAllianceBagAskReq {
+    int32 openType = 1; // 是否需要拿货品数据 0-否 1-是
+}
+
+message OpenAllianceBagAskRt {
+    int32 rt = 1;
+    client2server.OpenAllianceBagRt info = 2;
+}
+
+// 捐献东西给联盟仓库
+message DonateAllianceBagAskReq {
+    repeated DonateAllianceBagAskVo info = 1;
+}
+
+message DonateAllianceBagAskVo {
+    int32 propProtoId = 1;
+    int32 num = 2;
+}
+
+message DonateAllianceBagAskRt {
+    int32 rt = 1;
+}
+
+// 从联盟仓库兑换东西
+message ExchangeAllianceBagAskReq {
+    repeated client2server.OpenAllianceBagVo info = 1;
+}
+
+message ExchangeAllianceBagAskRt {
+    int32 rt = 1;
+}
+
+// 修改联盟仓库捐献要求
+message ChangeAllianceBagSetAskReq {
+    int32 lvSet = 1;
+}
+
+message ChangeAllianceBagSetAskRt {
+    int32 rt = 1;
+}
+
+// 联盟boss排行榜
+message AllianceBossRankAskReq {
+}
+
+message AllianceBossRankAskRt {
+    int32 rt = 1;
+    repeated client2server.QueryRankInfoRt rankInfo = 2;
+}
+
+// 收到邀请加入联盟
+message JoinAllianceByInvateReq {
+    int64 pid = 1;
+    int32 areaNo = 2;
+    string playerName = 3;
+    int32 playerPhoto = 4;
+    int64 pltAreaNo = 5;
+    int64 lastLoginTime = 7;
+    int64 offTime = 8;
+    int32 photoProtoId = 9;
+    int32 playerCastleLv = 10;
+    string playerNickName = 11;
+    int32 jjcScore = 12;
+    int32 nowState = 13; // 当前所属州
+    int32 firstState = 14; // 第一次入盟的州
+    client2server.PhotoViewInfo photoInfo = 15;
+
+    LogVo log = 21;
+}
+
+message JoinAllianceByInvateRt {
+    int32 rt = 1;
+}
+
+// 删除联盟外交留言
+message RemoveAllianceWaijiaoReq {
+    repeated int64 removeIds = 1; // 要删除的留言IDS
+}
+
+message RemoveAllianceWaijiaoRt {
+    int32 rt = 1;
+    repeated int64 removeIds = 2; // 真正删除掉的留言IDS
+}
+
+// 修改联盟旗帜ask
+message SetAllianceFlagAskReq {
+    int32 color = 1;
+    int32 style = 2;
+    int32 effect = 3;
+}
+
+message SetAllianceFlagAskRt {
+    int32 rt = 1;
+}
+
+// 删除帮助信息
+message RemoveAllianceHelpAskReq {
+    int64 helpId = 1;
+}
+
+message RemoveAllianceHelpAskRt {
+    int32 rt = 1;
+}
+
+// 弹劾盟主
+message AllianceImpeachAskReq {
+    int64 allianceWorldOpenTime = 1;
+}
+
+message AllianceImpeachAskRt {
+    int32 rt = 1;
+}
+
+// 修改联盟名称/检测简称
+message SetAllianceNameAskReq {
+    int32 setType = 1; // 修改类型 1-名称  2-简称 3-语种
+    string name = 2; // 要修改成的内容
+}
+
+message SetAllianceNameAskRt {
+    int32 rt = 1;
+}
+
+/*message MyHelpVo {
+    int64 helpId = 1; // 帮助信息的唯一ID
+    int32 helpType = 2; // 帮助类型  1-研发帮助
+    int32 maxHelpNum = 3; // 上限帮助次数
+    int32 nowHelpNum = 4; // 当前帮助次数
+    int64 helpValue1 = 5; // 信息1  对于不同的帮助类型有不同的意义,如 研发帮助 这个字段表示科技ID
+    int64 helpValue2 = 6; // 信息2  对于不同的帮助类型有不同的意义,如 研发帮助 这个字段表示科技等级
+    int64 helpValue3 = 7; // 信息3  对于不同的帮助类型有不同的意义,如 研发帮助 这个字段暂无意义,预留
+    int64 helpValue4 = 8; // 信息4  对于不同的帮助类型有不同的意义,如 研发帮助 这个字段暂无意义,预留
+}*/
+
+/*message AllianceHelpVo {
+    int64 helpId = 1; // 帮助信息的唯一ID
+    int32 helpType = 2; // 帮助类型  1-研发帮助
+    int32 maxHelpNum = 3; // 上限帮助次数
+    int32 nowHelpNum = 4; // 当前帮助次数
+    int64 helpPlayerId = 5; // 需要帮助的玩家ID
+    string helpPlayerName = 6; // 需要帮助的玩家名
+    int64 helpValue1 = 7; // 信息1  对于不同的帮助类型有不同的意义,如 研发帮助 这个字段表示科技ID
+    int64 helpValue2 = 8; // 信息2  对于不同的帮助类型有不同的意义,如 研发帮助 这个字段表示科技等级
+    int64 helpValue3 = 9; // 信息3  对于不同的帮助类型有不同的意义,如 研发帮助 这个字段暂无意义,预留
+    int64 helpValue4 = 10; // 信息4  对于不同的帮助类型有不同的意义,如 研发帮助 这个字段暂无意义,预留
+    int32 photoId = 11; // 玩家头像
+    repeated int32 positions = 12; //职位
+    int32 jjcScore = 13;
+}*/
+
+// 获取赌场奖池信息
+message GetCasinoAskReq {
+}
+
+message GetCasinoAskRt {
+    int32 rt = 1;
+    int64 totalMoney = 2;
+    repeated client2server.CasinosWinner casinosWinner = 3;
+}
+
+// 赌场抽到大奖
+message DrawCasinoAskReq {
+    int32 rate = 1;
+    int32 areaNo = 2; // 服务器编号
+    string playerName = 3; // 玩家名
+    string allianceShortName = 4; // 玩家昵称
+    int64 myPlayerId = 5; // 玩家id
+    int32 belongState = 6;
+}
+
+message DrawCasinoAskRt {
+    int32 rt = 1;
+    int64 totalMoney = 2;
+}
+
+
+message RoomOwnerChangeAskReq {
+    int64 roomId = 1;
+    int64 newOwner = 2;
+}
+
+message RoomOwnerChangeAskRt {
+    int32 rt = 1;
+    int64 chatRoomId = 2;
+    string roomName = 3;
+    int32 unreadNum = 4;
+    repeated int32 iconProtoIds = 5;
+    int32 memberNum = 6;
+    int64 roomPlayerId = 7;
+    repeated int64 members = 8;
+    int64 lastSendTime = 9;
+}
+
+
+message CreateRoomAskReq {
+    string nameRoom = 1;
+    int32 iconProto = 2;
+    string playerName = 3;
+    int32 vipLv = 4;
+    int32 areaNo = 5;
+    string allianceShortName = 6;
+    int64 fightValue = 7;
+    int32 castleLv = 8;
+    string playerShortName = 9;
+    int32 belongState = 10;
+    int64 worldId = 11;
+    int32 photoFrameProtoId = 12;//头像框信息
+}
+
+message CreateRoomAskRt {
+    int32 rt = 1;
+    int64 chatRoomId = 2;
+    string roomName = 3;
+    int32 unreadNum = 4;
+    repeated int32 iconProtoIds = 5;
+    int32 memberNum = 6;
+    int64 roomPlayerId = 7;
+}
+
+message DissmissChatRoomAskReq {
+    int64 roomId = 1;
+
+    LogVo log = 11;
+}
+
+message DissmissChatRoomAskRt {
+    int32 rt = 1;
+    repeated int64 members = 2;
+    int64 chatRoomId = 3;
+    string roomName = 4;
+    int32 unreadNum = 5;
+    repeated int32 iconProtoIds = 6;
+    int32 memberNum = 7;
+    int64 roomPlayerId = 8;
+}
+
+message InviteJoinChatAskReq {
+    int64 roomId = 1;
+    int64 playerIdAdd = 2;
+    string playerName = 3; // 玩家名字
+    int32 protoId = 4; // 头像ID
+    int32 vipLv = 5;
+    int32 areaNo = 6;
+    string allianceShortName = 7;
+    int64 fightValue = 8;
+    int32 castleLv = 9;
+    string playerShortName = 10;
+    int32 belongState = 11;
+    int64 worldId = 12;
+    int32 photoFrameProtoId = 13;//头像框id
+}
+
+message InviteJoinChatAskRt {
+    int32 rt = 1;
+    int64 freshmen = 2;
+    int64 chatRoomId = 3;
+    string roomName = 4;
+    int32 unreadNum = 5;
+    repeated int32 iconProtoIds = 6;
+    int32 memberNum = 7;
+    int64 roomPlayerId = 8;
+    repeated int64 memberIds = 9;
+    int64 lastSendTime = 10;
+}
+
+message KickOutChatRoomAskReq {
+    int64 roomId = 1;
+    int64 playerIdRemove = 2;
+}
+
+message KickOutChatRoomAskRt {
+    int32 rt = 1;
+    int64 chatRoomId = 2;
+    string roomName = 3;
+    int32 unreadNum = 4;
+    repeated int32 iconProtoIds = 5;
+    int32 memberNum = 6;
+    int64 roomPlayerId = 7;
+    repeated int64 memberIds = 8;
+    int64 lastSendTime = 9;
+}
+
+message QueryMemberInRoomAskReq {
+    int64 roomId = 1;
+}
+
+message QueryMemberInRoomAskRt {
+    int32 rt = 1;
+    repeated client2server.GroupMember groupMember = 2;
+}
+
+
+message QuitOneRoomAskReq {
+    int64 roomId = 1;
+}
+
+message QuitOneRoomAskRt {
+    int32 rt = 1;
+    int64 chatRoomId = 2;
+    string roomName = 3;
+    int32 unreadNum = 4;
+    repeated int32 iconProtoIds = 5;
+    int32 memberNum = 6;
+    int64 roomPlayerId = 7;
+    repeated int64 memberIds = 8;
+    int64 lastSendTime = 9;
+}
+
+
+message RenameChatRoomAskReq {
+    int64 roomId = 1;
+    string roomName = 2;
+}
+
+message RenameChatRoomAskRt {
+    int32 rt = 1;
+    repeated int64 members = 2;
+    int64 chatRoomId = 3;
+    string roomName = 4;
+    int32 unreadNum = 5;
+    repeated int32 iconProtoIds = 6;
+    int32 memberNum = 7;
+    int64 roomPlayerId = 8;
+}
+
+
+message SendAllianceChatAskReq {
+    string message = 1; // 普通消息
+    int32 messageType = 2; // 战报，表情，普通消息，喇叭
+    string playerName = 3;
+    string playerShortName = 4;
+    int64 easyFightId = 5; // 战报id
+    int64 massId = 6; // 集结id
+    string massName = 7; // 集结名字
+    int32 iconProtoId = 8; // 头像模板id
+    int32 areaNo = 9; // 区号
+    int64 pltAreaId = 10; // 所属服务器 唯一标识
+    int32 vipLv = 11; // vip等级
+    string allianceName = 12; // 联盟名称
+    string allianceShortName = 13; // 联盟名称
+    int32 wonderPos = 14; // 国王
+    int32 kingdomPos = 15; // 大帝
+    int32 belongState = 16;
+}
+
+message SendAllianceChatAskRt {
+    int32 rt = 1;
+    int64 chatId = 2;
+}
+
+
+message SendRoomMsgAskReq {
+    string message = 1; // 普通消息
+    int32 messageType = 2; // 战报，表情，普通消息，喇叭
+    string playerName = 3;
+    string playerShortName = 4;
+    int64 easyFightId = 5; // 战报id
+    int64 massId = 6; // 集结id
+    string massName = 7; // 集结名字
+    int32 iconProtoId = 8; // 头像模板id
+    int32 areaNo = 9; // 区号
+    int64 pltAreaId = 10; // 所属服务器 唯一标识
+    int32 vipLv = 11; // vip等级
+    string allianceName = 12; // 联盟名称
+    string allianceShortName = 13; // 联盟名称
+    int32 alliancePos = 14; // vip等级
+    int64 roomId = 15;
+    int32 wonderPos = 16;
+    int32 belongState = 17;
+}
+
+message SendRoomMsgAskRt {
+    int32 rt = 1;
+    int64 chatId = 2;
+}
+
+message GetChatHistoryAskReq {
+    int64 chatId = 1;
+    int32 chatType = 2;
+
+    int64 joinTime = 11;
+}
+
+message GetChatHistoryAskRt {
+    int32 rt = 1;
+    repeated client2server.ChatInfo chatRecordList = 2;
+    client2server.ChatRoom room = 3;
+}
+
+message GetChatInfoAskReq {
+    int64 chatId = 1;
+}
+
+message GetChatInfoAskRt {
+    int32 rt = 1;
+    client2server.ChatInfo chatRecordList = 2;
+}
+
+message GetChatroomAskReq {
+    int64 roomId = 1;
+}
+
+message GetChatroomAskRt {
+    int32 rt = 1;
+    client2server.ChatRoom ChatRoomVo = 2;
+}
+
+// 世界到公共的ask请求
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 世界到公共的ask请求
+message World2PubAskReq {
+    int64 fromId = 1;
+    int64 playerId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+         CreateAllianceAskReq createAllianceAskReq = 11;
+         JoinAllianceByIdAskReq joinAllianceByIdAskReq = 12;
+         DealJoinAllianceAskReq dealJoinAllianceAskReq = 13;
+         CheckAllianceNameAskReq checkAllianceNameAskReq = 14;
+         AllianceInviteAskReq allianceInviteAskReq = 15;
+         OpenAllianceGiftAskReq openAllianceGiftAskReq = 16;
+         AllianceRecallPosAskReq allianceRecallPosAskReq = 17;
+         SetAlliancePowerLimitAskReq setAlliancePowerLimitAskReq = 18;
+         AllianceJoinCancelAskReq allianceJoinCancelAskReq = 19;
+         WriteAllianceWaijiaoAskReq writeAllianceWaijiaoAskReq = 20;
+         OpenAllianceWaijiaoAskReq openAllianceWaijiaoAskReq = 21;
+         QueryAllianceLogAskReq queryAllianceLogAskReq = 27;
+         SetAllianceDescptAskReq setAllianceDescptAskReq = 28;
+         AllianceDismissAskReq allianceDismissAskReq = 31;
+         ResetAlliancePosAskReq resetAlliancePosAskReq = 32;
+         RemoveAllianceMemberAskReq removeAllianceMemberAskReq = 33;
+         GetAllianceGiftAskReq getAllianceGiftAskReq = 34;
+         QueryAllianceMemberAskReq queryAllianceMemberAskReq = 35;
+         QueryAllianceReqListAskReq queryAllianceReqListAskReq = 37;
+         QueryAllianceInfoAskReq queryAllianceInfoAskReq = 38;
+         QueryAllianceListAskReq queryAllianceListAskReq = 39;
+         SummonAllianceBossAskReq summonAllianceBossAskReq = 40;
+         QueryAllianceBossLivenessAskReq queryAllianceBossLivenessAskReq = 41;
+         RemoveAllianceBossAskReq removeAllianceBossAskReq = 43;
+         QueryInAllianceRankReq queryInAllianceRankReq = 44;
+         QueryAllianceRankAskReq queryAllianceRankAskReq = 45;
+         QueryAllianceRankFirstAskReq queryAllianceRankFirstAskReq = 46;
+         AllianceActivityScoreAddAskReq allianceActivityScoreAddAskReq = 48;
+         SeleteAllianceActivityInfosReq seleteAllianceActivityInfosReq = 49;
+         OpenActivityAskReq openActivityAskReq = 51;
+         SelectActivityRankAskReq selectActivityRankAskReq = 52;
+         SelectNowRankReq selectNowRankReq = 53;
+         SendAllianceMassAskReq sendAllianceMassAskReq = 57;
+         ReloadPublicConfigAskReq reloadPublicConfigAskReq = 58;
+         GmOverAllianceActivityAskReq gmOverAllianceActivityAskReq = 59;
+         SendWonderAwardAskReq sendWonderAwardAskReq = 60;
+         QueryWonderAwardRecordAskReq queryWonderAwardRecordAskReq = 61;
+         ClearWonderAwardRecordAskReq clearWonderAwardRecordAskReq = 62;
+         QueryOccupyInfoAskReq queryOccupyInfoAskReq = 64;
+         HunterInviteAskReq hunterInviteAskReq = 65;
+         UpdateHunterInviteAskReq updateHunterInviteAskReq = 66;
+         SetPublicMoveServerStateReq setPublicMoveServerStateReq = 67;
+         QueryApplyAllianceListAskReq queryApplyAllianceListAskReq = 68;
+         AllianceMemberQuitAskReq allianceMemberQuitAskReq = 69;
+         SendWorldAllianceChatAskReq sendWorldAllianceChatAskReq = 71;
+         OpenAllianceBossAskReq openAllianceBossAskReq = 72;
+         EndFightAllianceBossAskReq endFightAllianceBossAskReq = 73;
+         QueryInAllianceFirstRankReq queryInAllianceFirstRankReq = 74;
+         OpenAllianceFightMainReq openAllianceFightMainReq = 75;
+         QueryAllianceFightArmyReq queryAllianceFightArmyReq = 76;
+         BeginAllianceFightReq beginAllianceFightReq = 77;
+         OpenAllianceFightReq openAllianceFightReq = 78;
+         QueryAllianceBuildsAskReq queryAllianceBuildsAskReq = 79;
+         CheckCreateAllianceBuildAskReq checkCreateAllianceBuildAskReq = 80;
+         OpenFightDayEliminateReq openFightDayEliminateReq = 81;
+         AllianceSetApplyPowerReq allianceSetApplyPowerReq = 82;
+         ApplyAllianceOfficerReq applyAllianceOfficerReq = 83;
+         QueryApplyAllianceOfficerReq queryApplyAllianceOfficerReq = 84;
+         DeleteApplyAllianceOfficerReq deleteApplyAllianceOfficerReq = 85;
+         BeginFightAllianceBossAskReq beginFightAllianceBossAskReq = 86;
+         QueryJjcOppAskReq queryJjcOppAskReq = 87;
+        
+        JjcScoreChangeAskReq jjcScoreChangeAskReq = 88;
+        FetchJjcOppAskReq fetchJjcOppAskReq = 89;
+        QueryJjcAllRankReq queryJjcAllRankReq = 90;
+        QueryAllianceChatReq queryAllianceChatReq = 92;
+
+        UnregisterAccount2PubReq unregisterAccount2PubReq = 93;
+    }
+}
+
+// 世界到公共的ask返回
+message World2PubAskResp {
+    int64 worldId = 1;
+    int64 playerId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+        CreateAllianceAskRt createAllianceAskRt = 11;
+        JoinAllianceByIdAskRt joinAllianceByIdAskRt = 12;
+        DealJoinAllianceAskRt dealJoinAllianceAskRt = 13;
+        CheckAllianceNameAskRt checkAllianceNameAskRt = 14;
+        AllianceInviteAskRt allianceInviteAskRt = 15;
+        OpenAllianceGiftAskRt openAllianceGiftAskRt = 16;
+        AllianceRecallPosAskRt allianceRecallPosAskRt = 17;
+        SetAlliancePowerLimitAskRt setAlliancePowerLimitAskRt = 18;
+        AllianceJoinCancelAskRt allianceJoinCancelAskRt = 19;
+        WriteAllianceWaijiaoAskRt writeAllianceWaijiaoAskRt = 20;
+        OpenAllianceWaijiaoAskRt OpenAllianceWaijiaoAskRt = 21;
+        QueryAllianceLogAskRt queryAllianceLogAskRt = 27;
+        SetAllianceDescptAskRt setAllianceDescptAskRt = 28;
+        AllianceDismissAskRt allianceDismissAskRt = 31;
+        ResetAlliancePosAskRt resetAlliancePosAskRt = 32;
+        RemoveAllianceMemberAskRt removeAllianceMemberAskRt = 33;
+        GetAllianceGiftAskRt getAllianceGiftAskRt = 34;
+        QueryAllianceMemberAskRt queryAllianceMemberAskRt = 35;
+        QueryAllianceReqListAskRt queryAllianceReqListAskRt = 37;
+        QueryAllianceInfoAskRt queryAllianceInfoAskRt = 38;
+        QueryAllianceListAskRt queryAllianceListAskRt = 39;
+        SummonAllianceBossAskRt summonAllianceBossAskRt = 40;
+        QueryAllianceBossLivenessAskRt queryAllianceBossLivenessAskRt = 41;
+        RemoveAllianceBossAskRt removeAllianceBossAskRt = 43;
+        QueryInAllianceRankRt queryInAllianceRankRt = 44;
+        QueryAllianceRankAskRt queryAllianceRankAskRt = 45;
+        QueryAllianceRankFirstAskRt queryAllianceRankFirstAskRt = 46;
+        AllianceActivityScoreAddAskRt allianceActivityScoreAddAskRt = 48;
+        SeleteAllianceActivityInfosRt seleteAllianceActivityInfosRt = 49;
+        OpenActivityAskRt openActivityAskRt = 51;
+        SelectActivityRankAskRt selectActivityRankAskRt = 52;
+        SelectNowRankRt selectNowRankRt = 53;
+        SendAllianceMassAskRt sendAllianceMassAskRt = 57;
+        ReloadPublicConfigAskRt reloadPublicConfigAskRt = 58;
+        GmOverAllianceActivityAskRt gmOverAllianceActivityAskRt = 59;
+        SendWonderAwardAskRt sendWonderAwardAskRt = 60;
+        QueryWonderAwardRecordAskRt queryWonderAwardRecordAskRt = 61;
+        ClearWonderAwardRecordAskRt clearWonderAwardRecordAskRt = 62;
+        QueryOccupyInfoAskRt queryOccupyInfoAskRt = 64;
+        HunterInviteAskRt hunterInviteAskRt = 65;
+        UpdateHunterInviteAskRt updateHunterInviteAskRt = 66;
+        SetPublicMoveServerStateRt setPublicMoveServerStateRt = 67;
+        QueryApplyAllianceListAskRt queryApplyAllianceListAskRt = 68;
+        AllianceMemberQuitAskRt allianceMemberQuitAskRt = 69;
+        SendWorldAllianceChatAskRt sendWorldAllianceChatAskRt = 71;
+        OpenAllianceBossAskRt openAllianceBossAskRt = 72;
+        EndFightAllianceBossAskRt endFightAllianceBossAskRt = 73;
+        QueryInAllianceFirstRankRt queryInAllianceFirstRankRt = 74;
+        OpenAllianceFightMainResp openAllianceFightMainResp = 75;
+        QueryAllianceFightArmyResp queryAllianceFightArmyResp = 76;
+        BeginAllianceFightResp beginAllianceFightResp = 77;
+        OpenAllianceFightResp openAllianceFightResp = 78;
+        QueryAllianceBuildsAskResp queryAllianceBuildsAskResp = 79;
+        CheckCreateAllianceBuildAskResp checkCreateAllianceBuildAskResp = 80;
+        OpenFightDayEliminateResp openFightDayEliminateResp = 81;
+        AllianceSetApplyPowerResp allianceSetApplyPowerResp = 82;
+        ApplyAllianceOfficerResp applyAllianceOfficerResp = 83;
+        QueryApplyAllianceOfficerResp queryApplyAllianceOfficerResp = 84;
+        DeleteApplyAllianceOfficerResp deleteApplyAllianceOfficerResp = 85;
+        BeginFightAllianceBossAskRt beginFightAllianceBossAskRt = 86;
+        QueryJjcOppAskResp queryJjcOppAskResp = 87;
+        JjcScoreChangeAskResp jjcScoreChangeAskResp = 88;
+        FetchJjcOppAskResp fetchJjcOppAskResp = 89;
+        QueryJjcAllRankResp queryJjcAllRankResp = 90;
+        QueryAllianceChatResp queryAllianceChatResp = 92;
+        UnregisterAccount2PubResp unregisterAccount2PubResp = 93;
+    }
+}
+
+// 联盟销号
+message UnregisterAccount2PubReq {
+    int64 playerId = 1; // 玩家ID
+}
+
+message UnregisterAccount2PubResp {
+    int32 rt = 2;
+}
+
+// 联盟点赞
+message QueryAllianceChatReq {
+    repeated int64 chatId = 1; // 点赞的chatId
+    repeated int64 chatIds = 2; // 身上所有的已点赞chatId
+}
+
+message QueryAllianceChatResp {
+    int32 rt = 2;
+    repeated int64 outTimeChatIds = 3; // 过期的chatId
+    repeated string params = 4; // 查到的参数
+}
+
+// 查询竞技场对手
+message QueryJjcAllRankReq {
+    int32 start = 1;
+    int32 over = 2;
+}
+
+message QueryJjcAllRankResp {
+    int32 rt = 1;
+    client2server.QueryJjcAllRankVo myInfo = 2;
+    repeated client2server.QueryJjcAllRankVo vos = 3;
+}
+
+// 查询竞技场对手
+message QueryJjcOppAskReq {
+}
+
+message QueryJjcOppAskResp {
+    int32 rt = 1;
+    int64 oppPlayerId = 2;
+}
+
+// 竞技场积分变动
+message JjcScoreChangeAskReq {
+    int32 changeType = 1; //1-增加 2-减少
+    int32 value = 2;
+    repeated int64 blackPlayerId = 3; // 不会匹配中的玩家 本次对手 + 被保护玩家
+    int64 newOpp = 4; // 是否需要换一个新对手 0否1是
+    string name = 5;
+    string allianceName = 6;
+    int32 areaNo = 7;
+    int32 photo = 8;
+    int32 state = 9;
+}
+
+message JjcScoreChangeAskResp {
+    int32 rt = 1;
+    int64 newOppPlayerId = 2; // 如果有需要 要换个对手 进攻方胜利用的
+}
+
+// 竞技场更换对手
+message FetchJjcOppAskReq {
+    repeated int64 blackPlayerId = 1; // 不会匹配中的玩家 本次对手 + 被保护玩家
+}
+
+message FetchJjcOppAskResp {
+    int32 rt = 1;
+    int64 newOppPlayerId = 2; // 对手
+}
+
+// 设置联盟官员申请战斗力
+message AllianceSetApplyPowerReq {
+    int64 canApplyPower = 1; // 可以申请职位的战斗力要求  < 0 表示未开启这个功能
+}
+
+message AllianceSetApplyPowerResp {
+    int32 rt = 1;
+}
+
+// 设置联盟官员申请战斗力
+message ApplyAllianceOfficerReq {
+    int32 applyId = 1; // 要申请的位置id
+}
+
+message ApplyAllianceOfficerResp {
+    int32 rt = 1;
+}
+
+// 查询申请成为联盟官员列表
+message QueryApplyAllianceOfficerReq {
+}
+
+message QueryApplyAllianceOfficerResp {
+    int32 rt = 1;
+    repeated client2server.ApplyOfficerVo applyOfficerVos = 2;
+    int64 canApplyPower = 3; // 允许申请职位的战力
+}
+
+// 删除一条申请
+message DeleteApplyAllianceOfficerReq {
+    int64 applyId = 4;
+}
+
+message DeleteApplyAllianceOfficerResp {
+    int32 rt = 1;
+}
+
+// 每日三消活动主界面请求
+message OpenFightDayEliminateReq {
+}
+
+message OpenFightDayEliminateResp {
+    int32 rt = 1;
+    int32 protoId = 2; // 本届模板
+    repeated client2server.DayEliminateApplyInfo dayEliminateApplyInfos = 3; // 参赛者数据
+    repeated client2server.HistoryInfo historyInfos = 4; // 名人堂数据
+}
+
+message CheckCreateAllianceBuildAskReq {
+    int32 buildProtoId = 1;
+    int64 buildInWorldId = 2;
+}
+
+message CheckCreateAllianceBuildAskResp {
+    int32 rt = 1;
+}
+
+message QueryAllianceBuildsAskReq {
+}
+
+message QueryAllianceBuildsAskResp {
+    int32 rt = 1;
+    client2server.QueryAllianceBuildsRt queryAllianceBuildsRt = 2;
+}
+
+message BeginAllianceFightReq {
+    int64 oppAllianceId = 1; //
+    int64 oppPlayerId = 2; //
+    repeated int64 heroIds = 3;
+}
+
+message BeginAllianceFightResp {
+    int32 rt = 1;
+    int32 bgSkillId = 2;
+}
+
+message QueryAllianceFightArmyReq {
+    int64 queryPlayerId = 1; // 要查询的玩家的布阵数据 如果是0的话就是查询全帮
+}
+
+message QueryAllianceFightArmyResp {
+    int32 rt = 1;
+    repeated client2server.AllianceFightDefArmyPlan allianceFightArmyPlan = 2; // 所有防守布阵具体状态
+}
+
+message OpenAllianceFightMainReq {
+}
+
+message OpenAllianceFightMainResp {
+    int32 rt = 1;
+    client2server.OpenAllianceFightMainRt openAllianceFightMainRt = 2;
+}
+
+message EndFightAllianceBossAskReq {
+    int64 fightHurt = 1; // 玩家打出来的总伤害
+    int64 costHp = 2; // boss真实掉的血量
+    pb4server.LogVo log = 3;
+}
+
+message EndFightAllianceBossAskRt {
+    int32 rt = 1;
+    int32 overTime = 2; // 结束时间
+    int32 bossId = 3;
+    int64 totleHp = 4; // 总血量
+    int64 nowHp = 5; // 当前血量
+    int64 bossUniqueId = 6; // 每只boss的唯一64位ID
+}
+
+
+message BeginFightAllianceBossAskReq {
+}
+
+message BeginFightAllianceBossAskRt {
+    int32 rt = 1;
+    int32 bossId = 2;
+    int64 nowHp = 3;
+}
+
+message OpenAllianceBossAskReq {
+}
+
+message OpenAllianceBossAskRt {
+    int32 rt = 1;
+    client2server.AllianceBossVo allianceBossVo = 2;
+}
+
+// 发送联盟消息
+message SendWorldAllianceChatAskReq {
+    string message = 1; // 普通消息
+    int32 messageType = 2; // 战报，表情，普通消息，喇叭
+    string playerName = 3;
+    string playerShortName = 4;
+    int64 easyFightId = 5; // 战报id
+    int64 massId = 6; // 集结id
+    string massName = 7; // 集结名字
+    int32 iconProtoId = 8; // 头像模板id
+    int32 areaNo = 9; // 区号
+    int64 pltAreaId = 10; // 所属服务器 唯一标识
+    int32 vipLv = 11; // vip等级
+    string allianceName = 12; // 联盟名称
+    string allianceShortName = 13; // 联盟名称
+    int32 wonderPos = 14; // 国王
+    int32 kingdomPos = 15; // 大帝
+    int32 belongState = 16;
+}
+
+message SendWorldAllianceChatAskRt {
+    int32 rt = 1;
+    int64 chatId = 2;
+}
+
+// 玩家离帮
+message AllianceMemberQuitAskReq {
+    LogVo log = 1;
+}
+
+message AllianceMemberQuitAskRt {
+    int32 rt = 1;
+}
+
+// 已申请列表
+message QueryApplyAllianceListAskReq {
+}
+
+message QueryApplyAllianceListAskRt {
+    int32 rt = 1;
+    AllianceQueryListInfoVo alliance = 2; //联盟列表
+}
+
+// 设置迁城状态
+message SetPublicMoveServerStateReq {
+    int32 state = 1; // 如果设置成锁定状态 下面的参数就没意义 如果是解锁状态的话 下面的值需要跟着修改的
+    int32 areaNo = 2; // 区号
+    int64 newWorldId = 3; // 服务器唯一id WorldId
+    int32 x = 4;
+    int32 y = 5;
+}
+
+message SetPublicMoveServerStateRt {
+    int32 rt = 1;
+}
+
+// 创建公会ask
+message CreateAllianceAskReq {
+    string name = 1;
+    string shortName = 2;
+    int64 pid = 3;
+    int32 allianceLan = 4;
+    string playerName = 5;
+    int64 power = 6;
+    int64 lastLeaveTime = 7;
+    int64 honor = 8;
+    int32 canHelpNum = 9;
+    int64 gamePltAreaNo = 10;
+    int64 mapPltAreaNo = 11;
+    int32 gameAreaNo = 12;
+    int32 photoProtoId = 13;
+    int32 playerCastleLv = 14;
+    string playerNickName = 15;
+    int32 flagColor = 16; // 联盟旗帜的颜色
+    int32 flagStyle = 17; // 联盟旗帜的样式
+    int32 flagEffect = 18; // 联盟旗帜图案
+    int32 jjcScore = 19;
+    int32 state = 20; //所在的州
+    client2server.PhotoViewInfo photoInfo = 21;
+    string manifesto = 22; //联盟宣言
+    int64 worldOpenTime = 23; //世间开服时间
+    LogVo log = 31;
+}
+
+message CreateAllianceAskRt {
+    int32 rt = 1;
+    int32 flagColor = 2;
+    int32 flagStyle = 3;
+    int32 flagEffect = 4;
+    string allianceName = 5;
+    string allianceShortName = 6;
+    int32 allianceLan = 7;
+    int32 state = 8; //所在的州
+}
+
+// 加入联盟ask
+message JoinAllianceByIdAskReq {
+    int64 pid = 1;
+    int64 fightValue = 2;
+    string playerName = 3;
+    int32 playerPhoto = 4;
+    int64 pltAreaNo = 5;
+    int32 areaNo = 6;
+    int64 lastLoginTime = 7;
+    int64 offTime = 8;
+    int32 photoProtoId = 9;
+    int32 playerCastleLv = 10;
+    string playerNickName = 11;
+    int32 jjcScore = 12;
+    int32 nowState = 13; // 当前所属州
+    int32 firstState = 14; // 第一次入盟的州
+    client2server.PhotoViewInfo photoInfo = 15;
+
+    LogVo log = 21;
+}
+
+message JoinAllianceByIdAskRt {
+    int32 rt = 1;
+    int32 isCreateJoinInfo = 2; // 是否需要创建申请记录
+}
+
+// 处理加入联盟请求ask
+message DealJoinAllianceAskReq {
+    int32 reqType = 1;
+    int64 pid = 2;
+    int64 reqPid = 3;
+    QueryPlayerInfoAskVo queryPlayerInfoAskVo = 4;
+
+    LogVo log = 11;
+}
+
+message QueryPlayerInfoAskVo {
+    int64 gamePltAreaNo = 1;
+    string playerName = 2;
+    int32 photoProtoId = 3;
+    int64 offTime = 4;
+    int64 mapPltAreaNo = 5;
+    int64 lastLoginTime = 6;
+    int32 mapAreaNo = 7;
+    int32 playerCastleLv = 8;
+    string playerNickName = 9;
+    int32 jjcScore = 10;
+    int32 nowState = 12; // 当前所属州
+    int32 firstState = 13; // 第一次入盟的州
+    client2server.PhotoViewInfo photoInfo = 14;
+}
+
+message DealJoinAllianceAskRt {
+    int32 rt = 1;
+}
+
+// 检测公会名有效性ask
+message CheckAllianceNameAskReq {
+    int32 nameType = 1;
+    string name = 2;
+}
+
+message CheckAllianceNameAskRt {
+    int32 rt = 1;
+}
+
+// 公会要求ask
+message AllianceInviteAskReq {
+    int64 invitePlayerId = 1;
+}
+
+message AllianceInviteAskRt {
+    int32 rt = 1;
+}
+
+// 帮会礼物ask
+message OpenAllianceGiftAskReq {
+}
+
+message OpenAllianceGiftAskRt {
+    int32 rt = 1;
+    client2server.AllianceBigGiftVo allianceBigGiftVo = 2; // 我的礼物信息
+    repeated client2server.AllianceGiftVo allianceGiftVos = 3; // 礼物列表
+}
+
+// 罢免帮派职位
+message AllianceRecallPosAskReq {
+    int64 setPid = 1;
+    int32 posId = 2;
+
+    LogVo log = 11;
+}
+
+message AllianceRecallPosAskRt {
+    int32 rt = 1;
+}
+
+// 设置联盟申请实力限制
+message SetAlliancePowerLimitAskReq {
+    int64 power = 1;
+    int64 canAddPower = 2;
+}
+
+message SetAlliancePowerLimitAskRt {
+    int32 rt = 1;
+}
+
+// 取消联盟申请
+message AllianceJoinCancelAskReq {
+}
+
+message AllianceJoinCancelAskRt {
+    int32 rt = 1;
+}
+
+// 写外交界面
+message WriteAllianceWaijiaoAskReq {
+    int64 myAllianceId = 1; // 1-9是留言者的信息
+    int32 flagColor = 2;
+    int32 flagStyle = 3;
+    int32 flagEffect = 4;
+    string aName = 5;
+    string asName = 6;
+    string playerPos = 7;
+    string waijiaoInfo = 8;
+    int32 areaNo = 9; // 发言的人所属服务器区号
+    string playerName = 10;
+    int32 photoProtoId = 11;
+    string nickName = 12;
+    int32 jjcScore = 13;
+    int32 belongState = 14;
+    client2server.PhotoViewInfo photoInfo = 15;
+}
+
+message WriteAllianceWaijiaoAskRt {
+    int32 rt = 1;
+    AllianceWaijiaoInfoVo allianceWaijiaoInfos = 2;
+}
+
+message AllianceWaijiaoInfoVo {
+    int32 flagColor = 1; //联盟旗帜的颜色
+    int32 flagStyle = 2; //联盟旗帜的样式
+    int32 flagEffect = 3; //联盟旗帜图案
+    int64 aid = 4; //联盟名字
+    string name = 5; //联盟ID
+    string shortName = 6; //联盟简称
+    int64 playerId = 7; //玩家ID
+    string playerName = 8; //玩家名
+    string playerPositions = 9; //玩家职位
+    int32 createTime = 10; //发布时间
+    string waijiaoInfo = 11; //内容
+    int32 mapPltAreaNo = 12; //发表时所在区号
+    int32 photoProtoId = 13; //头像
+    string nickName = 14; //玩家昵称
+    int64 waijiaoId = 15; // 外交ID
+    int32 jjcScore = 16;
+    int32 belongState = 17;
+    client2server.PhotoViewInfo photoInfo = 18;
+}
+
+// 打开联盟外交界面
+message OpenAllianceWaijiaoAskReq {
+}
+
+message OpenAllianceWaijiaoAskRt {
+    int32 rt = 1;
+    repeated AllianceWaijiaoInfoVo allianceWaijiaoInfos = 2;
+}
+
+message AllianceReplyInfoVo {
+    int64 replyId = 1; //回复的回复ID
+    int64 playerId = 2; //回复的玩家ID
+    string playerName = 3; //回复的玩家名称
+    string playerShortName = 4; //回复的玩家昵称
+    repeated int32 positions = 5; //回复者的职位
+    int32 photoProtoId = 6; //回复者的头像模版
+    string message = 7; //回复内容
+    int32 replyAt = 8; //回复时间
+    int32 vipLv = 9; //vip等级
+    int32 curentPos = 10; // 官职
+}
+
+// 联盟邮件主题
+message AllianceTopicInfoVo {
+    int64 topicId = 1; //主题ID
+    int32 type = 2; //主题类型：40-联盟全体成员 41-白虎团邮件 42-青龙团邮件 43-玄武团邮件 44-朱雀团邮件
+    int64 playerId = 3; //发布的玩家ID
+    string playerName = 4; //发布的玩家名称
+    int32 photoProtoId = 5; //发布者的头像模版
+    string title = 6; //发布标题
+    int32 lastAt = 7; //最后一次回复时间
+    int32 isRead = 8; //是否已经读取
+    int32 isSign = 9; //是否收藏
+}
+
+// 查询联盟日志
+message QueryAllianceLogAskReq {
+}
+
+message QueryAllianceLogAskRt {
+    int32 rt = 1;
+    repeated client2server.AllianceQueryLogInfo l = 2;
+}
+
+// 设置联盟公告
+message SetAllianceDescptAskReq {
+    string desp = 1; // 公告内容
+    int32 despType = 2; // 公告类型  1-公告 2-标语
+}
+
+message SetAllianceDescptAskRt {
+    int32 rt = 1;
+}
+
+// 联盟解散
+message AllianceDismissAskReq {
+    LogVo log = 1;
+}
+
+message AllianceDismissAskRt {
+    int32 rt = 1;
+}
+
+// 任命职位
+message ResetAlliancePosAskReq {
+    int64 posPlayerId = 1; // 被设置职位人ID
+    repeated int32 posId = 2; // 职位
+    int64 allianceWorldOpenTime = 3;
+
+    LogVo log = 11;
+}
+
+message ResetAlliancePosAskRt {
+    int32 rt = 1;
+}
+
+// 联盟踢人
+message RemoveAllianceMemberAskReq {
+    int64 removePlayerId = 1; // 被踢的玩家ID
+    int32 isRook = 2; // 是否是新手期玩家  0-否 1-是
+
+    LogVo log = 11;
+}
+
+message RemoveAllianceMemberAskRt {
+    int32 rt = 1;
+}
+
+// 领取联盟礼物
+message GetAllianceGiftAskReq {
+    int32 addExp = 1;
+    int32 addBigExp = 2;
+    repeated int64 giftIds = 3;
+}
+
+message GetAllianceGiftAskRt {
+    int32 rt = 1;
+}
+
+// 查询联盟成员信息
+message QueryAllianceMemberAskReq {
+}
+
+message QueryAllianceMemberAskRt {
+    int32 rt = 1;
+    int32 onlineQty = 2; //在线玩家数
+    repeated client2server.AllianceQueryPlayerInfo queryAllianceMemberVos = 3;
+    repeated int32 myApplyPos = 4; // 我申请的职位
+    int64 canApplyPower = 5; // 可以申请职位的战斗力要求  < 0 表示未开启这个功能
+}
+
+// 查询联盟的申请信息
+message QueryAllianceReqListAskReq {
+}
+
+message QueryAllianceReqListAskRt {
+    int32 rt = 1;
+    int64 canAddPower = 2; // 可以直接加入的战斗力
+    int64 powerLimit = 3; // 可申请的最低战斗力
+    repeated AllianceQueryReqListInfoVo players = 4; //申请加入联盟的玩家列表
+}
+
+message AllianceQueryReqListInfoVo {
+    int64 id = 1; //玩家ID
+    string name = 2; //玩家名称
+    int32 photoProtoId = 3; //玩家头像
+    int64 fightValue = 4; //战斗力
+    int32 jjcSocre = 7;
+    int32 belongState = 8;
+    int32 photoFrameProtoId = 9;//头像框ID
+}
+
+// 查询某联盟具体信息
+message QueryAllianceInfoAskReq {
+    int32 logNum = 1; // 主页要显示的日志条数
+}
+
+message QueryAllianceInfoAskRt {
+    int32 rt = 1;
+    int64 id = 2; //联盟ID
+    string name = 3; //联盟名称
+    string shortName = 4; //联盟简称
+    int64 alliancePlayerId = 5; //盟主ID
+    string playerName = 6; //盟主名称
+    int32 reservePlayers = 7; //当前招收人数
+    int32 limitPlayers = 8; //招收人数上限
+    int64 powerValue = 9; //当前势力值
+    int64 woodConst = 10; //NPC城池木材固定值
+    int64 ironConst = 11; //NPC城池铁矿固定值
+    int64 stoneConst = 12; //NPC城池石料固定值
+    int64 foodstuffConst = 13; //NPC城池粮食固定值
+    string description = 14; //联盟公告
+    int64 ctrbtWeek = 15; //玩家本周贡献
+    int64 ctrbtTotal = 16; //玩家总贡献
+    int32 relationShipId = 17; //联盟关系：1-友好；2-敌对；3-中立
+    int32 rewards = 18; //奖池金额
+    int64 powerLimit = 19; //允许加入联盟的最低战斗力
+    int32 nextPublishTime = 20; //下次可发布任务时间
+    int32 hasCountyCity = 21; //联盟是否有占领的郡城：0-没有；1-有
+    int32 flagColor = 22; //旗帜的颜色模版ID
+    int32 flagStyle = 23; //旗帜的样式模版ID
+    int32 flagEffect = 24; //旗帜的图案模版ID
+    int32 setRelationEndTime = 25; //联盟外交变更冷却结束时间
+    int32 wood = 26; //木料加成
+    int32 iron = 27; //晶矿加成
+    int32 stone = 28; //石料加成
+    int32 food = 29; //粮食加成
+    int64 canAddLimit = 30; // 可以直接加入的战斗力 如果<0就表示没开启这个功能
+    string biaoyu = 31; //联盟标语
+    int32 allianceLan = 32; //联盟语种
+    int32 allianceInAreaNo = 33; //联盟所属的服务器编号
+    int32 occupyWonderCount = 34; //占领的奇观数量
+    int32 isApply = 35; // 是否申请过这个联盟
+    int32 fightRank = 36; // 战斗力排行
+    int32 giftLv = 37; // 礼物等级
+    string systemDescription = 38; // 系统联盟公告
+    int32 allianceLv = 39;
+    int64 allianceExp = 40;
+    int64 canApplyPower = 41; // 允许申请职位的战力
+    int32 belongState = 42;
+    repeated client2server.AllianceQueryLogInfo logs = 43; //联盟日志列表
+    string manifesto = 44; //联盟宣言
+    int64 lastManifesto = 45; //上次修改联盟宣言时间
+}
+
+// 查询可申请联盟列表
+message QueryAllianceListAskReq {
+    int32 playerMapAreaNo = 1; // 查看者所属地图服ID
+    string allianceName = 2; // 联盟名字或者简称
+    int32 allianceLan = 3; // 所选语言
+    int32 isFill = 4; // 是否尽可能补满50个  0 - 否 1 - 是
+    int32 nowState = 5; // 当前所属州
+    int32 firstState = 6; // 第一次入盟的州
+}
+
+message QueryAllianceListAskRt {
+    int32 rt = 1;
+    repeated AllianceQueryListInfoVo alliances = 2; //联盟列表
+}
+
+message AllianceQueryListInfoVo {
+    int64 id = 1; //联盟ID
+    string name = 2; //联盟名称
+    string shortName = 3; //联盟简称
+    int32 reservePlayers = 4; //当前招收人数
+    int64 powerValue = 5; //联盟势力值
+    int32 operate = 6; //可进行操作：0-申请加入；1-取消申请
+    int32 allianceLan = 7; // 所选语言
+    int64 canAddPower = 8; // 可直接加入战斗力值
+    int64 canReqPower = 9; // 可申请的战斗力值
+    int32 flagColor = 10; //旗帜的颜色模版ID
+    int32 flagStyle = 11; //旗帜的样式模版ID
+    int32 flagEffect = 12; //旗帜的图案模版ID
+    int64 alliancePower = 13; // 帮派战斗力
+    int32 giftLv = 14; //礼物等级
+    int32 areaNo = 15; // 区号
+    int32 allianceLv = 16; // 联盟等级
+    int32 belongState = 17;
+    int32 upLv = 18;
+    int32 allianceMemberLimit = 19; // 联盟人数上限
+    int32 allianceActivityProto = 20; // 当前的联盟活跃度模板
+    int32 newMemberActivityLv = 21;//新联盟活跃度联盟活跃等级
+}
+
+// 召唤联盟BOSS
+message SummonAllianceBossAskReq {
+    int32 bossId = 1; // 要召唤的联盟BOSSID
+    int32 x = 2; // 要召唤的联盟BOSSID
+    int32 y = 3; // 要召唤的联盟BOSSID
+    int32 score = 4; // 要召唤的积分档次
+    int32 areaNo = 5; // 服务器编号
+}
+
+message SummonAllianceBossAskRt {
+    int32 rt = 1;
+}
+
+// 查看联盟boss活跃度进度
+message QueryAllianceBossLivenessAskReq {
+}
+
+message QueryAllianceBossLivenessAskRt {
+    int32 rt = 1;
+    int32 value = 2; // 活跃度
+    repeated AllianceBossLivenessVo allianceBossLiveness = 3; // 召唤状态
+}
+
+message AllianceBossLivenessVo {
+    int32 score = 1; // 活跃度档
+    repeated AllianceBossSummonInfoVo allianceBossSummonInfo = 2; // 该挡内的召唤情况
+}
+
+message AllianceBossSummonInfoVo {
+    int32 bossId = 1;
+    int32 state = 2;
+}
+
+// 删除联盟BOSS
+message RemoveAllianceBossAskReq {
+    int32 x = 1; // 要召唤的联盟BOSSID
+    int32 y = 2; // 要召唤的联盟BOSSID
+}
+
+message RemoveAllianceBossAskRt {
+    int32 rt = 1;
+}
+
+//// GAME -> PUBLIC
+// 查询联盟内部数据排行榜
+message QueryInAllianceFirstRankReq {
+}
+
+// PUBLIC -> GAME
+// 查询联盟内部数据排行榜返回
+message QueryInAllianceFirstRankRt {
+    int32 rt = 1;
+    repeated QueryInAllianceFirstRankRtVo queryInAllianceFirstRankVos = 2; // 排行内容
+}
+
+message QueryInAllianceFirstRankRtVo {
+    int32 rankType = 1; // 排行类型
+    QueryInAllianceRankVo queryInAllianceRankVos = 2; // 排行内容
+    QueryInAllianceRankVo myRankVos = 3; // 我的数据
+}
+
+//// GAME -> PUBLIC
+// 查询联盟内部数据排行榜
+message QueryInAllianceRankReq {
+    int32 rankType = 1; // 排行类型
+}
+
+// PUBLIC -> GAME
+// 查询联盟内部数据排行榜返回
+message QueryInAllianceRankRt {
+    int32 rt = 1;
+    repeated QueryInAllianceRankVo queryInAllianceRankVos = 2; // 排行内容
+}
+
+message QueryInAllianceRankVo {
+    int64 playerId = 1; // 玩家ID
+    string playerName = 2; // 玩家名字
+    string playerNickName = 3; // 玩家昵称
+    int64 areaNo = 4; // 玩家所处服务器
+    int32 photo = 5; // 玩家头像
+    repeated int64 value = 6; // 内容
+    repeated int32 pos = 7; // 职位
+    int64 power = 8; // 战斗力
+    int32 curentPos = 9; // 官职
+    int32 belongState = 10;
+    int32 rank = 11;
+    int32 anonymous = 12;
+    client2server.PhotoViewInfo photoInfo = 13; // 头像信息
+}
+
+// GAME -> PUBLIC
+// 查询联盟数据排行榜
+message QueryAllianceRankAskReq {
+    int32 rankType = 1; // 排行类型
+    int32 page = 2;
+    int32 num = 3;
+    int32 areaNo = 4; //需要查询的玩家服
+}
+
+// PUBLIC -> GAME
+// 查询联盟数据排行榜返回
+message QueryAllianceRankAskRt {
+    int32 rt = 1;
+    repeated QueryAllianceRankAskVo queryAllianceRankVos = 2; // 排行内容
+    int32 myAllianceRank = 3; // 我帮派的排行  0表示不再前100
+    int64 myAllianceScore = 4; // 我帮派的成绩
+}
+
+message QueryAllianceRankAskVo {
+    int64 allianceId = 1; //联盟ID
+    int32 flagColor = 2; //旗帜的颜色模版ID
+    int32 flagStyle = 3; //旗帜的样式模版ID
+    int32 flagEffect = 4; //旗帜的图案模版ID
+    string allianceName = 5; //联盟名称
+    string allianceShortName = 6; //联盟简称
+    int64 value = 7; //内容
+    int32 belongState = 8;
+    int32 rank = 9;
+}
+
+// GAME -> PUBLIC
+// 查询联盟数据排行榜首页
+message QueryAllianceRankFirstAskReq {
+    int32 areaNo = 1; //需要查询的玩家服
+}
+
+// PUBLIC -> GAME
+// 查询联盟数据排行榜首页返回
+message QueryAllianceRankFirstAskRt {
+    int32 rt = 1;
+    repeated QueryAllianceRankAskVos queryAllianceRankVos = 2; // 排行内容
+}
+
+message QueryAllianceRankAskVos {
+    int32 rankType = 1;
+    QueryAllianceRankAskVo queryAllianceRankVos = 2; // 排行内容
+}
+
+// GAME -> PUBLIC
+// 联盟活动积分增加
+message AllianceActivityScoreAddAskReq {
+    int64 addScore = 1;
+    int32 conditionType = 2;
+}
+
+// PUBLIC -> GAME
+// 联盟活动积分增加返回
+message AllianceActivityScoreAddAskRt {
+    int32 rt = 1;
+    int64 successAddScore = 2;
+}
+
+// GAME -> PUBLIC
+// 打开活动总界面只请求联盟活动的数据
+message SeleteAllianceActivityInfosReq {
+}
+
+// PUBLIC -> GAME
+// 打开活动总界面只请求联盟活动的数据返回
+message SeleteAllianceActivityInfosRt {
+    int32 rt = 1;
+    repeated AllianceActivityInfoVo allianceActivityInfos = 2;
+}
+
+message AllianceActivityInfoVo {
+    int32 activityId = 1;
+    int32 score = 2;
+    int32 rank = 3;
+}
+
+// GAME -> PUBLIC
+// 查询活动的信息
+message OpenActivityAskReq {
+}
+
+// PUBLIC -> GAME
+// 查询活动的信息返回
+message OpenActivityAskRt {
+    int32 rt = 1;
+    repeated OpenActivityAskVo infos = 2;
+}
+
+message OpenActivityAskVo {
+    int32 activityId = 1;
+    int32 myRank = 2;
+    int32 castleLv = 3;
+    int32 score = 4;
+}
+
+// GAME -> PUBLIC
+// 查询活动排行
+message SelectActivityRankAskReq {
+    int64 rankId = 1;
+}
+
+// PUBLIC -> GAME
+// 查询活动排行返回
+message SelectActivityRankAskRt {
+    int32 rt = 1;
+    repeated AllianceActivityRankAskVo allianceActivityRankVos = 2;
+}
+
+message AllianceActivityRankAskVo {
+    int64 allianceId = 1;
+    string allianceName = 2;
+    string shortName = 3;
+    int32 myScore = 4;
+    int32 flagColor = 5;
+    int32 flagStyle = 6;
+    int32 flagEffect = 7;
+    int32 belongState = 8;
+}
+
+// GAME -> PUBLIC
+// 查询活动此时排行
+message SelectNowRankReq {
+    int32 activityId = 1;
+}
+
+// PUBLIC -> GAME
+// 查询活动排行返回
+message SelectNowRankRt {
+    int32 rt = 1;
+    repeated AllianceActivityRankAskVo allianceActivityRankVos = 2;
+}
+
+//MsgType = 11000
+// Public->Game
+// 修改联盟旗帜之后的推送
+message DealAfterSetAllianceFlagAskReq {
+    int64 allianceId = 1;
+    int32 color = 2;
+    int32 style = 3;
+    int32 effect = 4;
+}
+
+//MsgType = 11002
+// Public->Game
+// 帮派职位变化通知给所有帮众
+message PosChangeNoticAllAllianceAskReq {
+    int64 allianceId = 1;
+    int32 pos = 2;
+    string playerName = 3;
+    string getPosPlayerName = 4;
+    int32 changeType = 5;
+    repeated int32 positions = 6;
+    int64 setPlayerId = 7;
+    int32 isOnline = 8;
+    int32 photoProtoId = 9;
+}
+
+// GAME -> PUBLIC
+// 分发联盟礼物
+message DistributeAllianceGiftAskReq {
+    repeated DistributeAllianceGiftAskReqVo giftMap = 1;
+}
+
+message DistributeAllianceGiftAskReqVo {
+    int32 giftId = 1;
+    int32 giftNum = 2;
+    string fromLanId = 3;
+    repeated string fromLanParam = 4;
+}
+
+// PUBLIC -> GAME
+// 分发联盟礼物返回
+message DistributeAllianceGiftAskRt {
+    int32 rt = 1;
+}
+
+// GAME -> PUBLIC
+// 发送联盟邮件
+message SendAllianceMailAskReq {
+    client2server.MailTitleAndCon mailInfo = 1;
+    int64 worldId = 2;
+
+    LogVo log = 11;
+}
+
+// PUBLIC -> GAME
+// 发送联盟邮件返回
+message SendAllianceMailAskRt {
+    int32 rt = 1;
+}
+
+// HOME -> PUBLIC
+// 发送联盟聊天消息
+message SendAllianceMassAskReq {
+    string message = 1;
+    int32 messageType = 2;
+    string playerName = 3;
+    string playerShortName = 4;
+    int64 massId = 5;
+    string massName = 6;
+    int32 iconProtoId = 7;
+    int32 areaNo = 8;
+    int64 pltAreaId = 9;
+    int32 vipLv = 10;
+    string allianceName = 11;
+    string allianceShortName = 12;
+    int32 wonderPos = 13;
+    int32 belongState = 14;
+}
+
+message SendAllianceMassAskRt {
+    int32 rt = 1;
+    int64 chatId = 2;
+    int32 pos = 3;
+}
+
+// 重载配置表
+message ReloadPublicConfigAskReq {
+}
+
+message ReloadPublicConfigAskRt {
+    int32 rt = 1;
+}
+
+// GM命令结算联盟活动
+message GmOverAllianceActivityAskReq {
+}
+
+// GM命令结算联盟活动返回
+message GmOverAllianceActivityAskRt {
+    int32 rt = 1;
+}
+
+// 请求发送奇观战奖励
+message SendWonderAwardAskReq {
+    int64 targetPlayerId = 1;
+    int32 awardId = 2;
+}
+
+message SendWonderAwardAskRt {
+    int32 rt = 1;
+}
+
+// 查询奇观战奖励记录
+message QueryWonderAwardRecordAskReq {
+}
+
+message QueryWonderAwardRecordAskRt {
+    int32 rt = 1;
+    repeated WonderAwardRecordVo queryAllianceAwardInfo = 2;
+}
+
+message WonderAwardRecordVo {
+    int32 awardId = 1;
+    repeated int64 playerIds = 2;
+}
+
+// 请求清除奇观战奖励记录
+message ClearWonderAwardRecordAskReq {
+}
+
+message ClearWonderAwardRecordAskRt {
+    int32 rt = 1;
+}
+
+// 查询占领的信息
+message QueryOccupyInfoAskReq {
+}
+
+message QueryOccupyInfoAskRt {
+    int32 rt = 1;
+    repeated client2server.OccupyWonder occupyWonderInfo = 2;
+    repeated client2server.OccupyWorldCheckPoint occupyWorldCheckPointInfo = 3; //关卡信息
+    repeated client2server.OccupyRes occupyResInfo = 4; //资源矿信息
+}
+
+// 发送狩猎邀请
+message HunterInviteAskReq {
+    int32 posX = 1;
+    int32 posY = 2;
+    int32 bossId = 3;
+    int32 nowHp = 4;
+    repeated AtkRecordVo atkRecord = 5;
+}
+
+message HunterInviteAskRt {
+    int32 rt = 1;
+}
+
+message AtkRecordVo {
+    int64 playerId = 1;
+    int32 damage = 2;
+}
+
+// 更新狩猎邀请
+message UpdateHunterInviteAskReq {
+    int32 posX = 1;
+    int32 posY = 2;
+    int32 nowHp = 3;
+    repeated AtkRecordVo atkRecord = 4;
+}
+
+message UpdateHunterInviteAskRt {
+    int32 rt = 1;
+}
+
+// Public到PublicManager的ask请求
+message Public2PublicManagerAskReq {
+    int64 publicId = 1;
+}
+
+// Public到PublicManager的ask返回
+message Public2PublicManagerAskResp {
+    int64 publicId = 1;
+}
+
+// PublicManager到Public的ask请求
+message PubMgr2PubAskReq {
+    int64 fromId = 1;
+
+    oneof msg {
+        CreateAllianceAskReq createAllianceAskReq = 11;
+        // QueryAllianceBelongWorldInfoReq queryAllianceBelongWorldInfoReq = 12;
+    }
+}
+
+// PublicManager到Public的ask返回
+message PubMgr2PubAskResp {
+    int64 publicId = 1;
+
+    oneof msg {
+        CreateAllianceAskRt createAllianceAskRt = 11;
+        QueryAllianceBelongWorldInfoRt queryAllianceBelongWorldInfoRt = 12;
+    }
+}
+
+message AllianceCompetitionVo {
+    int32 rank = 1;
+    int32 rankLv = 2;
+    int64 score = 3;
+    int64 allianceId = 4;
+}
+
+// 查询联盟归属服务器信息
+message QueryAllianceBelongWorldInfoReq {
+}
+
+message QueryAllianceBelongWorldInfoRt {
+    int32 rt = 1;
+    int64 worldId = 2; // 联盟归属世界ID
+    int32 areaNo = 3; // 联盟归属区服ID
+    int32 flagColor = 4; // 联盟旗帜的颜色
+    int32 flagStyle = 5; // 联盟旗帜的样式
+    int32 flagEffect = 6; // 联盟旗帜图案
+}
+
+// 世界到公共管理节点的ask请求
+message World2PublicManagerAskReq {
+    int64 worldId = 1;
+    int64 playerId = 2;
+    int64 publicId = 3;
+    int32 clientMsgNo = 4;
+
+    oneof msg {
+        CreateAllianceAskReq createAllianceAskReq = 11;
+        FindOwnAllianceRankReq findOwnAllianceRankReq = 12;
+    }
+}
+
+// 世界到公共管理节点的ask返回
+message World2PublicManagerAskResp {
+    int64 worldId = 1;
+    int64 playerId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+        CreateAllianceAskRt createAllianceAskRt = 11;
+        FindOwnAllianceRankRt findOwnAllianceRankRt = 12;
+    }
+}
+
+// 世界奇观状态发生改变
+message FindOwnAllianceRankReq {
+    int32 areaNo = 1;
+}
+
+// 世界奇观状态发生改变
+message FindOwnAllianceRankRt {
+    int32 rt = 1;
+    repeated AllianceRankInfos allianceRankInfo = 2; // 联盟排行
+}
+
+// home到公共管理节点的tell
+message Home2PubMgrTell {
+
+    int64 playerId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+    }
+}
+
+// 世界到公共管理节点的tell
+message World2PubMgrTell {
+    int64 worldId = 1;
+    int64 playerId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+        WorldWonderEmperorStartTell worldWonderEmperorStartTell = 11;
+        WorldWonderEmperorEndTell worldWonderEmperorEndTell = 12;
+        WorldWonderOccupyChangeNameTell worldWonderOccupyChangeNameTell = 13;
+        WorldWonderOccupyChangeAllianceInfoTell worldWonderOccupyChangeAllianceInfoTell = 14;
+        WorldWonderOccupyChangeCastleInfoTell worldWonderOccupyChangeCastleInfoTell = 15;
+        WorldWonderOccupyChangeMainHeroTell worldWonderOccupyChangeMainHeroTell = 16;
+        WorldWonderStatusChangeTell worldWonderStatusChangeTell = 17;
+        WorldPlayerRankInfoTell worldPlayerRankInfoTell = 18;
+        JjcInfoSyncTell jjcInfoSyncTell = 19;
+        AllianceCompetitionJoinTell allianceCompetitionJoinTell = 20;
+        SyncAllianceFightApplyTell syncAllianceFightApplyTell = 21;
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+
+        CleanDataTell cleanDataTell = 300;
+    }
+}
+
+// 总动员参赛联盟数据
+message AllianceCompetitionJoinTell {
+    repeated AllianceCompetitionJoinVo joiners = 1;
+    int64 openServerTime = 2;  //当前服务器开服时间
+}
+
+// 总动员参赛者数据
+message AllianceCompetitionJoinVo {
+    int64 allianceId = 1;
+    int32 allianceRankLv = 2;
+}
+
+// 竞技场数据变化
+message JjcInfoSyncTell {
+    repeated JjcInfoSyncVo jjcInfoSyncVos = 1;
+}
+
+// 竞技场数据变化
+message JjcInfoSyncVo {
+    int64 worldId = 1;
+    int64 playerId = 2;
+    string playerName = 3;
+    int32 photoId = 4;
+    string allianceShortName = 5;
+    string allanceName = 6;
+    int32 belongState = 9;
+
+    int32 jjcScore = 7;
+    // 竞技场积分变化 如果是起服收集数据 下面这个值是0 以上面的竞技场积分为准 如果是日常PK分数变数 以这个值为准 因为可以一个人被多个人同时打
+    int32 jjcChangeScore = 8;
+}
+
+// 玩家尝试加入全球排行榜
+message WorldPlayerRankInfoTell {
+    int32 rankType = 1;
+    client2server.WorldPlayerRankInfo worldPlayerRankInfos = 2;
+}
+
+// 世界奇观状态发生改变
+message WorldWonderStatusChangeTell {
+    int32 worldWonderId = 1;
+    int32 status = 2;
+}
+
+// 大帝战开启
+message WorldWonderEmperorStartTell {
+    int32 wonderProtoId = 1; // 开启的世界奇观ID
+}
+
+// 大帝战关闭
+message WorldWonderEmperorEndTell {
+    int32 wonderProtoId = 1; // 开启的世界奇观ID
+    WorldWonderOccupyInfo worldWonderOccupyInfo = 2; // 大帝奇观占领者信息
+}
+
+// 有世界奇观占领者改名
+message WorldWonderOccupyChangeNameTell {
+    string playerName = 1; // 玩家名字
+}
+
+// 有世界奇观占领者的联盟信息发生变化
+message WorldWonderOccupyChangeAllianceInfoTell {
+    int64 allianceId = 1;
+    int64 allianceWorldId = 2;
+    int32 allianceAreaNo = 3;
+    string allianceName = 4;
+    string allianceShortName = 5;
+    int32 belongState = 6;
+}
+
+// 有世界奇观占领者迁服或者迁地
+message WorldWonderOccupyChangeCastleInfoTell {
+    int64 worldId = 1; // 转入的世界服ID
+    int32 areaNo = 2; // 区服ID
+    int32 x = 3; // 主城坐标x
+    int32 y = 4; // 主城坐标y
+}
+
+// 有世界奇观占领者首英雄变化
+message WorldWonderOccupyChangeMainHeroTell {
+    int32 mainHeroProtoId = 1; // 首英雄配置ID
+}
+
+// 世界公共数据到公共管理节点的ask请求
+message WorldManager2PublicManagerAskReq {
+}
+
+message WorldManager2PublicManagerAskResp {
+}
+
+message WorldWonderOccupyInfo {
+    int32 wonderProtoId = 1; // 奇观配置Id
+    int64 playerId = 2; // 玩家ID
+    string playerName = 3; // 玩家昵称
+    int64 worldId = 4; // 玩家所在世界ID
+    int32 areaNo = 5; // 玩家所在的区服ID
+    int64 allianceId = 6; // 联盟ID
+    string allianceName = 7; // 联盟名字
+    string allianceShortName = 8; // 联盟简称
+    int64 allianceWorldId = 9; // 联盟世界服ID
+    int32 allianceAreaNo = 10; // 联盟区服ID
+    int32 mainHeroProtoId = 11; // 玩家首英雄配置ID
+    int32 castleX = 12; // 玩家主城所在坐标X
+    int32 castleY = 13; // 玩家主城所在坐标Y
+    int32 flagColor = 14; // 联盟旗帜的颜色
+    int32 flagStyle = 15; // 联盟旗帜的样式
+    int32 flagEffect = 16; // 联盟旗帜图案
+    int32 belongState = 17;
+}
+
+message AllianceRankInfos {
+    int32 rankType = 1; // 排行类型
+    repeated AllianceSimpleInfoVo allianceRankInfo = 5; // 联盟排行
+}
+
+message AllianceOccupyInfo {
+    int64 allianceId = 1; // 联盟ID
+    string allianceMainMemberName = 2; // 盟主名字
+    int32 allianceAreaNo = 3; // 联盟所属服务器
+    string allianceName = 4; // 联盟名字
+    string allianceShortName = 5; // 联盟简称
+    repeated int64 worldId = 6; // 占领的世界ID
+    int32 allianceLan = 7; // 联盟语言
+    int64 allianceFightValue = 8; // 联盟战斗力
+    int32 belongState = 9;
+}
+
+message AllianceSimpleInfoVo {
+    string allianceName = 1;
+    string allianceShortName = 2;
+    int64 allianceId = 3;
+    int32 flagColor = 4;
+    int32 flagStyle = 5;
+    int32 flagEffect = 6;
+    int64 value = 7;
+    string extend1 = 8;
+    string leaderName = 9;
+    int32 belongState = 10;
+}
+
+// Home到PublicManager的ask请求
+message Home2PublicManagerAskReq {
+    int64 playerId = 1;
+    int64 publicId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+        SetAllianceNameAskReq SetAllianceNameAskReq = 11;
+        OpenAfterAllianceCompetitionAskReq openAfterAllianceCompetitionAskReq = 12;
+        QueryAllianceListAskReq queryAllianceListAskReq = 13;
+    }
+}
+
+// Home到PublicManager的ask返回
+message Home2PublicManagerAskResp {
+    int64 playerId = 1;
+    int32 clientMsgNo = 2;
+
+    oneof msg {
+        SetAllianceNameAskRt SetAllianceNameAskRt = 11;
+        OpenAfterAllianceCompetitionAskRt openAfterAllianceCompetitionAskRt = 12;
+        QueryAllianceListAskRt queryAllianceListAskRt = 43;
+    }
+}
+
+// 活动结束打开界面
+message OpenAfterAllianceCompetitionAskReq {
+    int64 allianceId = 1;
+}
+
+message OpenAfterAllianceCompetitionAskRt {
+    int32 rt = 1;
+    int32 beforeRankLv = 2; // 联盟参赛之前的段位
+    int32 afterRankLv = 3; // 联盟参赛之后的段位
+    int32 score = 4; // 本次参赛获取到的积分
+}
+
+message World2PubTell {
+    oneof msg {
+         InsertAllianceLogTell insertAllianceLogTell = 11;
+         MoveServerLockAllianceReqTell moveServerLockAllianceReqTell = 12;
+         MoveServerUnLockAllianceReqTell moveServerUnLockAllianceReqTell = 13;
+         AllianceFightArmyChangeTell allianceFightArmyChangeTell = 14;
+         AllianceBeFightTell allianceBeFightTell = 15; // 联盟战被进攻推送
+         AllianceFightOverForAtkTell allianceFightOverForAtkTell = 16;
+         AllianceFightOverForDefTell allianceFightOverForDefTell = 17;
+         UpdateWorldCheckPointTell updateWorldCheckPointTell = 18;
+         UpdateResTell updateResTell = 19;
+         UpdateWonderTell updateWonderTell = 20;
+         AddAllianceExpTell addAllianceExpTell = 21;
+         SyncDayEliminateTell syncDayEliminateTell = 23;
+         SyncAllianceUpLvTell syncAllianceUpLvTell = 24;
+         SyncAllianceEffectWorldTell syncAllianceEffectWorldTell = 25;
+         WorldAllianceCountryTell allianceCountryTell = 26;
+         AllianceFilialeTell allianceFilialeTell = 27;
+         BornStateChangeTell bornStateChangeTell = 28;
+         UpdateHieronTell updateHieronTell = 29;
+         UpdateAllianceMemberInfoFromWorldTell updateAllianceMemberInfoFromWorldTell = 30;
+         DistributeAllianceGiftAskReq distributeAllianceGiftAskReq = 31;
+         ReceiveAllianceGiftTell receiveAllianceGiftTell = 34;
+         SyncAllianceUnit syncAllianceUnit = 35;
+         AllianceCompetitionScoreSyncTell competitionScoreTell = 38;
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+
+        WorldSendChatMsgTell worldSendChatMsgTell = 22;
+        
+        AllianceJoinBattleFieldInfoTell allianceJoinBattleFieldInfoTell = 32;
+        BattleFieldMatchingTell battleFieldMatchingTell = 33;
+        CleanChatTell cleanChatTell = 36;
+        WorldAddAllianceGiftTell worldAddAllianceGiftTell = 37;
+
+
+        CleanDataTell cleanDataTell = 300;
+        GmPubCreateObjTell gmPubCreateObjTell = 400;
+    }
+}
+
+//世界添加联盟礼物经验
+message WorldAddAllianceGiftTell {
+    int32 addExp = 1;
+    int32 addBigExp = 2;
+}
+
+message CleanChatTell {
+}
+
+message SyncAllianceUnit {
+    int32 unit = 1;
+}
+
+// 通知联盟收到联盟礼物
+message ReceiveAllianceGiftTell {
+    repeated client2server.IntToIntKV giftMap = 1;
+    string fromLanId = 2;
+    repeated string fromLanParam = 3;
+    repeated int64 onlinePlayers = 4;
+}
+
+// 修改联盟成员信息
+message UpdateAllianceMemberInfoFromWorldTell {
+    repeated UpdateAllianceMemberInfoVo updates = 1;
+    int64 playerId = 2;
+}
+
+// 联盟参展信息修改
+message AllianceJoinBattleFieldInfoTell {
+    repeated AllianceJoinBattleFieldInfo allianceJoinBattleFieldInfo = 1;
+}
+
+message AllianceJoinBattleFieldInfo {
+    int64 allianceId = 1;
+    int32 areaNo = 2;
+    int64 strength = 3;
+    repeated client2server.LongToIntKV playerInfo = 4;
+}
+
+// 战场匹配
+message BattleFieldMatchingTell {
+}
+
+message UpdateAllianceMemberInfoVo {
+    int32 updateType = 1; // 修改的类型常量
+    string info = 2; //修改成的内容
+}
+
+message WorldChatTell {
+    client2server.ChatInfo chatInfo = 2;
+}
+
+message GmPubCreateObjTell {
+}
+
+message BornStateChangeTell {
+    int64 playerId = 1;
+    int32 bornState = 2;
+}
+
+message SyncAllianceEffectWorldTell {
+    repeated client2server.IntToIntKV effect = 1;
+}
+
+// 同步联盟活跃评级
+message SyncAllianceUpLvTell {
+    int32 upLv = 1;
+}
+
+// 主盟分盟信息变化
+message AllianceFilialeTell {
+    int64 allianceId = 1;
+    int64 mainAllianceFilialeId = 2;
+}
+
+// 联盟建国信息变化
+message WorldAllianceCountryTell {
+    int64 allianceId = 1;
+}
+
+// 同步每日三消战斗数据
+message SyncDayEliminateTell {
+    int64 playerId = 1;
+    int32 protoId = 2; // 本届模板
+    client2server.DayEliminateApplyInfo dayEliminateApplyInfo = 3; // 用了这个结构体 但是身价啥的不会动 就覆盖玩家的个人数据
+}
+
+message WorldSendChatMsgTell {
+    client2server.ChatInfo chatInfo = 1;
+}
+
+//添加联盟经验
+message AddAllianceExpTell {
+    int32 addExp = 1;
+}
+
+// 更新奇观信息
+message UpdateWonderTell {
+    int32 changeType = 1;
+    int64 worldId = 2;
+    int32 wonderProtoId = 3;
+    int32 occupy = 4;
+}
+
+message UpdateHieronTell {
+    int32 changeType = 1;
+    int64 hieronId = 2;
+    int32 hieronProtoId = 3;
+    int32 occupy = 4;
+}
+
+
+message UpdateResTell {
+    int32 changeType = 1;
+    int64 worldId = 2;
+    int32 resId = 3;
+}
+
+message UpdateWorldCheckPointTell {
+    int32 changeType = 1;
+    int64 worldId = 2;
+    int32 worldCheckPointId = 3;
+}
+
+// 一次联盟战斗结束 防守方数据修改
+message AllianceFightOverForDefTell {
+    int64 playerId = 1;
+    int32 score = 2;
+    string atkName = 3;
+    int32 fightResult = 4;
+    repeated HeroStateAfterAllianceFight heroStateAfterAllianceFights = 5;
+    int64 atkId = 6;
+}
+
+message HeroStateAfterAllianceFight {
+    int32 heroProtoId = 1;
+    int64 hpAfterFight = 2; // 战斗后血量
+}
+
+// 一次联盟战斗结束 进攻方数据修改
+message AllianceFightOverForAtkTell {
+    int64 playerId = 1;
+    int32 score = 2;
+    string defName = 3;
+    int32 fightResult = 4;
+    int64 defId = 5;
+}
+
+// 联盟布阵发生变化
+message AllianceBeFightTell {
+    int64 playerId = 1;
+    string atkName = 2;
+}
+
+// 联盟布阵发生变化
+message AllianceFightArmyChangeTell {
+    int64 playerId = 1;
+    repeated client2server.JjcHeroGenral jjcHeros = 2; // 对方武将数据
+    client2server.Dragon dragon = 3; // 防守方龙数据
+    repeated int32 initSkills = 4; // 科技带来的技能加成
+}
+
+// 迁服锁public状态
+message MoveServerUnLockAllianceReqTell {
+    int64 playerId = 1;
+    int64 moveServerId = 2;
+    int32 areaNo = 3;
+    int64 mapPltAreaId = 4;
+    int64 comeWorldId = 5;
+}
+
+// 迁服锁public状态
+message MoveServerLockAllianceReqTell {
+    int64 playerId = 1;
+    int64 moveServerId = 2;
+    int64 comeWorldId = 3;
+}
+
+
+message InsertAllianceLogTell {
+    int64 allianceId = 1;
+    int32 logType = 2;
+    int32 photoId = 3;
+    string logInfo = 4;
+    int64 logTime = 5;
+    int32 jjcScore = 6;
+    client2server.PhotoViewInfo photoInfo = 7;
+}
+
+//===================================================================================================
+message Pub2PubMgrTell {
+    oneof msg {
+        UnLockAllianceNameTell unLockAllianceNameTell = 11;
+        SyncAllianceSimpleInfoTell syncAllianceSimpleInfoTell = 12;
+        SyncAboutWorldWonderAllianceInfoTell syncAboutWorldWonderAllianceInfoTell = 13;
+        SyncAllianceFightApplyTell syncAllianceFightApplyTell = 14;
+        SyncInfoByAny syncInfoByAny = 15; // 数据同步
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+    }
+}
+
+// 联盟参赛/取消参赛联盟战
+message SyncAllianceFightApplyTell {
+    int32 dealType = 1; // 1-参赛 2-取消参赛
+    int64 allianceId = 2;
+    int32 allianceFightRank = 3; // 联盟暗分
+    int32 allianceFightLastResult = 4; // 上次战斗结果(胜负平)   1-胜 2-平 3-负
+}
+
+// 修改联盟名称之后的推送
+message UnLockAllianceNameTell {
+    string allianceName = 1;
+    string allianceShortName = 2;
+    int32 changeType = 3; // 1-把暂用状态变成已用状态 2-删除暂用名,用于解散联盟时
+    int32 belongState = 4;
+}
+
+// 修改联盟转服或者改名后有关于世界奇观的简单信息推送
+message SyncAboutWorldWonderAllianceInfoTell {
+    int64 allianceId = 1;
+    int64 allianceWorldId = 2;
+    int32 allianceAreaNo = 3;
+    string allianceName = 4;
+    string allianceShortName = 5;
+    int32 belongState = 9;
+    int32 flagColor = 6;
+    int32 flagStyle = 7;
+    int32 flagEffect = 8;
+}
+
+// 同步联盟基础属性
+message SyncAllianceSimpleInfoTell {
+    int32 changeType = 1; // 1-新增或者修改都直接覆盖 2-移除
+    int64 allianceId = 2;
+    SyncAllianceSimpleInfoVo syncAllianceSimpleInfoVo = 3;
+}
+
+message SyncAllianceSimpleInfoVo {
+    string allianceName = 1;
+    string allianceShortName = 2;
+    int64 allianceId = 3;
+    int32 flagColor = 4;
+    int32 flagStyle = 5;
+    int32 flagEffect = 6;
+    int64 allianceCompetitionScore = 7;
+    int64 allianceCompetitionScoreChangeTime = 8;
+    int32 allianceGiftLv = 9;
+    int32 allianceLan = 10;
+    int64 canAddPower = 11;
+    int64 canReqPower = 12;
+    int64 occupyCount = 13;
+    int32 allianceLv = 14;
+    int32 belongState = 15;
+    int32 upLv = 16;
+    repeated client2server.IntToIntKV effect = 17;
+
+    // 下面几个只能推送差量,power是可能会少的 所以可能会负数
+    int64 power = 101;
+    int64 killSolider = 102;
+    int64 monsterScore = 103;
+    int32 allianceRankLv = 104; // 联盟所处总动员段位
+    int32 allianceMemberNum = 105; // 联盟人数
+    repeated int64 allianceOccupyInfos = 106; // 联盟大占领情况
+    string allianceMainMemberName = 107;
+    int32 allianceAreaNo = 108;
+    repeated int32 occWonderProtoId = 109; // 占领的所有奇观的模板ID
+}
+
+// 联盟管理节点到普通联盟节点的tell消息
+message PubMgr2PubTell {
+    oneof msg {
+         AllianceFightGetOppTell allianceFightGetOppTell = 12; // 联盟战匹配到对手
+         AllianceFightOverTell allianceFightOverTell = 13; // 联盟战结束通知大家各自结算
+         CleanAllianceFightTell cleanAllianceFightTell = 14; // 新的一届联盟赛开始了 清理联盟数据
+         AllianceFightGoingTell allianceFightGoingTell = 15; // 联盟战开打
+         AllianceCompetitionOpenTell allianceCompetitionOpenTell = 16; // 联盟总动员状态修改
+        AllianceCompetitionGroupTell allianceCompetitionGroupTell = 17;
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+    }
+}
+
+message AllianceCompetitionGroupTell {
+    int32 state = 1; // 变化状态 1-获得资格  2-游戏时间结束进行奖励展示  3-活动彻底结束
+    int32 rankLv = 2; // 用于状态2  表示活动结束之后的段位
+    repeated int64 allianceId = 3; // 组内联盟id
+    int32 groupId = 4; // 分组id
+    map<int64, int64> allianceMap = 5;
+    map<int64, int64> allianceWorldOpenTimeMap = 6; // 联盟开服时间Map
+    LogVo log = 11;
+}
+
+message AllianceCompetitionOpenTell {
+    int32 state = 1; // 变化状态 1-获得资格  2-游戏时间结束进行奖励展示  3-活动彻底结束
+    int32 rankLv = 2; // 用于状态2  表示活动结束之后的段位
+    int32 indexLv = 3; // 用于状态2  表示本次活动的排名
+    int32 preRankLv = 4; // 用于状态2 表示结算之前的段位
+}
+
+message AllianceFightGoingTell {
+}
+
+message CleanAllianceFightTell {
+}
+
+message AllianceFightOverTell {
+}
+
+message AllianceFightGetOppTell {
+    int64 allianceId = 1; // 0的话就是轮空了 否则的话是对手的ID 这边只需要一个ID作为钥匙 收到这个推送之后马上会把自己的数据同步给对手
+    int32 bgSkillId = 2; // 本届战场技能ID
+}
+
+// 联盟管理节点到世界服节点的tell消息
+message PubMgr2WorldTell {
+    oneof msg {
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+
+        CleanDataOkTell cleanDataOkTell = 300;
+    }
+}
+
+// 联盟到联盟的tell消息
+message Pub2PubTell {
+    oneof msg {
+        AllianceFightSyncInfoToOppTell allianceFightSyncInfoToOppTell = 11; // 同步联盟战数据给对手
+        OppAllianceArmyPlansTell queryOppAllianceArmyPlansTell = 12; // 联盟战结束的时候一次性上报数据给对手用来展示期查询
+        AllianceFightAllReviveTell allianceFightAllReviveTell = 13; // 通知对手我方触发了全部复活
+        AllianceCompetitionStateTell competitionStateTell = 14; // 联盟总动员活动状态变化
+        AllianceCmpttStatByWorldTell cmpttStatByWorldTell = 15; // 联盟总动员活动状态变化（根据世界分组）
+        AllianceCompetitionScoreSyncTell competitionScoreTell = 16;
+        WorldChatTell worldChatTell = 17;
+
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+    }
+}
+
+message AllianceCompetitionScoreSyncTell {
+    int64 allianceId = 1;
+    int64 allianceCompetitionScore = 2;
+    int64 updateTime = 3;
+    int32 flagColor = 4; //旗帜的颜色模版ID
+    int32 flagStyle = 5; //旗帜的样式模版ID
+    int32 flagEffect = 6; //旗帜的图案模版ID
+    string allianceName = 7; //联盟名称
+    string allianceShortName = 8; //联盟简称
+}
+
+message AllianceCmpttStatByWorldTell {
+    int64 worldId = 1;
+    map<int64, AllianceCompetitionStateTell> joiner = 2;
+}
+
+message AllianceCompetitionStateTell {
+    int32 state = 1; // 变化状态 1-获得资格  2-游戏时间结束进行奖励展示  3-活动彻底结束
+    int32 rankLv = 2; // 用于状态2  表示活动结束之后的段位
+    int32 indexLv = 3; // 用于状态2  表示本次活动的排名
+    int32 preRankLv = 4; // 用于状态2 表示结算之前的段位
+    int64 groupId = 5; // 所在分组id
+
+    LogVo log = 11;
+}
+
+message AllianceFightAllReviveTell {
+}
+
+message OppAllianceArmyPlansTell {
+    repeated client2server.AllianceFightDefArmyPlan allianceFightArmyPlan = 1; // 所有防守布阵具体状态
+}
+
+message AllianceFightSyncInfoToOppTell {
+    int32 allianceFightOppFlagColor = 1; // 敌方旗帜
+    int32 allianceFightOppFlagStyle = 2; // 敌方旗帜
+    int32 allianceFightOppFlagEffect = 3; // 敌方旗帜
+    string allianceFightOppName = 4; // 敌方全称
+    string allianceFightOppShortName = 5; // 敌方简称
+    int32 allianceFightOppScore = 6; // 敌方积分
+}
+
+// Home到Public的Tell
+message Home2PubTell {
+    int64 fromId = 1;
+
+    oneof msg {
+         RemoveReqTell removeReqTell = 11;
+         UpdateAllianceMemberInfoFromHomeTell updateAllianceMemberInfoFromHomeTell = 12;
+        
+         CleanRoomChatMsgTell cleanRoomChatMsgTell = 16;
+        
+         Gm4AllianceCompetitionTell gm4AllianceCompetitionTell = 18;
+         SyncAllianceCompetitionPersonalTell syncAllianceCompetitionPersonalTell = 19;
+         SyncAllianceCompetitionRewardTell syncAllianceCompetitionRewardTell = 20;
+         ReqAllianceDataTell reqAllianceDataTell = 24;
+         AddAllianceGiftTell addAllianceGiftTell = 25;
+        
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+
+
+        CleanAllianceChatMsgTell cleanAllianceChatMsgTell = 15;
+        SyncInfoByAny syncInfoByAny = 17;
+        CleanChatRoomTell cleanChatRoomTell = 21;
+        WorldChatTell worldChatTell = 22;
+        SendChatTell sendChatTell = 23;
+        CleanChatTell cleanChatTell = 26;
+    }
+}
+
+// 添加联盟大礼物经验
+message AddAllianceGiftTell {
+    int32 addExp = 1;
+    int32 addBigExp = 2;
+}
+
+// 请求联盟数据
+message ReqAllianceDataTell {
+}
+
+message UpdateAllianceMemberInfoFromHomeTell {
+    repeated UpdateAllianceMemberInfoVo updates = 1;
+}
+
+// 玩家发送消息
+message SendChatTell {
+    string message = 1;
+    client2server.ChatInfo chatInfo = 2;
+}
+
+// 清理聊天室
+message CleanChatRoomTell {
+    int64 roomId = 1;
+}
+
+// 领奖信息同步
+message SyncAllianceCompetitionRewardTell {
+    int32 allianceScore = 1; // 联盟积分
+    int32 personalScore = 2; // 个人积分
+}
+
+// 专属任务数据同步
+message SyncAllianceCompetitionPersonalTell {
+    int32 addScore = 1; // 添加的积分
+    int32 completeNum = 2; // 完成数量
+    int32 receiveNum = 3; // 领取数量
+}
+
+message Gm4AllianceCompetitionTell {
+    int32 rankLv = 1;
+    int64 score = 2;
+}
+
+message CleanAllianceChatMsgTell {
+    int64 cleanPlayerId = 1;
+}
+
+message CleanRoomChatMsgTell {
+    int64 cleanPlayerId = 1;
+}
+
+// 删除联盟申请
+message RemoveReqTell {
+
+}
+
+//===================================================================================================
+message WorldMgr2PubMgrTell {
+    int64 publicId = 1;
+    oneof msg {
+        FindUseAllianceNamesReqTell findUseAllianceNamesReqTell = 11;
+    }
+}
+
+// 世界公共节点来请求获取当前已经被使用的联盟名
+message FindUseAllianceNamesReqTell {
+}
+
+//===================================================================================================
+message Mgr2PubAskReq {
+    int64 fromId = 1;
+
+    oneof msg {
+        EvalScriptReq evalScriptReq = 11;
+        QueryAllianceInfoReq queryAllianceInfoReq = 12;
+        CreateGiftKeyAskReq createGiftKeyAskReq = 13;
+        IdipPubReq idipPubReq = 14;
+        QueryGiftKeyAskReq queryGiftKeyAskReq = 18;
+        DeleteGiftKeyAskReq deleteGiftKeyAskReq = 19;
+        NewCreateGiftKeyCodeAskReq newCreateGiftKeyCodeAskReq = 20;
+        NewPubGiftKeyCodeAskReq newPubGiftKeyCodeAskReq = 21;
+        NewQueryGiftKeyCodeDataAskReq newQueryGiftKeyCodeDataAskReq = 22;
+        NewDeleteGiftKeyCodeAskReq newDeleteGiftKeyCodeAskReq = 23;
+        NewUpdateGiftKeyCodeAskReq newUpdateGiftKeyCodeAskReq = 24;
+    }
+}
+
+message Mgr2PubAskResp {
+    oneof msg {
+        EvalScriptResp evalScriptResp = 11;
+        QueryAllianceInfoResp queryAllianceInfoResp = 12;
+        CreateGiftKeyAskResp createGiftKeyAskResp = 13;
+        IdipPubResp idipPubResp = 14;
+        QueryGiftKeyAskResp queryGiftKeyAskResp = 18;
+        DeleteGiftKeyAskResp deleteGiftKeyAskResp = 19;
+        NewCreateGiftKeyCodeAskResp newCreateGiftKeyCodeAskResp = 20;
+        NewPubGiftKeyCodeAskResp newPubGiftKeyCodeAskResp = 21;
+        NewQueryGiftKeyCodeDataAskResp newQueryGiftKeyCodeDataAskResp = 22;
+        NewDeleteGiftKeyCodeAskResp newDeleteGiftKeyCodeAskResp = 23;
+        NewUpdateGiftKeyCodeAskResp newUpdateGiftKeyCodeAskResp = 24;
+    }
+}
+
+// 查询礼品码
+message QueryGiftKeyAskReq {
+    int64 cfgId = 1;
+}
+
+message QueryGiftKeyAskResp {
+    int32 rt = 1;
+    repeated GiftKeyDrawInfo drawInfo = 2;
+}
+
+message GiftKeyDrawInfo {
+    string key = 1;
+    int32 draw = 2;
+}
+
+// 删除礼品码
+message DeleteGiftKeyAskReq {
+    repeated int64 cfgIds = 1;
+}
+
+message DeleteGiftKeyAskResp {
+    int32 rt = 1;
+}
+
+// 生成礼品码
+message CreateGiftKeyAskReq {
+    int64 cfgId = 1;
+    int32 amount = 2;
+}
+
+message CreateGiftKeyAskResp {
+    int32 rt = 1;
+}
+
+// 新改版-生成礼品码
+message NewCreateGiftKeyCodeAskReq {
+    int64 cfgId = 1;
+    int32 amount = 2;//一组包含多少个码
+    int64 startTime = 3;//生效开始时间
+    int64 endTime = 4;//生效结束时间
+    int32 keyDrawNum = 5;//单个cdk领取次数
+    int32 drawSeveral = 6;// 互斥 0 互斥 / 1 不互斥
+    string attach = 7;//礼品信息
+    string customKeyCodes = 8;//自定义礼品码,1.长度要6-20 2.只允许英文大小写+数字,分号分割，可以为空
+}
+
+message NewCreateGiftKeyCodeAskResp {
+    int32 rt = 1;
+}
+
+//发布keyCode
+message NewPubGiftKeyCodeAskReq{
+    repeated string KeyCodes = 1;
+}
+
+message NewPubGiftKeyCodeAskResp{
+    int32 rt = 2;
+    repeated string KeyCodes = 3;//发布成功的CDK
+}
+
+//查询礼品码信息
+message NewQueryGiftKeyCodeDataAskReq{
+
+}
+
+message NewQueryGiftKeyCodeDataAskResp{
+    int32 rt = 1;
+    repeated QueryGiftKeyCfgData queryGiftKeyCfgData = 2;
+}
+
+message QueryGiftKeyCfgData{
+    int64 id = 1;
+    string keyCode = 2;//cdk
+    int64 generationTime = 3;//生成时间
+    string attach = 4;//礼品信息
+    int32  drawSeveral = 5;// 互斥 0 互斥 / 1 不互斥
+    int32  keyDrawNum = 6;// 单个CDK领取次数 0则表示无限领取
+    int32 releaseStatus = 7;//发布状态
+    int32 draw = 8;//领取次数
+    int32 status = 9;//礼品码状态
+    int64 startTime = 10;//其实时间
+    int64 endTime = 11;//结束时间
+}
+
+// 删除礼品码
+message NewDeleteGiftKeyCodeAskReq {
+    repeated string keyCodes = 1;
+}
+
+message NewDeleteGiftKeyCodeAskResp {
+    int32 rt = 2;
+}
+
+// 修改礼品码
+message NewUpdateGiftKeyCodeAskReq {
+    string oldKeyCodes = 1;//老cdk
+    string newKeyCodes = 2;//新cdk
+    int64 startTime = 3;//生效开始时间
+    int64 endTime = 4;//生效结束时间
+    string attach = 5;//礼品信息
+    int32 keyDrawNum = 6;//单个cdk领取次数
+}
+
+message NewUpdateGiftKeyCodeAskResp {
+    int32 rt = 7;
+}
+
+// idip
+message IdipPubReq {
+    int32 seqId = 1;
+    int32 cmdId = 2;
+    string data = 3;
+    string extend = 4;
+}
+
+message IdipPubResp {
+    int32 result = 1;
+    string retMsg = 2;
+    string data = 3;
+    string extend = 4;
+}
+
+// 查询联盟信息
+message QueryAllianceInfoReq {
+}
+
+message QueryAllianceInfoResp {
+    int32 rt = 1;
+    string allianceInfo = 2; // 联盟信息
+    string allianceName = 3;
+    int64 mainPlayerId = 4;
+    string mainPlayerName = 5;
+    int64 alliancePower = 6;
+    int32 allianceMemberNum = 7;
+    repeated AllianceMemberData members = 8;
+}
+
+message AllianceMemberData {
+    int64 playerId = 1;
+    int32 rNum = 2;
+}
+
+//===================================================================================================
+message Mgr2PublicManagerAskReq {
+    int64 publicId = 1;
+
+    oneof msg {
+        EvalScriptReq evalScriptReq = 11;
+        QueryAllianceRankReq queryAllianceRankReq = 12;
+    }
+}
+
+message Mgr2PublicManagerAskResp {
+    oneof msg {
+        EvalScriptResp evalScriptResp = 11;
+        QueryAllianceRankResp queryAllianceRankResp = 12;
+    }
+}
+
+// 查询联盟排行榜
+message QueryAllianceRankReq {
+}
+
+message QueryAllianceRankResp {
+    int32 rt = 1;
+    repeated AllianceRankInfos ranks = 2;
+}
+
+// 一个不被协议使用的结构 用于服务器转二进制记录数据库
+message LastAllianceFightInfo {
+    client2server.FightAllianceOppVo oppAllianceFightMainVo = 1; // 我的对手联盟的一些数据
+    repeated client2server.AllianceFightDefArmyPlan myAllianceArmyPlans = 2; // 我的联盟的所有布阵数据
+    repeated client2server.AllianceFightDefArmyPlan oppAllianceArmyPlans = 3; // 我的对手联盟的所有布阵数据
+    repeated client2server.AllianceFightLogVo myAllianceLogs = 4; // 我的联盟的所有战斗数据
+}

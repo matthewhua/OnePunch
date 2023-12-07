@@ -1,0 +1,77 @@
+syntax = "proto3";
+package pb4fighttest;
+
+option java_package = "pb4fighttest";
+option java_outer_classname = "InternalFkt";
+option java_multiple_files = true;
+
+message ToFightTestTell {
+    int64 toId = 1;
+
+    oneof msg {
+        FightTestReq fightTestReq = 11;
+    }
+}
+
+message FightTestReq {
+    int32 id = 1;
+    FightTestTeam atkTeam = 2;  // 攻击方
+    FightTestTeam defTeam = 3;  // 防守方
+    int32 fightType = 4;
+}
+
+message FightTestTeam {
+    repeated FightTestHero heros = 1;           // 英雄信息
+    repeated FightTestSoldier soldiers = 2;     // 兵种信息
+    repeated FightTestEffect effects = 3;       // 效果信息
+}
+
+message FightTestHero {
+    int32 heroId = 1;   // 英雄id
+    int32 skillLv = 2;  // 技能等级
+}
+
+message FightTestSoldier {
+    int32 soldierId = 1;    // 兵种id
+    int64 soldierNum = 2;   // 兵种数量
+}
+
+message FightTestEffect {
+    int32 effectId = 1;     // 效果id
+    int32 effectValue = 2;  // 效果值
+}
+
+message FightTestResp {
+    int32 id = 1;
+    int32 rt = 2;                   // 消息回复:1、成功 其他、失败
+    int32 fightResult = 3;          // 战斗结果:1、失败 2、胜利
+    int32 round = 4;                //回合数
+
+    FightTestResult atkResult = 11; //攻击方战斗结果
+    FightTestResult defResult = 12; //防守方战斗结果
+}
+
+message FightTestResult {
+    repeated FightTestSoldierKDResult soldiersKD = 1;   // 兵种KD输出结果
+    repeated FightTestHeroKDResult heroesKD = 2;        // 英雄KD
+}
+
+message FightTestSoldierKDResult {
+    int32 soldierId = 1;
+    int64 leftNum = 2;                  // 剩余数量
+    int64 beHurtNum = 3;                // 受伤数量
+    repeated BeHurtFrom hurtFrom= 4;    // 每个兵种所受到对方各兵种的伤害
+    int64 totalHurt = 5;                // 输出的总伤害
+}
+
+message BeHurtFrom {
+    int32 soldierId = 1;    //  兵种id
+    int64 hurt = 2;         //  伤害
+}
+
+message FightTestHeroKDResult {
+    int32 heroId = 1;       // 英雄id
+    int32 skillId = 2;      // 技能id
+    int32 skillLv = 3;      // 技能等级
+    int64 hurt = 7;         // 英雄造成的伤害
+}

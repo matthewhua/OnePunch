@@ -1,0 +1,2080 @@
+syntax = "proto3";
+
+package pb4server;
+
+import "client2server.proto";
+import "internalpb2.proto";
+import "systemMsg.proto";
+import "internal2public.proto";
+
+option java_package = "pb4server";
+option java_outer_classname = "InternalHkt";
+option java_multiple_files = true;
+
+message ToHomeTell {
+    int64 toId = 1;
+
+    oneof msg {
+        Home2HomeTell fromHome = 11;
+        World2HomeTell fromWorld = 12;
+        Pub2HomeTell fromPub = 13;
+        Gate2HomeTell fromGate = 14;
+        Sys2HomeTell fromSys = 15;
+        Login2HomeTell fromLogin = 16;
+        Report2HomeTell fromReport = 17;
+    }
+}
+
+message ToHomeAsk {
+    int64 toId = 1;
+
+    oneof msg {
+        World2HomeAskReq fromWorld = 11;
+        Home2HomeAskReq fromHome = 12;
+        Mgr2HomeAskReq fromMgr = 13;
+        Login2HomeAskReq fromLogin = 14;
+        BattleField2HomeAskReq fromBattleField = 15;
+    }
+}
+
+// World到Home的ask请求
+message World2HomeAskReq {
+    int64 worldId = 1;
+    int32 clientMsgNo = 2;
+
+    oneof msg {
+        WUseHGmAskReq gm = 4;
+        AddRelicRewardAskReq addRelicRewardAskReq = 13;
+        AddResToHomeAskReq addResToHomeAskReq = 14;
+        QueryFriendBlackAskReq queryFriendBlackAskReq = 16;
+        QueryPlayerInfoAskReq queryPlayerInfoAskReq = 17;
+        PlunderAskReq plunderAskReq = 18;
+        AddHeroExpAskReq addHeroExpAskReq = 20;
+        ReloadHomeConfigAskReq reloadHomeConfigAskReq = 21;
+        MakeCityAskHomeReq makeCityAskHomeReq = 22;
+        CreateBattleReportAskHomeReq CreateBattleReportAskHomeReq = 23;
+        SetHomeMoveServerStateReq setHomeMoveServerStateReq = 24;
+        CheckJoinAllianceStateReq checkJoinAllianceStateReq = 25;
+        AllianceInviteReq allianceInviteReq = 26;
+        QueryNowResAskReq queryNowResAskReq = 31;
+        CostEliminateItemAskReq costEliminateItemAskReq = 32;
+        WorldCostHomeResAskReq wCostHomeResAskReq = 33;
+        BeginRobFightReq beginRobFightReq = 39;
+        EndRobFightReq endRobFightReq = 40;
+        CheckResourceNumAndLimit checkResourceNumAndLimit = 41;
+        QueryPersonalInfoAskReq queryPersonalInfoAskReq = 46;
+        QueryHuoyueduValueReq queryHuoyueduValueReq = 49;
+        PveAutoFightRobAskReq pveAutoFightRobAskReq = 53;
+        CostHeroEnergyAskReq costHeroEnergyAskReq = 54;
+        ExploreMapNpcRewardAskReq exploreMapNpcRewardAskReq = 55;
+        TryCreateAllianceAskReq tryCreateAllianceAskReq = 56;
+        BeginRadarAtkEliminateMonsterAskReq beginRadarAtkEliminateMonsterAskReq = 57;
+        RandomEventEliminateStartAsk randomEventEliminateStartAsk = 60;
+        RandomEventEliminateFinishAsk randomEventEliminateFinishAsk = 61;
+        RandomEventSlgStarAsk randomEventSlgStarAsk = 62;
+        DragonTreasureEliminateStartAsk dragonTreasureEliminateStartAsk = 63;
+        DragonTreasureEliminateFinishAsk dragonTreasureEliminateFinishAsk = 64;
+        AcsUseProp useProp = 65;
+        EliminateInnerCityStartAsk eliminateInnerCityStartAsk = 66;
+        EliminateInnerCityFinishAsk eliminateInnerCityFinishAsk = 67;
+        EliminateChallengeStartReq eliminateChallengeStartReq = 68;
+        EliminateChallengeShopBuyReq eliminateChallengeShopBuyReq = 69;
+        QueryActivityStatusReq queryActivityStatusReq = 70;
+        AllianceSupplyReq allianceSupplyReq = 71;
+        DoCostResource doCostResource = 72;
+        MgrDelHeroByIdReq mgrDelHeroByIdReq = 73;
+        OperateCmdFromWorldReq operateCmdFromWorldReq = 74;
+        GmAllExternalCmdsReq gmAllExternalCmdsReq = 75;
+    }
+}
+
+// World到Home的ask返回
+message World2HomeAskResp {
+    int64 playerId = 1;
+    int64 worldId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+        WUseHGmAskRt gmRt = 4;
+        AddRelicRewardAskRt addRelicRewardAskRt = 13;
+        AddResToHomeAskRt addResToHomeAskRt = 14;
+        QueryFriendBlackAskRt queryFriendBlackAskRt = 16;
+        QueryPlayerInfoAskRt queryPlayerInfoAskRt = 17;
+        PlunderAskRt plunderAskRt = 18;
+        AddHeroExpAskRt addHeroExpAskRt = 20;
+        ReloadHomeConfigAskRt reloadHomeConfigAskRt = 21;
+        MakeCityAskHomeRt makeCityAskHomeRt = 22;
+        CreateBattleReportAskHomeRt CreateBattleReportAskHomeRt = 23;
+        SetHomeMoveServerStateRt setHomeMoveServerStateRt = 24;
+        CheckJoinAllianceStateRt checkJoinAllianceStateRt = 25;
+        AllianceInviteRt allianceInviteRt = 26;
+        QueryNowResAskRt queryNowResAskRt = 31;
+        CostEliminateItemAskRt costEliminateItemAskRt = 32;
+        WorldCostHomeResAskRt wCostHomeResAskRt = 33;
+        BeginRobFightRt beginRobFightRt = 39;
+        EndRobFightRt endRobFightRt = 40;
+        CheckResourceNumAndLimitRt checkResourceNumAndLimitRt = 41;
+        QueryPersonalInfoAskRt queryPersonalInfoAskRt = 46;
+        QueryHuoyueduValueResp queryHuoyueduValueResp = 49;
+        PveAutoFightRobAskReqRt PveAutoFightRobAskReqRt = 53;
+        CostHeroEnergyAskRt costHeroEnergyAskRt = 54;
+        ExploreMapNpcRewardAskRt exploreMapNpcRewardAskRt = 55;
+        TryCreateAllianceAskResp tryCreateAllianceAskResp = 56;
+        BeginRadarAtkEliminateMonsterAskResp beginRadarAtkEliminateMonsterAskResp = 57;
+        RandomEventEliminateStartAskRt randomEventEliminateStartAskRt = 60;
+        RandomEventEliminateFinishAskRt randomEventEliminateFinishAskRt = 61;
+        RandomEventSlgStarAskRt randomEventSlgStarAskRt = 62;
+        DragonTreasureEliminateStartAskRt dragonTreasureEliminateStartAskRt = 63;
+        DragonTreasureEliminateFinishAskRt dragonTreasureEliminateFinishAsk = 64;
+        AcsUsePropRt usePropRt = 65;
+        EliminateInnerCityStartAskRt eliminateInnerCityStartAskRt = 66;
+        EliminateInnerCityFinishAskRt eliminateInnerCityFinishAskRt = 67;
+        EliminateChallengeStartResp eliminateChallengeStartResp = 68;
+        EliminateChallengeShopBuyResp eliminateChallengeShopBuyResp = 69;
+        QueryActivityStatusResp queryActivityStatusResp = 70;
+        AllianceSupplyResp allianceSupplyResp = 71;
+        DoCostResourceResp doCostResourceResp = 72;
+        MgrDelHeroByIdResp mgrDelHeroByIdResp = 73;
+        OperateCmdFromWorldResp operateCmdFromWorldResp = 74;
+        GmAllExternalCmdsResp gmAllExternalCmdsResp = 75;
+
+    }
+}
+
+message GmAllExternalCmdsReq{
+
+}
+
+message GmAllExternalCmdsResp{
+    int32 rt = 1;
+    repeated string gmCmds = 2;
+}
+
+message OperateCmdFromWorldReq{
+    int32 type = 1;
+    string text = 2;
+}
+
+message OperateCmdFromWorldResp{
+    int32 rt = 2;
+    string text = 3;
+}
+
+
+message MgrDelHeroByIdReq{
+    int64 heroId = 1;
+}
+
+message MgrDelHeroByIdResp{
+    int32 rt = 2;
+}
+
+message DoCostResource {
+    string resVo = 1;
+    LogVo log = 2;
+}
+
+message DoCostResourceResp {
+    int32 rt = 2;
+}
+
+message AllianceSupplyReq {
+    int32 resMainType = 1;
+    int64 resNum = 2;
+    LogVo log = 3;
+}
+
+message AllianceSupplyResp {
+    int32 rt = 2;
+}
+
+message QueryActivityStatusReq {
+    client2server.QueryActivityStatus reqMsg = 1;
+}
+
+message QueryActivityStatusResp {
+    int32 rt = 2;
+    client2server.QueryTaskRt respMsg = 3;
+    repeated int32 worldTaskProtoId = 4;
+}
+
+message EliminateChallengeShopBuyReq {
+    int32 shopProtoId = 1;
+    int32 protoId = 2; // 本届ID
+    LogVo log = 3;
+	int32 num = 4;
+}
+
+message EliminateChallengeShopBuyResp {
+    int32 rt = 1;
+}
+
+message EliminateInnerCityStartAsk {
+    int64 cityId = 1;
+}
+
+message EliminateInnerCityStartAskRt {
+    int32 rt = 1;
+}
+
+message EliminateInnerCityFinishAsk {
+    int64 cityId = 1;
+    int32 fightResult = 2;
+}
+
+message EliminateInnerCityFinishAskRt {
+    int32 rt = 1;
+}
+
+message AcsUseProp {
+    client2server.UseProp useProp = 1;
+    LogVo log = 2;
+}
+
+message AcsUsePropRt {
+    int32 rt = 1;
+}
+
+// 龙族秘宝三消开始战斗
+message DragonTreasureEliminateStartAsk {
+    int32 dragonTreasureId = 2;
+    repeated int64 heroId = 3;
+}
+
+message DragonTreasureEliminateStartAskRt {
+    int32 rt = 1;
+    map<int64, client2server.HeroBasicInfo> heroStashMap = 2;
+}
+
+// 开始三消挑战赛 扣除次数并且发送奖励
+message EliminateChallengeStartReq {
+    int32 protoId = 1;
+    LogVo log = 2;
+}
+
+message EliminateChallengeStartResp {
+    int32 rt = 1;
+    int32 rewardFlag = 2; // 是否要发奖励
+}
+
+// 龙族秘宝三消结束战斗
+message DragonTreasureEliminateFinishAsk {
+    int32 fightResult = 1;
+    int32 unitId = 2;
+    int32 dragonTreasureId = 3;
+    repeated int64 heroIds = 4;
+    LogVo log = 5;
+}
+message DragonTreasureEliminateFinishAskRt {
+    int32 rt = 1;
+    string resVo = 2;
+}
+
+// 内城随机事件三消开始战斗
+message RandomEventEliminateStartAsk {
+    int64 id = 1;
+}
+message RandomEventEliminateStartAskRt {
+    int32 rt = 1;
+    int32 randomEventProtoId = 2;
+    int32 res = 3;
+}
+
+// 内城随机事件三消战斗结束
+message RandomEventEliminateFinishAsk {
+    int64 id = 1;
+    int32 fightResult = 2;
+}
+message RandomEventEliminateFinishAskRt {
+    int32 rt = 1;
+    int32 randomEventProtoId = 2;
+    int32 res = 3;
+}
+
+// 内城随机事件slg战斗开始
+message RandomEventSlgStarAsk {
+    int64 id = 1;
+}
+message RandomEventSlgStarAskRt {
+    int32 rt = 1;
+    int32 randomEventProtoId = 2;
+    int32 res = 3;
+}
+
+message TryCreateAllianceAskReq {
+    string res = 1;
+    int32 createType = 2;
+    LogVo log = 4;
+    int32 enableSupply = 5; // 允许资源补齐
+}
+
+message TryCreateAllianceAskResp {
+    int32 rt = 1;
+}
+
+// 探索地图npc奖励
+message ExploreMapNpcRewardAskReq {
+    int32 npcProtoId = 1;
+    LogVo log = 2;
+}
+
+message ExploreMapNpcRewardAskRt {
+    int32 rt = 1;
+    int32 dropType = 2;
+    int32 dropProtoId = 3;
+
+}
+
+// 扣除英雄体力
+message CostHeroEnergyAskReq {
+    repeated int64 heroIds = 1;
+    int32 energy = 2;
+}
+
+message CostHeroEnergyAskRt {
+    int32 rt = 1;
+}
+
+message PveAutoFightRobAskReq {
+    client2server.BeginAutoFightPveRob req = 1; // 发到home去验证条件并扣除体力
+    int32 fightResult = 2;
+    string rewards = 3; // 如果战斗胜利则在Home修改数据并直接发奖励,世界不处理奖励信息
+}
+
+message PveAutoFightRobAskReqRt {
+    int32 rt = 1;
+}
+
+message QueryHuoyueduValueReq {
+}
+
+message QueryHuoyueduValueResp {
+    int32 rt = 1;
+    int32 huoyueduValue = 2;
+}
+
+message InternalPlayerInfo {
+    int64 playerId = 1;
+    int64 playerWorldId = 2;
+    string playerName = 3;
+    string playerAllianceName = 4;
+    string playerAllianceShortName = 5;
+    string playerAllianceNickName = 6;
+    int32 playerPhotoId = 7;
+    string reward = 8; // 悬赏,针对玩家的
+    int32 jjcScore = 9;
+    int32 castleAreaNo = 10; // 区号
+    int32 castleX = 11; // 主堡X坐标
+    int32 castleY = 12; // 主堡Y坐标
+    int32 belongState = 13;
+    int64 playerAllianceId = 14; // 玩家联盟id
+    client2server.PhotoViewInfo photoInfo = 15; // 玩家所属洲以及国家信息
+}
+
+// 查询玩家信息
+message QueryPersonalInfoAskReq {
+}
+
+message QueryPersonalInfoAskRt {
+    int32 rt = 1;
+    PlayerInFo playerInfo = 2;
+    repeated client2server.BagInfo bagInfo = 3;
+    int64 mainHeroPrisonPlayerId = 4;
+}
+
+message CheckResourceNumAndLimit {
+    int32 resType = 1;
+}
+message CheckResourceNumAndLimitRt {
+    int32 rt = 1;
+    int64 limit = 2;
+    int64 nowNum = 3;
+}
+
+message EndRobFightReq {
+    int32 robId = 1;
+    LogVo log = 2;
+}
+
+message EndRobFightRt {
+    int32 rt = 1;
+    client2server.BigInnerCity bigInnerCitys = 2; // 战斗胜利的话这个返回的是打下来的那个城池数据
+}
+
+message BeginRobFightReq {
+    repeated int64 heroIds = 1; // 派遣武将
+    int32 robId = 2; // 要攻打的ID
+}
+
+message BeginRobFightRt {
+    int32 rt = 1;
+}
+
+message FightHeroVo {
+    int64 heroId = 1;
+    int32 oldCityId = 2; // 0就表示是主城派的
+}
+
+message BeginRadarAtkEliminateMonsterAskReq {
+    int32 monsterProtoId = 1;
+    client2server.BeginEliminateFight req = 2;
+}
+
+message BeginRadarAtkEliminateMonsterAskResp {
+    int32 rt = 1;
+}
+
+message WorldCostHomeResAskReq {
+    string res = 1;
+    int32 extend = 2; // 拓展字段
+
+    LogVo log = 4;
+    int32 enableSupply = 5; // 允许资源补齐
+    int32 enableEmptyRes = 6; // 允许空资源,默认不允许
+}
+
+message WorldCostHomeResAskRt {
+    int32 rt = 1;
+    string realCost = 2; // 实际扣除的资源(区分安全和非安全)
+}
+
+message WUseHGmAskReq {
+    string gmType = 1;
+    string message = 2;
+    LogVo log = 3;
+}
+
+message WUseHGmAskRt {
+    int32 rt = 1;
+    string desc = 2;
+}
+
+// 战斗胜利扣除用掉的三消道具
+message CostEliminateItemAskReq {
+    string resString = 1; // 要扣除的奖励格式
+    int32 fightType = 2; // 要扣除的战斗类型
+    LogVo log = 3;
+}
+
+message CostEliminateItemAskRt {
+    int32 rt = 1;
+}
+
+// 侦查查询当前资源
+message QueryNowResAskReq {
+}
+
+message QueryNowResAskRt {
+    int32 rt = 1;
+    string res = 2;
+    string canPlunderRes = 3; //可掠夺资源
+}
+
+// 检测是否可以被联盟邀请并且发送邮件
+message AllianceInviteReq {
+    string allianceShortName = 1;
+    string name = 2;
+    string allianceNickName = 3;
+    string allianceName = 4;
+    int32 belongState = 5;
+
+    LogVo log = 11;
+}
+
+message AllianceInviteRt {
+    int32 rt = 1;
+}
+
+// 查看入帮状态并且尝试锁定该状态
+message CheckJoinAllianceStateReq {
+}
+
+message CheckJoinAllianceStateRt {
+    int32 rt = 1;
+}
+
+// 设置迁城状态
+message SetHomeMoveServerStateReq {
+    int32 state = 1; // 如果设置成锁定状态 下面的参数就没意义 如果是解锁状态的话 下面的值需要跟着修改的
+    int32 areaNo = 2; // 区号
+    int64 newWorldId = 3; // 服务器唯一id WorldId
+    int32 x = 4;
+    int32 y = 5;
+    string cost = 6; // 迁服扣掉的奖励格式字符串
+}
+
+message SetHomeMoveServerStateRt {
+    int32 rt = 1;
+}
+
+//请求创建战报
+message CreateBattleReportAskHomeReq {
+    BattleReport report = 1;
+}
+
+message CreateBattleReportAskHomeRt {
+    int32 rt = 1;
+}
+
+message BattleReport {
+    int32 readState = 1;
+    int32 reportType = 2;
+    int64 fightTime = 3;
+    int32 posX = 4;
+    int32 posY = 5;
+    int64 pastTime = 6;
+    bytes reportContent = 10;
+    bytes fightDetail = 11;
+}
+
+// 请求创建城池
+message MakeCityAskHomeReq {
+    int64 playerId = 1;
+    int64 castleId = 2;
+    int64 worldId = 3;
+    string playerName = 4;
+    string account = 5; // openId
+    string channelId = 6;
+    int32 accOpId = 7;
+    int32 areaNo = 8;
+    int32 rollServer = 9;
+    int32 openServerTime = 10; // 开服时间戳秒数
+    int64 accountId = 11; // 账号唯一ID
+    int32 castleX = 12; // 主堡X坐标
+    int32 castleY = 13; // 主堡Y坐标
+    client2server.BanData banData = 14; // 封禁数据
+    ClientInfo clientInfo = 15; // 客户端信息
+    int32 clientType = 16; //客户端类型
+    int32 lanType = 17; // 语言类型
+    string country = 18; // 国家
+    int32 timezone = 19; // 时区
+    string platformChannel = 20;
+    string adChannel = 21;
+    int32 clientLang = 22; // 客户端设备语言
+}
+
+message MakeCityAskHomeRt {
+    int32 rt = 1;
+    repeated string initHeroMap = 2;
+    repeated client2server.LongToLongKV initTaskMap = 3;
+    repeated HomeInnerCityBuilding homeInnerCityBuilding = 4; // 内城的功能建筑
+}
+
+message ClientInfo {
+    string regChannelId = 1;
+    string loginChannelId = 2;
+}
+
+message HomeInnerCityBuilding {
+    int64 id = 1;
+    int32 buildingType = 2;
+    int32 lv = 3;
+}
+
+//添加遗迹奖励
+message AddRelicRewardAskReq {
+    int32 timeBoxId = 1;
+    int32 dropRate = 2;
+}
+
+message AddRelicRewardAskRt {
+    int32 rt = 1;
+}
+
+//让Home服添加奖励
+message AddResToHomeAskReq {
+    string addRes = 1;
+    int32 actionId = 2; //和客户端约定的行为Id
+    LogVo log = 3;
+}
+
+message AddResToHomeAskRt {
+    int32 rt = 1;
+}
+
+//查询玩家的好友，黑名单信息
+message QueryFriendBlackAskReq {
+    int64 targetPlayerId = 1;
+}
+
+message QueryFriendBlackAskRt {
+    int32 rt = 1;
+    int32 isMyFriend = 2;
+    int32 isInMyBlack = 3;
+}
+
+//查询某玩家的部分信息
+message QueryPlayerInfoAskReq {
+}
+
+message QueryPlayerInfoAskRt {
+    int32 rt = 1;
+    QueryPlayerInfoVo queryPlayerInfoVo = 2;
+}
+
+message QueryPlayerInfoVo {
+    int64 gamePltAreaNo = 1; // 所在游戏服
+    string playerName = 2; // 玩家名
+    int32 photoProtoId = 3; // 玩家头像
+    int64 offTime = 4; // 离线时间
+    int64 mapPltAreaNo = 5; // 所在地图服
+    int64 lastLoginTime = 6; // 最后登录时间
+    int32 mapAreaNo = 7; // 所在地图服的编号
+    int32 playerCastleLv = 8; // 玩家主堡等级
+    int64 allianceId = 9; // 玩家联盟ID
+    string playerNickName = 10; // 玩家昵称
+    int32 jjcScore = 11;
+    int32 nowState = 12; // 当前所属州
+    int32 firstState = 13; // 第一次入盟的州
+    client2server.PhotoViewInfo photoInfo = 14; // 头像
+}
+
+//掠夺请求
+message PlunderAskReq {
+    repeated PlayerWeightInfo playerWeight = 1; //负重
+    LogVo log = 2;
+}
+
+message PlunderAskRt {
+    int32 rt = 1;
+    repeated PlayerPlunderInfo plunderRes = 2;
+    string bePlunderRes = 3;
+}
+
+message PlayerWeightInfo {
+    int64 playerId = 1;
+    int64 weight = 2; //负重
+    repeated client2server.IntToLongKV maxPlunderRes = 3;
+}
+
+message PlayerPlunderInfo {
+    int64 playerId = 1;
+    string plunderRes = 2;
+}
+
+//添加英雄经验请求
+message AddHeroExpAskReq {
+    int64 heroId = 1;
+    int32 addExp = 2;
+    LogVo log = 3;
+}
+
+message AddHeroExpAskRt {
+    int32 rt = 1;
+}
+
+// 重载配置表
+message ReloadHomeConfigAskReq {
+}
+
+message ReloadHomeConfigAskRt {
+    int32 rt = 1;
+}
+
+//=======================================================================================================
+
+// Home到Home的ask请求
+message Home2HomeAskReq {
+    int64 senderId = 1;
+    int32 clientMsgNo = 2;
+
+    oneof msg {
+        ThumbToPlayerAskReq thumbToPlayerAskReq = 11;
+        BeforeJoinRoomAskReq beforeJoinRoomAskReq = 12;
+        AskStrangerInfoAskReq askStrangerInfoAskReq = 13;
+        FriendGroupNoticeAskReq friendGroupNoticeAskReq = 17;
+        FindPlayerInBlackAskReq findPlayerInBlackAskReq = 18;
+        QueryInfoByHomeReq queryInfoByHomeReq = 19;
+        QueryBattleReportInfoAskReq queryBattleReportInfoAskReq = 20;
+        AskFightInfoDetailAskReq askFightInfoDetailAskReq = 21;
+        QueryPlayerTargetAskReq queryPlayerTargetAskReq = 22;
+        QueryDragonAskReq queryDragonAskReq = 23;
+        QueryHeroTrainInfoAskReq queryHeroTrainInfoAskReq = 32;
+        HeroOnTrainAskReq heroOnTrainAskReq = 33;
+        CheckFriendLimitAskReq checkFriendLimitAskReq = 35;
+        MakeFriendAskReq makeFriendAskReq = 36;
+        AssistMemberAskReq assistMemberAskReq = 37;
+        CabbageViewOtherAskReq cabbageViewOtherAskReq = 38;
+        CabbageStealTargetAskReq cabbageStealTargetAskReq = 39;
+    }
+}
+
+// Home到Home的ask返回
+message Home2HomeAskResp {
+    int64 playerId = 1;
+    int64 senderId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+        ThumbToPlayerAskRt thumbToPlayerAskRt = 11;
+        BeforeJoinRoomAskRt beforeJoinRoomAskRt = 12;
+        AskStrangerInfoAskRt askStrangerInfoAskRt = 13;
+        FriendGroupNoticeAskRt friendGroupNoticeAskRt = 17;
+        FindPlayerInBlackAskRt findPlayerInBlackAskRt = 18;
+        QueryInfoByHomeRt queryInfoByHomeRt = 19;
+        QueryBattleReportInfoAskRt queryBattleReportInfoAskRt = 20;
+        AskFightInfoDetailAskRt askFightInfoDetailAskRt = 21;
+        QueryPlayerTargetAskRt queryPlayerTargetAskRt = 22;
+        QueryDragonAskRt queryDragonAskRt = 23;
+        QueryHeroTrainInfoAskRt queryHeroTrainInfoAskRt = 32;
+        HeroOnTrainAskRt heroOnTrainAskRt = 33;
+        CheckFriendLimitAskRt checkFriendLimitAskRt = 35;
+        MakeFriendAskRt makeFriendAskRt = 36;
+        AssistMemberAskRt assistMemberAskRt = 37;
+        CabbageViewOtherAskResp cabbageViewOtherAskResp = 38;
+        CabbageStealTargetAskResp cabbageStealTargetAskResp = 39;
+
+    }
+}
+
+
+message CabbageViewOtherAskReq {
+    int64 from = 1; // 发起人的玩家id
+    int64 fromWorldId = 2; // 发起人的worldId
+}
+message CabbageViewOtherAskResp {
+    int32 rt = 1; // 查询结果
+    repeated client2server.CabbageHostInfo info = 2;
+}
+
+message CabbageStealTargetAskReq {
+    int64 from = 1; // 发起人的玩家id
+    int64 fromWorldId = 2; // 发起人的worldId
+    string fromName = 3; // 发起人玩家名
+    int64 fromAllianceId = 4; // 发起人联盟id
+    string fromAllianceShortName = 5; // 发起人联盟简称
+    int32 fieldId = 6; // 地块
+    int64 nowTimeMillis = 7; // 当前时间
+    int32 protoMaxStolenNum = 8; // 单次最大偷取数量
+    int32 freq = 9; // 偷取成功概率
+}
+message CabbageStealTargetAskResp {
+    int32 rt = 1;
+    int32 failOfNothing = 2;
+    repeated client2server.IntToLongKV props = 3;
+}
+
+// 请求加好友
+message MakeFriendAskReq {
+    int32 vipHide = 1;
+}
+
+message MakeFriendAskRt {
+    int32 rt = 1;
+    client2server.FriendInfo friend = 2;
+}
+
+// 判断好友上限
+message CheckFriendLimitAskReq {
+}
+
+message CheckFriendLimitAskRt {
+    int32 rt = 1;
+    client2server.FriendInfo friend = 2;
+}
+
+// 查找玩家，加入黑名单
+message FindPlayerInBlackAskReq {
+    int64 myPlayerId = 1;
+}
+
+message FindPlayerInBlackAskRt {
+    int32 rt = 1;
+    client2server.FriendInfo targetPlayer = 2;
+}
+
+//查询英雄训练所信息
+message QueryHeroTrainInfoAskReq {
+}
+
+message QueryHeroTrainInfoAskRt {
+    int32 rt = 1;
+    client2server.HeroTrainInfo trainInfo = 2;
+}
+
+//英雄上好友的训练位
+message HeroOnTrainAskReq {
+    client2server.TrainHero hero = 1;
+}
+
+message HeroOnTrainAskRt {
+    int32 rt = 1;
+    client2server.TrainHero hero = 2;
+}
+
+message QueryDragonAskReq {
+    int64 dragonId = 1;
+}
+
+message QueryDragonAskRt {
+    int32 rt = 1;
+    client2server.Dragon dragon = 2;
+}
+
+message QueryPlayerTargetAskReq {
+}
+
+message QueryPlayerTargetAskRt {
+    int32 rt = 1;
+    repeated client2server.KingInfo kingInfos = 2;
+    repeated client2server.IntToIntKV effectInfos = 3;//玩家effect信息
+}
+
+//获取战报信息
+message QueryBattleReportInfoAskReq {
+    int64 reportId = 1;
+    int64 fightDetailId = 2;
+}
+
+message QueryBattleReportInfoAskRt {
+    int32 rt = 1;
+    int32 reportType = 3;
+    string monsterFight = 6; // 三消魔物战json战报
+    client2server.SlgFightReport slgReport = 8;
+}
+
+// 点赞
+message ThumbToPlayerAskReq {
+    int64 sendPlayerId = 1;
+    string playerName = 2;
+    int32 lv = 3;
+    string intro = 4;
+    int64 thumbTime = 5;
+}
+
+message ThumbToPlayerAskRt {
+    int32 rt = 1;
+    string playerName = 2;
+    int32 lv = 3;
+    string intro = 4;
+}
+
+// 加入聊天室前查询home
+message BeforeJoinRoomAskReq {
+    int64 groupId = 1;
+    int64 reqWorldId = 2;
+}
+
+message BeforeJoinRoomAskRt {
+    int32 rt = 1;
+    string playerName = 2;
+    int32 protoId = 3;
+    int32 vipLv = 4;
+    int32 areaNo = 5;
+    string allianceShortName = 6;
+    int64 fightValue = 7;
+    int32 castleLv = 8;
+    string playerShortName = 9;
+    int32 belongState = 10;
+    string openId = 11;
+    int64 worldId = 12;
+    int32 photoFrameProtoId = 13;//头像框id
+}
+
+// 查询陌生人home
+message AskStrangerInfoAskReq {
+    int64 targetPlayerId = 1;
+}
+
+message AskStrangerInfoAskRt {
+    int32 rt = 1;
+    client2server.FriendInfo targetPlayer = 2;
+}
+
+// 好友移动,删除分组
+message FriendGroupNoticeAskReq {
+    int64 groupId = 1;
+}
+
+message FriendGroupNoticeAskRt {
+    int32 rt = 1;
+}
+
+// 请求home返回player信息
+message QueryInfoByHomeReq {
+
+}
+
+message QueryInfoByHomeRt {
+    int32 rt = 1;
+    PlayerInFo playerInfo = 2;
+    repeated client2server.BagInfo bagInfo = 3;
+    int64 mainHeroPrisonPlayerId = 4;
+    repeated client2server.BigInnerCity bigInnerCitys = 5;
+}
+
+message PlayerInFo {
+    string name = 1; // 玩家名称
+    string shortName = 2; // 玩家简称
+    int64 id = 3; // 玩家IDQueryInfoByHomeRt
+    int64 allianceId = 4; // 联盟ID
+    string allianceName = 5; // 联盟名称
+    string allianceShortName = 6; // 联盟简称
+    repeated int32 positions = 7; // 联盟职位
+    client2server.PhotoViewInfo photoInfo = 8; // 头像
+    int64 fightValue = 9; // 战斗力
+    int32 kingLv = 10; // 君主等级
+    int32 kingExp = 11; // 君主经验
+    int32 vipLv = 12; // vip等级
+    int32 currentPos = 13; // 当前官职
+    int32 mainHeroStarLv = 14; // 领主星级
+    int32 mainHeroAdvLv = 15; // 领主阶级
+    int64 killSoliderNum = 16; // 杀敌数
+    int32 isMyFriend = 17; // 是否是我的好友
+    int32 isMyBlackFriend = 18; // 是否是我的黑名单
+    int32 mainHeroProtoId = 19; // 领主模版
+    int32 jjcScore = 20;
+    int32 heroNum = 21; // 玩家英雄数量
+    int32 innerCityNum = 22; // 内城城池数
+    int32 belongState = 23; // 联盟所属洲
+    int32 nowUnitTaskId = 24; // 章节任务进度
+    int32 lordEquipOpen = 25; // 领主装备开启
+    repeated client2server.LordEquip lordEquip = 26 [deprecated = true]; //废弃!领主装备
+    int32 castleLv = 27; // 内城主堡等级
+    client2server.LordEquipInfo lordEquipInfo = 28; // 领主装备
+    int32 currentSkinId = 29; // 领主当前皮肤
+    int32 lordEquipStoneOpen = 30; // 领主装备徽章是否开启
+
+    int64 worldId = 100; // 当前世界ID
+    int32 areaNo = 101; // 当前区号
+}
+
+//===================================================================================================
+message Mgr2HomeAskReq {
+
+    oneof msg {
+        SendSysMailAskReq sendSysMailAskReq = 11;
+        QueryHomePlayerAskReq queryHomePlayerAskReq = 12;
+        EvalScriptReq evalScriptReq = 13;
+        QueryEquipDataReq queryEquipDataReq = 14;
+        ExchangeHomeInfoReq exchangeHomeInfoReq = 15;
+        DumpPlayerHomeReq dumpPlayerHomeReq = 16;
+        ImportPlayerHomeReq importPlayerHomeReq = 17;
+        MgrPayReq mgrPayReq = 18;
+        IdipHomeReq idipHomeReq = 28;
+        QueryHomePlayerInfoReq queryHomePlayerInfoReq = 29;
+        GmCmd2HomeReq gmCmd2HomeReq = 30;
+        ForbidChatReq forbidChatReq = 31;
+        QueryPlayerHeroInfoReq queryPlayerHeroInfoReq = 32;
+        QueryInnerCityInfoRep queryInnerCityInfoRep = 33;
+        MgrQueryLordTalentReq mgrQueryLordTalentReq = 34;
+        MgrQueryEffectReq queryEffectReq = 35;
+        MgrPlayerSurpriseGiftReq queryPlayerSurpriseGiftReq = 36;
+    }
+}
+
+message Mgr2HomeAskResp {
+    oneof msg {
+        SendSysMailAskResp sendSysMailAskResp = 11;
+        QueryHomePlayerAskResp queryHomePlayerAskResp = 12;
+        EvalScriptResp evalScriptResp = 13;
+        QueryEquipDataResp queryEquipDataResp = 14;
+        ExchangeHomeInfoResp exchangeHomeInfoResp = 15;
+        DumpPlayerHomeResp dumpPlayerHomeResp = 16;
+        ImportPlayerHomeResp importPlayerHomeResp = 17;
+        MgrPayResp mgrPayResp = 18;
+        IdipHomeResp idipHomeResp = 28;
+        QueryHomePlayerInfoResp queryHomePlayerInfoResp = 29;
+        GmCmd2HomeResp gmCmd2HomeResp = 30;
+        ForbidChatResp forbidChatResp = 31;
+        QueryPlayerHeroInfoResp queryPlayerHeroInfoResp = 32;
+        QueryInnerCityInfoResp queryInnerCityInfoResp = 33;
+        MgrQueryLordTalentResp mgrQueryLordTalentResp = 34;
+        MgrQueryEffectResp queryEffectResp = 35;
+        MgrPlayerSurpriseGiftResp queryPlayerSurpriseGiftResp = 36;
+    }
+}
+
+// 禁言
+message ForbidChatReq {
+    int64 banEndTime = 2;
+    string banReason = 3;
+}
+
+message ForbidChatResp {
+    int32 rt = 1;
+}
+
+// gmcmd
+message GmCmd2HomeReq {
+    string text = 1;
+}
+
+message GmCmd2HomeResp {
+    int32 rt = 1;
+    string msg = 2;
+}
+
+// 查询home玩家讯息
+message QueryHomePlayerInfoReq {
+}
+
+message QueryHomePlayerInfoResp {
+    string playerData = 1;
+}
+
+// idip
+message IdipHomeReq {
+    int32 seqId = 1;
+    int32 cmdId = 2;
+    string data = 3;
+    string extend = 4;
+}
+
+message IdipHomeResp {
+    int32 result = 1;
+    string retMsg = 2;
+    string data = 3;
+    string extend = 4;
+}
+
+//
+message ExchangeHomeInfoReq {
+    string oldOpenId = 1;
+    string newOpenId = 2;
+}
+
+message ExchangeHomeInfoResp {
+    int32 rt = 1; // rt正常恒等1 非1表示通讯异常
+    int32 success = 2; // 表示功能执行结果
+}
+
+message DumpPlayerHomeReq {
+    int64 playerId = 1;
+}
+
+message DumpPlayerHomeResp {
+    int32 rt = 1;
+    bytes info = 2;
+}
+
+message ImportPlayerHomeReq {
+    bytes info = 1;
+    bytes replaceData = 2;
+}
+
+message ImportPlayerHomeResp {
+    int32 rt = 1;
+}
+
+// 尽量保持和 PayCallbackReq 一致
+message MgrPayReq {
+    int64 playerId = 1; // 玩家ID
+    int64 timestamp = 2; // 支付时间(秒时间戳)
+    int32 payType = 3; // 支付方式
+    string payCurrency = 4; // 支付货币类型，如 RMB USD
+    string payAmount = 5; // 以 currency 单位支付金额
+    string usdAmount = 6; // 订单档位(以美元计价的金额，并非实际付费)
+    string myOrderNo = 7; // 游戏端唯一订单ID
+    string sdkOrderNo = 8; // SDK端唯一订单ID
+    int32 giftId = 9; // 礼包ID
+    string ip = 10; // 支付用户ip
+    int64 logId = 11;
+    int32 clientType = 12; // 客户端类型
+}
+
+message MgrPayResp {
+    int32 rt = 1;
+    string orderNo = 2; // 订单号
+}
+
+// 发送系统邮件
+message SendSysMailAskReq {
+    repeated SysMailMessageData message = 2;
+    string attach = 4;
+
+    LogVo log = 11;
+}
+
+message SendSysMailAskResp {
+    int32 rt = 1;
+}
+
+message SysMailMessageData {
+    int32 lanType = 1;
+    string title = 2;
+    string content = 3;
+}
+
+// 查询home玩家信息
+message QueryHomePlayerAskReq {
+}
+
+message QueryHomePlayerAskResp {
+    int32 rt = 1;
+    int64 playerId = 2;
+    int64 pltAreaNo = 3;// 世界服Id
+    string openId = 4;// 用户名 // 玩家用户名
+    string playerName = 6;// 玩家角色名
+    string nickName = 7;// 联盟昵称
+    string allianceName = 8; // 联盟名称
+    int32 kingLv = 9;// 领主等级,默认1级
+    int32 castleLv = 10;//主城等级
+    int32 vipLv = 11;// VIP等级
+    int64 coin = 15;// 铜币
+    int64 food = 16;// 食物
+    int64 wood = 17;// 木材
+    int64 stone = 18;// 石头
+    int64 iron = 19;// 铁
+    int64 bindGold = 20;//钻石
+    int64 gold = 21;
+    int64 power = 22;//总实力
+    int64 userPayNum = 23;// 充值积分总额
+    int64 userPayNum4Task = 24;// 排除特定充值项目、用于充值活动任务的充值积分总额
+    string homePlayerInfo = 27;
+    repeated int32 innerCities = 28;
+    repeated int32 robs = 29;
+    int32 belongState = 30;
+    int64 reliableStone = 31;// 可靠石头
+    int64 reliableFood = 32;// 可靠粮食
+    int64 reliableWood = 33;// 可靠木头
+    int64 reliableIron = 34; // 可靠铁
+    int64 reliableCoin = 35;//可靠铜币
+    string country = 36;    // 地区
+    int32 gmRank = 37;//gm等级
+}
+
+// 查询玩家道具
+message QueryEquipDataReq {
+}
+
+message QueryEquipDataResp {
+    int32 rt = 1;
+    repeated EquipData equips = 2;
+}
+
+message EquipData {
+    int64 id = 1;
+    int32 equipProtoId = 2;
+    int32 haveNum = 3;
+    int64 foreignId = 4;
+    string cardInfo = 5;
+}
+
+// 查询玩家英雄
+message QueryPlayerHeroInfoReq {
+}
+
+message QueryPlayerHeroInfoResp {
+    int32 rt = 2;
+    repeated HeroData heroes = 3;
+}
+
+message HeroData {
+    int64 id = 1;
+    int32 heroProtoId = 2;
+    int32 level = 3;
+    int32 exp = 4;
+    int32 advLv = 5;
+    int32 awake = 6;
+    int32 mainHeroState = 7;
+    int64 heroStrength = 8;
+    int64 power = 9;
+    int32 quality = 10;
+}
+
+// 查询玩家建筑信息
+message QueryInnerCityInfoRep{
+}
+
+message QueryInnerCityInfoResp{
+    int32 rt = 2;
+    repeated client2server.InnerCityInfo innerCityInfo = 3;
+    repeated client2server.IntToIntKV innerCityProtoId = 4;//内城建筑protoId   <建筑类型:建筑id>
+}
+
+message MgrQueryLordTalentReq{
+
+}
+
+message MgrQueryLordTalentResp{
+    int32 rt = 1;
+    repeated client2server.LordTalentPage page = 2;
+    repeated client2server.IntToStringKV TalentProtoId = 3;
+}
+
+message MgrQueryEffectReq {
+    int32 strategy = 1;
+}
+
+message MgrQueryEffectResp {
+    int32 rt = 2;
+    map<int32, EffectGroup> groupInfo = 3;
+
+    message EffectGroup {
+        repeated client2server.IntToIntKV info = 1;
+    }
+}
+
+//查询玩家情景礼包的触发信息
+message MgrPlayerSurpriseGiftReq {
+}
+
+message MgrPlayerSurpriseGiftResp {
+    int32 rt = 2;
+    repeated client2server.SurpriseGiftPackage surpriseGiftPackages=3;
+}
+
+
+
+// BattleField到Home的ask请求
+message BattleField2HomeAskReq {
+    int64 battleFieldId = 1;
+    int32 clientMsgNo = 2;
+
+    oneof msg {
+        AddResToHomeAskReq AddResToHomeAskReq = 11;
+        BattleFieldCostHomeResAskReq battleFieldCostHomeResAskReq = 12;
+    }
+}
+
+// BattleField到Home的ask请求
+message BattleField2HomeAskResp {
+    int64 playerId = 1;
+    int64 battleFieldId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+        AddResToHomeAskRt addResToHomeAskRt = 11;
+        BattleFieldCostHomeResAskResp battleFieldCostHomeResAskRt = 12;
+    }
+}
+
+message BattleFieldCostHomeResAskReq {
+    LogVo log = 1;
+    string res = 2;
+    int32 enableSupply = 3;
+    int32 enableEmptyRes = 4;
+}
+
+message BattleFieldCostHomeResAskResp {
+    int32 rt = 2;
+    string realCost = 3;
+}
+
+
+// ==============================================
+message Report2HomeTell {
+    oneof msg {
+        FetchTencentCreditRespTell fetchTencentCreditRespTell = 11;
+    }
+}
+
+message FetchTencentCreditRespTell {
+    int32 ret = 1; // 返回结果，0正常，非0异常
+    int64 mtime = 2; // 评估时间
+    int32 score = 3; // 通用信用分(值域为[0, 1200])
+    int32 tag_black = 4; // 黑产标签等级，当need_black_tag为1时返回 取值为[0, 1, 2, 3, 4, 5]，黑产标签等级越高，恶意度越高
+    int32 tag_ugc = 5; // ugc标签等级，当need_tag_ugc为1时返回  取值为[0, 1, 2, 3, 4, 5]，UGC标签等级越高，恶意度越高。
+}
+
+// =============================================
+message Login2HomeTell {
+
+    oneof msg {
+        MidasGetBalanceRespTell midasGetBalanceRespTell = 11;
+        MidasPayRespTell midasPayRespTell = 12;
+        MidasCancelPayRespTell midasCancelPayRespTell = 13;
+        MidasPresentRespTell midasPresentRespTell = 14;
+        SurveyRewardTell surveyRewardTell = 15;
+    }
+}
+
+
+// 问卷webhook发送奖励
+message SurveyRewardTell {
+    int64 surveyId = 1;
+    string sid = 2;
+
+    LogVo log = 11;
+}
+
+message MidasGetBalanceRespTell {
+    int32 ret = 1;
+    int64 balance = 2;
+    int64 gen_balance = 3;
+    int64 save_amt = 4;
+    int64 save_sum = 5; // 历史总游戏币金额
+    int64 cost_sum = 6; // 历史总消费游戏币金额
+    int64 present_sum = 7; // 历史累计收到赠送金额
+}
+
+message MidasPayRespTell {
+    int32 ret = 1;
+    int64 billno = 2; // 唯一订单号
+    int64 balance = 3; // 预扣后的余额
+    int64 gen_balance = 4; // 赠送游戏币数量（balance中赠送游戏币数量）
+    int64 used_gen_amt = 5; // 本次扣的赠送币的金额
+}
+
+message MidasCancelPayRespTell {
+    int32 ret = 1;
+    int64 billno = 2; // 唯一订单号
+}
+
+message MidasPresentRespTell {
+    int32 ret = 1;
+    int64 billno = 2; // 唯一订单号
+    int64 balance = 3; // 预扣后的余额
+}
+
+//===================================================================================================
+message Home2HomeTell {
+    int64 worldId = 1;
+    int32 clientMsgNo = 2;
+    int64 sendPlayerId = 3;
+
+    oneof msg {
+        SaveFriendChatRecordTell saveFriendChatRecordTell = 16;
+        CreateMailTell createMailTell = 19;
+        CleanPrivateChatMsgTell cleanPrivateChatMsgTell = 20;
+        CleanChatPlayerTell cleanChatPlayerTell = 21;
+        CleanMailTell cleanMailTell = 22;
+        CheckFriendLimitTell checkFriendLimitTell = 23;
+        CheckFriendLimitReplyTell checkFriendLimitReplyTell = 24;
+        AddFriendTell addFriendTell = 25;
+        DelFriendTell delFriendTell = 26;
+        NewMailTell newMailTell = 27;
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+    }
+}
+
+message AddFriendTell {
+    int64 logId = 1;
+    client2server.FriendInfo friend = 2;
+}
+
+message DelFriendTell {
+    int64 logId = 1;
+}
+
+message CheckFriendLimitTell {
+}
+
+message CheckFriendLimitReplyTell {
+    int32 rt = 1;
+    client2server.FriendInfo friend = 2;
+}
+
+message CleanMailTell {
+    int64 mailId = 1;
+    int64 mailExtendId = 2;
+}
+
+// 清除聊天玩家通知
+message CleanChatPlayerTell {
+    int64 cleanPlayerId = 1;
+}
+
+//清除私聊记录
+message CleanPrivateChatMsgTell {
+    int64 cleanPlayerId = 1;
+}
+
+message SaveFriendChatRecordTell {
+    client2server.ChatInfo chatInfo = 1;
+
+    LogVo log = 30;
+}
+
+// 触发心跳
+message TriggerHeartTellReq {
+    int32 action = 1;
+    int64 actionId = 2;
+    int64 overTime = 3; // 结束时间，也认为是心跳的ID
+}
+
+//===================================================================================================
+message World2HomeTell {
+    int32 clientMsgNo = 1;
+
+    oneof msg {
+        MakeCityTell makeCityTell = 11;
+        CreateMailTell createMailTell = 12;
+        LeaveAllianceTell leaveAllianceTell = 13;
+        HaveAllianceTell haveAllianceTell = 14;
+        AllianceInfoChangeTell allianceInfoChangeTell = 15;
+        TaskFinishOnWorldTell taskFinishOnWorldTell = 16;
+        AchieveFinishOnWorldTell achieveFinishOnWorldTell = 17;
+        UnLockJoinAllianceStateTell unLockJoinAllianceStateTell = 19;
+        JoinNoSuccessTell joinNoSuccessTell = 20;
+        GiveRansomCostResReqTell giveRansomCostResReqTell = 23;
+        KillPrisonerCostResReqTell killPrisonerCostResReqTell = 24;
+        SetMainHeroRewardReqTell setMainHeroRewardReqTell = 25;
+        EatPoisonCostReqTell eatPoisonCostReqTell = 26;
+        CreateOpenServerTaskTell createOpenServerTaskTell = 27;
+        MoveServerLockHomeReqTell moveServerLockHomeReqTell = 28;
+        MoveServerUnLockHomeReqTell moveServerUnLockHomeReqTell = 29;
+        World2HomeRetryTell world2HomeRetryTell = 30;
+        DragonExplorBattleUnlockLevelTell dragonExplorUnlockLevel = 31; // 爬塔解锁新关卡
+        OpenLibraryItemTell OpenLibraryItemTell = 32;
+        DragonExplorBattleHappensTell dragonExplorBattleHappensTell = 33; // 战斗发生
+        OpenSurpriseTell openSurpriseTell = 34;
+        InstanceTimeAddTell instanceTimeAddTell = 35;
+        HeroWearyAddTell heroWearyAddTell = 37;
+        RemoveBlackPlayerTell removeBlackPlayerTell = 38;
+        SendChatMsgTell sendChatMsgTell = 39;
+        UpdateChatPlayerTell updateChatPlayerTell = 40;
+        SendPrivateChatMessage sendPrivateChatMessage = 41;
+        NoticeRefreshCountryTask noticeRefreshCountryTask = 42;
+        WorldActivityOpenTell worldActivityOpenTell = 43;
+        OpenServerFightRankActivityStageTaskCreate openServerFightRankActivityStageTaskCreate = 44; // 要求home创建开服战力排行活动阶段任务
+        OpenServerFightRankActivityStageEnd openServerFightRankActivityStageEnd = 45; // 告知home开服战力排行活动阶段结束,在线玩家需要刷一下任务红点
+        ChooseStateTell chooseStateTell = 49;
+        AssistAllianceMemberTell assistAllianceMemberTell = 50;
+        RecallAssistGroupTell recallAssistGroupTell = 51;
+        BigWonderFightEndTell bigWonderFightEndTell = 52;
+        DealAfterHelpTell dealAfterHelpTell = 53;
+        BigWonderFightStartTell bigWonderFightStartTell = 54;
+        ScienceTaskOnlineRefreshTell scienceTaskOnlineRefreshTell = 55;
+        ClearTimeTell clearTimeTell = 56;
+        QueryActivityStatusTell queryActivityStatusTell = 57;
+        OpenFogTell openFogTell = 58;
+        OfflineMsgTell offlineMsgTell = 59;
+        ClientDisconnectTell clientDisconnectTell = 60;
+        CabbageActivityExpireOnlineTell cabbageActivityExpireOnlineTell = 61;
+        RandomEventSlgFinishTell randomEventSlgFinishTell = 62;
+        WorldUiconditionOpenReq worldUiconditionOpenReq = 63;
+        HomeUiconditionOpenResp homeUiconditionOpenResp = 64;
+        PreMakeCityTell preMakeCityTell = 65;
+        AllianceTaskRefreshTell allianceTaskRefreshTell = 66;
+        CanAssistMailTell canAssistMailTell = 67;
+        LuckyDiscountShopRedPointRefreshTell luckyDiscountShopRedPointRefreshTell = 68;
+        SyncallianceActivityEffect syncallianceActivityEffect = 69;
+        SyncAllianceUnitTaskEffect syncAllianceUnitTaskEffect = 70;
+        SyncFestivalLeiInfo syncFestivalInfo = 71;
+        NewMailTell newMailTell = 72;
+        NewAllianceGiftTell newAllianceGiftTell = 73;
+        SyncInfoByAny syncInfoByAny = 74;
+        PubDataForEnterTell pubDataForEnterTell = 75;
+        SkinRewardTell skinRewardTell = 76;
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+
+        CleanDataTell cleanDataTell = 300;
+        WakeUpPlayerTell wakeUpPlayerTell = 400;
+    }
+}
+
+// 皮肤奖励获取
+message SkinRewardTell {
+    int32 way = 1; // 来源
+    LogVo log = 2;
+}
+
+// 同步仇磊活动信息
+message SyncFestivalLeiInfo {
+    int32 type = 1;
+    int32 value = 2;
+    LogVo log = 3;
+    int32 protoId = 4;
+}
+
+// 同步联盟章节任务效果
+message SyncAllianceUnitTaskEffect {
+    repeated client2server.IntToIntKV eff = 1;
+}
+
+// 同步联盟活跃度科技效果
+message SyncallianceActivityEffect {
+    repeated client2server.IntToIntKV eff = 1;
+}
+
+// 幸运折扣商店红点刷新
+message LuckyDiscountShopRedPointRefreshTell {
+}
+
+message AllianceTaskRefreshTell {
+    int64 nowTimeMillis = 1;
+}
+
+message CanAssistMailTell {
+    int64 mailId = 1;
+    int64 sendTime = 2;
+    repeated int64 playerIds = 3;
+    int32 assistType = 4;
+}
+
+// 预创建城池
+message PreMakeCityTell {
+    int64 playerId = 1;
+    int64 castleId = 2;
+    int64 worldId = 3;
+    string playerName = 4;
+    int32 areaNo = 8;
+    int32 openServerTime = 10; // 开服时间戳秒数
+    int32 castleX = 12; // 主堡X坐标
+    int32 castleY = 13; // 主堡Y坐标
+}
+
+message WorldUiconditionOpenReq {
+    repeated client2server.UiconditionOpenPb uiconditionOpenPbs = 1;
+}
+
+message HomeUiconditionOpenResp {
+    repeated int32 overIds = 1;
+}
+
+// 内城随机事件slg战斗结束
+message RandomEventSlgFinishTell {
+    int64 id = 1;
+    int32 fightResult = 2;
+}
+
+message MakeCityTell {
+    int64 playerId = 1;
+    int64 castleId = 2;
+    int64 worldId = 3;
+    string playerName = 4;
+    string account = 5; // openId
+    string channelId = 6;
+    int32 accOpId = 7;
+    int32 areaNo = 8;
+    int32 rollServer = 9;
+    int32 openServerTime = 10; // 开服时间戳秒数
+    int64 accountId = 11; // 账号唯一ID
+    int32 castleX = 12; // 主堡X坐标
+    int32 castleY = 13; // 主堡Y坐标
+    client2server.BanData banData = 14; // 封禁数据
+    ClientInfo clientInfo = 15; // 客户端信息
+    int32 clientType = 16; //客户端类型
+}
+
+//客户端断线
+message ClientDisconnectTell {
+    int32 totalPlayTime = 1; // 玩家游戏总时长
+}
+
+message OfflineMsgTell {
+    int32 msgType = 2; //消息类型
+    int32 readType = 3; //阅读类型 1、读lan 2、读内容
+    string msg = 4; //消息内容
+    repeated string parms = 5; //消息参数
+}
+
+message OpenFogTell {
+    repeated client2server.IntToIntKV pos = 1;
+    int32 needReply = 2;
+}
+
+message WakeUpPlayerTell {
+}
+
+// 查询活动状态同步
+message QueryActivityStatusTell {
+}
+
+message CabbageActivityExpireOnlineTell {
+    int32 activityProtoId = 1; // 活动模板id,第2版偷菜
+    LogVo log = 11;
+}
+
+// 加速时间
+message ClearTimeTell {
+    int32 clearType = 1; // 加速类型
+    int32 clearSeconds = 2; // 加速的时间
+}
+
+// 科研任务在线玩家刷新通知
+message ScienceTaskOnlineRefreshTell {
+    int64 nextRefreshTime = 1;
+}
+
+// 大奇观结束开始
+message BigWonderFightStartTell {
+}
+
+// 大奇观结束争夺
+message BigWonderFightEndTell {
+    bool success = 1; // 是否成功
+    int64 overTime = 2; //结束时间
+    LogVo log = 11;
+}
+
+// 召回交易站发出的援助部队
+message RecallAssistGroupTell {
+    string resVo = 1; // 援助的资源
+    string reason = 2;
+}
+
+// 援助联盟成员
+message AssistAllianceMemberTell {
+    string resVo = 1; // 援助的资源
+    int64 SponsorId = 2; // 发起人id
+}
+
+message ChooseStateTell {
+    int32 chooseState = 1;
+    int32 chooseHero = 2; // heroSelect表的唯一ID
+}
+
+message OpenServerFightRankActivityStageEnd {
+}
+
+message OpenServerFightRankActivityStageTaskCreate {
+    repeated client2server.IntToLongKV cell = 1; // 模板id -> 时间
+}
+
+//天下大势开启通知
+message WorldActivityOpenTell {
+    repeated int32 checkWorldActivityIds = 1;
+}
+
+// 要求Home刷新势力任务
+message NoticeRefreshCountryTask {
+    int32 worldActivityProtoId = 1; // 天下大势进度模板id
+    int64 nowTimeMillis = 2; // 当前时间
+}
+
+// 给指定玩家发私聊
+message SendPrivateChatMessage {
+    int64 targetPlayerId = 1;
+    int32 readType = 2;
+    string message = 3;
+    repeated string lanParams = 4;
+    int32 messageType = 5;
+}
+
+//更新聊天玩家信息
+message UpdateChatPlayerTell {
+    int32 changeType = 1;
+    client2server.FriendInfo friendInfo = 2; // 好友信息
+}
+
+//发送聊天消息
+message SendChatMsgTell {
+    int64 targetId = 2; // 聊天对象Id 玩家Id/联盟Id/房间Id
+
+    client2server.ChatInfo chatInfo = 1;
+}
+
+// 移除黑名单玩家
+message RemoveBlackPlayerTell {
+    int64 targetPlayerId = 1;
+}
+
+//英雄行动力增加
+message HeroWearyAddTell {
+    repeated client2server.LongToIntKV addInfo = 1; //heroId-value
+}
+
+// 时间之力增加
+message InstanceTimeAddTell {
+    int32 addValue = 1;
+}
+
+// 开启惊喜礼包
+message OpenSurpriseTell {
+    repeated int32 giftPackageId = 1;
+}
+
+//让Home服点亮图鉴
+message OpenLibraryItemTell {
+    int32 type = 1; // 类型常量
+    int32 protoId = 2; // 怪物图鉴-推图instance表id/道具图鉴-prop表id
+    int32 kill = 3; // 类型是魔物时，表示是否杀死了魔物
+}
+message DragonExplorBattleHappensTell {
+    int32 levelLineId = 1; // 挑战的关卡的id
+    int32 fightType = 2; // 战斗类型
+    int32 fightResult = 3; // 战斗结果
+    string useProps = 4; // 使用的药
+    int32 usePropNum = 5; // 使用药的总量
+}
+message DragonExplorBattleUnlockLevelTell {
+    int32 toUnlockLevelLineId = 1; // 通关的关卡id
+    int32 stars = 2; // 三消战斗胜利时的星级
+}
+message World2HomeRetryTell {
+    int64 worldId = 1;
+    int64 msgId = 2;
+
+    oneof msg {
+        TriggerHeartTellReq triggerHeartTellReq = 11;
+    }
+}
+
+// 迁服解锁home状态
+message MoveServerUnLockHomeReqTell {
+    int64 moveServerId = 1;
+    int32 areaNo = 2;
+    int64 newWorldId = 3;
+    int32 openServerTime = 4; // 开服时间戳秒数
+    int32 castleX = 5; // 主堡X坐标
+    int32 castleY = 6; // 主堡Y坐标
+}
+
+// 迁服锁home状态
+message MoveServerLockHomeReqTell {
+    int64 moveServerId = 1;
+    string cost = 2;
+}
+
+// 去home通知该玩家有新的开服狂欢任务获得
+message CreateOpenServerTaskTell {
+}
+
+// 消耗毒蘑菇自杀
+message EatPoisonCostReqTell {
+    int64 eatNum = 1; // 消耗毒蘑菇数量
+    int64 prisonerPlayerId = 2; // 犯人ID
+    int64 prisonerWorldId = 3; // 犯人所在世界
+    int64 prisonerMasterPlayerId = 4; // 关押者ID
+    int64 prisonerMasterWorldId = 5; // 关押者所在世界
+}
+
+// 设置赏金
+message SetMainHeroRewardReqTell {
+    int64 setNum = 1; // 金币数
+    int64 prisonerPlayerId = 2; // 犯人ID
+    int64 prisonerWorldId = 3; // 犯人所在世界
+    int64 prisonerMasterPlayerId = 4; // 关押者ID
+    int64 prisonerMasterWorldId = 5; // 关押者所在世界
+}
+
+// 交资源杀人
+message KillPrisonerCostResReqTell {
+    int64 prisonerPlayerId = 1; // 犯人ID
+    int64 prisonerWorldId = 2; // 犯人所在世界
+    int64 prisonerMasterPlayerId = 3; // 关押者ID
+    int64 prisonerMasterWorldId = 4; // 关押者所在世界
+}
+
+// 交赎金赎人
+message GiveRansomCostResReqTell {
+    string res = 1; // 交的钱的奖励格式字符串
+    int64 prisonerPlayerId = 2; // 犯人ID
+    int64 prisonerWorldId = 3; // 犯人所在世界
+    int64 prisonerMasterPlayerId = 4; // 关押者ID
+    int64 prisonerMasterWorldId = 5; // 关押者所在世界
+}
+
+// 推送给被拒绝的玩家让他删除申请记录
+message JoinNoSuccessTell {
+    int64 allianceId = 1; // 拒绝玩家的帮派ID
+}
+
+// 解除玩家在home服的入帮状态
+message UnLockJoinAllianceStateTell {
+}
+
+// 执行HOME的GM命令
+message UseGmReqTell {
+    string gmType = 1;
+    string message = 2;
+}
+
+// 要具体战报
+message AskFightInfoDetailAskReq {
+    int64 reportId = 1;
+    int64 reportOwner = 2; // 拥有这份战报的玩家id
+}
+
+message AskFightInfoDetailAskRt {
+    int32 rt = 1;
+    client2server.BattleReportInfo reportContent = 2;
+    string message = 3; // 魔物战报的json
+}
+
+// 发送邮件
+message CreateMailTell {
+    client2server.MailTitleAndCon mailInfo = 1;
+    int64 sendPlayerId = 2;
+    string sendPlayerName = 3;
+    string sendPlayerNickName = 4;
+    int64 sendAllianceId = 5;
+    string sendAllianceName = 6;
+    string sendAllianceShortName = 7;
+    int32 mailType = 8;
+    string attach = 9;
+    int32 readState = 10;
+    int64 sysId = 11;
+    string extend1 = 12;
+    client2server.BattleReportInfo reportContent = 13;
+    int64 fightDetailId = 14;
+    int32 sendPlayerPhotoId = 15;
+    int32 sendPlayerJjcScore = 16;
+    int32 mailLogType = 20; //邮件日志类型
+    int64 extendId = 30; //扩展Id,用于特殊情况查询
+    int32 belongState = 21;
+    client2server.PhotoViewInfo sendPhotoInfo = 22;
+}
+
+message LeaveAllianceTell {
+}
+
+// 玩家加入联盟
+message HaveAllianceTell {
+    int64 allianceId = 1;
+    string allianceName = 2;
+    string allianceShortName = 3;
+    int32 flagColor = 4;
+    int32 flagStyle = 5;
+    int32 flagEffect = 6;
+    int32 isFirst = 7;
+    repeated int32 alliancePos = 8;
+    int32 createFlag = 9; // 是否是创建联盟  0-否 1-是
+}
+
+// 联盟信息发生变化
+message AllianceInfoChangeTell {
+    string allianceName = 1;
+    string allianceShortName = 2;
+    int32 flagColor = 3;
+    int32 flagStyle = 4;
+    int32 flagEffect = 5;
+    int32 allianceLan = 6;
+    int32 belongState = 7;
+}
+
+// 有个任务在世界被完成了
+message TaskFinishOnWorldTell {
+    repeated int64 taskId = 1;
+    int64 logId = 2;
+    repeated client2server.Task tasks = 3;
+}
+
+// gm成就达成
+message AchieveFinishOnWorldTell {
+    int32 achievementId = 1;
+}
+
+//===================================================================================================
+message Pub2HomeTell {
+    int32 clientMsgNo = 1;
+
+    oneof msg {
+        AllianceCompetitionScoreTell allianceCompetitionScoreTell = 11;
+        AllianceCompetitionInfoChangeNotic2GTell allianceCompetitionInfoChangeNotic2GTell = 12;
+        AllianceCompetitionOverNotic2GTell allianceCompetitionOverNotic2GTell = 13;
+        CreateMailTell createMailTell = 15;
+        SyncInfoByAny syncInfoByAny = 16;
+        ChatRoomChangeTell ChatRoomChangeTell = 17;
+        OfflineMsgTell offlineMsgTell = 18;
+        SendChatRespTell sendChatRespTell = 19;
+        PubDataForEnterTell pubDataForEnterTell = 20;
+        NewAllianceGiftTell newAllianceGiftTell = 21;
+        NewMailTell newMailTell = 22;
+
+        PublishTell publishTell = 100;
+        SubscribeTell subscribeTell = 102;
+        UnSubscribeTell unSubscribeTell = 104;
+    }
+}
+
+message NewMailTell {
+    int64 mailId = 1; // 邮件id
+    int64 extendId = 2; // 扩展Id，用于查询
+    int32 type = 3; //邮件类型 1、系统邮件 2、联盟邮件 3、收藏邮件 4、联盟邀请 5、普通战斗邮件 6、竞技场战斗邮件
+    client2server.MailTitleAndCon mailTitleAndCon = 4; //邮件信息
+    string attach = 5; // 邮件附件
+    client2server.BattleReportInfo report = 6; //战报基本信息
+    string extend1 = 11; // 扩展字段 当前用于紫钻邮件
+    int32 iconId = 12;  // 图标
+    int32 defaultStatus = 13;   // 默认状态，默认值是0
+
+    // 发送者信息
+    int64 playerId = 100; //发送者Id
+    string playerName = 101; //发送者名字
+    int64 allianceId = 102; //联盟ID
+    string allianceShortName = 103; //联盟简称
+    client2server.PhotoViewInfo photoInfo = 104;    // 头像信息
+
+    LogVo log = 200;    // 关联日志
+}
+
+message PubDataForEnterTell {
+    client2server.EnterGamePublicRt enterGamePublicRt = 1;
+    repeated client2server.AllianceGiftVo allianceGifts = 2;
+}
+
+message NewAllianceGiftTell {
+    repeated client2server.AllianceGiftVo allianceGifts = 2;
+}
+
+message SendChatRespTell {
+    int32 rt = 1;
+    client2server.ChatInfo chatInfo = 2;
+    string message = 3;
+}
+
+message ChatRoomChangeTell {
+    int32 changeType = 1;
+    client2server.ChatRoom chatRoom = 2;
+}
+
+// Public->Game
+// 通知玩家可领取奖励
+message AllianceCompetitionScoreTell {
+    repeated int32 score = 1;
+    repeated int32 personAalScore = 2;
+}
+
+// 通知玩家联盟总动员数据变化
+message AllianceCompetitionInfoChangeNotic2GTell {
+    int32 isRefReward = 1;
+    AllianceCompetitionInfoVoTell acInfo = 2;
+}
+
+message AllianceCompetitionInfoVoTell {
+    int64 allianceCompetitionId = 1;
+    int32 allianceCompetitionTicket = 2;
+    int32 allianceCompetitionNowTaskId = 3;
+    int32 allianceCompetitionNowTaskState = 4;
+    int32 allianceCompetitionNowTaskOverTime = 5;
+    int32 allianceCompetitionGetTaskNum = 6;
+    int32 allianceCompetitionBuyTaskNum = 7;
+    int32 allianceCompetitionRankLv = 8;
+    int32 allianceCompetitionNowTaskValue = 9;
+}
+
+// Public->Game
+// 通知玩家联盟总动员结束, 进入颁奖状态
+message AllianceCompetitionOverNotic2GTell {
+    int32 rankLv = 1;
+    int32 rank = 2;
+    int32 preRankLv = 3; // 结算之前的段位
+    int32 personalRank = 4; // 个人排名
+    int32 completeStage = 5; // 联盟完成的阶段
+}
+
+// 推送给盟友联盟挑战信息发生变化
+message DealAfterHelpTell {
+    int32 helpType = 1;
+    int64 helpValue1 = 2;
+    int64 helpValue2 = 3;
+    int64 helpValue3 = 4;
+    int64 helpValue4 = 5;
+    int64 helpPlayerId = 6; // 帮助者ID
+    int32 costSec = 7; // 减少的秒数
+}
+
+// Login到Home的ask请求
+message Login2HomeAskReq {
+    int64 loginId = 1;
+
+    oneof msg {
+        BalanceChangeCallbackReq balanceChangeCallbackReq = 11;
+        JufengBalanceChangeCallbackReq jufengBalanceChangeCallbackReq = 12;
+        PayCallbackReq payCallbackReq = 13;
+    }
+}
+
+message BalanceChangeCallbackReq {
+    int64 playerId = 1; // 玩家ID
+    int32 timestamp = 3; // 纪元时间戳
+    string nonce = 4; // 随机字符串
+    int32 client_type = 5; // 引用客户端类型
+    int32 poInt_amount = 6; // 应用点数量已更改。请注意，此值可能为负值，负值表示这是退款txn（点数扣除）。
+    string txn_id = 7; // GOP端的唯一app事务ID
+    int32 txn_type = 8; // 1->在游戏中，2-> mshop，3-> admin，4-> promo，5-> rebate，详情请参阅备注。
+    string channel_name = 9; // 可选，付款渠道名称。（名称不唯一，不同地区的同一频道可能共享同名）
+    int32 channel_id = 10; // 可选，支付渠道的提供商ID。channel_name可能会不时更改，但channel_id将为每个付款渠道保持固定。
+    string currency = 11; // ISO-4217指定的可选货币代码，一个例外是Garena Shell。当付款渠道是Garena Shell或Garena预付卡时，将退回货币“GS”。
+    string currency_amount = 12; // 用户支付的可选货币金额。
+    int32 txn_timestamp = 13; // 事务的纪元时间戳
+    string ip = 14; // 事务的用户ip
+    int32 rebate_card_id = 15; // 其实就是礼包ID
+    string app_identifier = 16; // 理论上是玩家ID
+    int64 logId = 17;
+}
+
+message JufengBalanceChangeCallbackReq {
+    int64 playerId = 1; // 玩家ID
+    int32 timestamp = 3; // 纪元时间戳
+    string orderNo = 7; // GOP端的唯一app事务ID
+    string partnerid = 9; // 联运商ID 默认xy (整合渠道标识对应表)
+    string paytype = 11; // 支付金额类型，默认为0:人民币,1:美金
+    string money = 12; // 充值金额（单位 元）
+    string ip = 14; // 事务的用户ip
+    int32 giftId = 15; // 其实就是礼包ID
+    string sdkOrderNo = 16; // SDK端要求的唯一性ID 目前腾讯在用 是  billno+openid+token
+    int64 logId = 17;
+}
+
+message PayCallbackReq {
+    int64 playerId = 1; // 玩家ID
+    int64 timestamp = 2; // 支付时间(秒时间戳)
+    int32 payType = 3; // 支付方式
+    string payCurrency = 4; // 支付货币类型，如 RMB USD
+    string payAmount = 5; // 以 currency 单位支付金额
+    string usdAmount = 6; // 订单档位(以美元计价的金额，并非实际付费)
+    string myOrderNo = 7; // 游戏端唯一订单ID
+    string sdkOrderNo = 8; // SDK端唯一订单ID
+    int32 giftId = 9; // 礼包ID
+    string ip = 10; // 支付用户ip
+    int64 logId = 11;
+    int32 clientType = 12; // 客户端类型
+}
+
+// World到Home的ask返回
+message Login2HomeAskResp {
+    int64 playerId = 1;
+    int64 loginId = 2;
+
+    oneof msg {
+        BalanceChangeCallbackRt balanceChangeCallbackRt = 11;
+        JufengBalanceChangeCallbackRt jufengBalanceChangeCallbackRt = 12;
+        PayCallbackRt payCallbackRt = 13;
+    }
+}
+
+message BalanceChangeCallbackRt {
+    int32 rt = 1;
+    string txnId = 2; // 订单号
+}
+
+message JufengBalanceChangeCallbackRt {
+    int32 rt = 1;
+    string orderNo = 2; // 订单号
+}
+
+message PayCallbackRt {
+    int32 rt = 1;
+    string orderNo = 2; // 订单号
+}
+
+//===================================================================================================
+message Gate2HomeTell {
+    oneof msg {
+        RegisterChannelToHomeTell registerChannelToHomeTell = 11;
+        PingTell pingTell = 2;
+    }
+}
+
+// 注册channel
+message RegisterChannelToHomeTell {
+}
+
+//===================================================================================================
+message Sys2HomeTell {
+
+    oneof msg {
+        SendTssSdkDataTell sendTssSdkDataTell = 11;
+        HomeCheckTextResultTell homeCheckTextResultTell = 12;
+    }
+}
+
+message SendTssSdkDataTell {
+    bytes antiData = 2;
+}
+
+message HomeCheckTextResultTell {
+    int32 result = 1;
+    bytes checkData = 2;
+    string msg = 3; // 被替换后的文本
+}
+
+// 联盟运输
+message AssistMemberAskReq {
+}
+
+// 联盟运输
+message AssistMemberAskRt {
+    int32 rt = 1;
+}

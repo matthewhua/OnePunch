@@ -1,0 +1,634 @@
+syntax = "proto3";
+
+package pb4server;
+
+import "client2server.proto";
+import "systemMsg.proto";
+
+option java_package = "pb4server";
+option java_outer_classname = "InternalLkt";
+option java_multiple_files = true;
+
+message ToLoginTell {
+    int64 toId = 1;
+
+    oneof msg {
+        World2LoginTell fromWorld = 11;
+        Pub2LoginTell fromPub = 12;
+        Home2LoginTell fromHome = 13;
+        Gate2LoginTell fromGate = 14;
+    }
+}
+
+message ToLoginAsk {
+    int64 toId = 1;
+
+    oneof msg {
+        World2LoginAskReq fromWorld = 11;
+        Home2LoginAskReq fromHome = 12;
+        Mgr2LoginAskReq fromMgr = 13;
+    }
+}
+
+// World到Login的ask请求
+message World2LoginAskReq {
+    oneof msg {
+        RegisterPlayerBelongReq registerPlayerBelongReq = 11;
+        MoveServerWorldBelongReq moveServerWorldBelongReq = 12;
+        CheckLoginSdkReq checkLoginSdkReq = 13;
+        BindGuestReq bindGuestReq = 14;
+        CheckNameReq checkNameReq = 15;
+        FindMyServerInfoReq findMyServerInfoReq = 16;
+        ChangePlayerReq changePlayerReq = 17;
+        FindAllRolesReq findAllRolesReq = 18;
+        GetAccountIdReq getAccountIdReq = 20;
+        MSDKBackendRequestReq msdkRequestReq = 22;
+    }
+}
+
+// World到Login的ask返回
+message World2LoginAskResp {
+
+    oneof msg {
+        RegisterPlayerBelongResp registerPlayerBelongResp = 11;
+        MoveServerWorldBelongResp moveServerWorldBelongResp = 12;
+        CheckLoginSdkResp checkLoginSdkResp = 13;
+        BindGuestResp bindGuestResp = 14;
+        CheckNameResp checkNameResp = 15;
+        FindMyServerInfoResp findMyServerInfoResp = 16;
+        ChangePlayerResp changePlayerResp = 17;
+        FindAllRolesResp findAllRolesResp = 18;
+        GetAccountIdResp getAccountIdResp = 20;
+        MSDKBackendRequestResp msdkRequestResp = 22;
+    }
+}
+
+message MSDKBackendRequestResp {
+    int32 rt = 1;
+    string openId = 2;
+    string uid = 3;
+}
+
+// 请求accountId
+message GetAccountIdReq {
+    string openId = 1; //主题
+    int64 worldId = 2;
+    int64 playerId = 3;
+}
+
+message GetAccountIdResp {
+    int32 rt = 1;
+    int64 accountId = 2;
+}
+
+// 切区
+message ChangePlayerReq {
+    string openId = 1;
+    int64 worldId = 2;
+    string ipAddr = 3;
+}
+
+message ChangePlayerResp {
+    int32 rt = 1;
+}
+
+// 查看玩家有角色的worldId
+message FindMyServerInfoReq {
+    string openId = 1;
+    int32 clientType = 2;
+}
+
+message FindMyServerInfoResp {
+    int32 rt = 1;
+    repeated int64 worlds = 2; // 传回玩家有角色的世界ID
+    repeated ServerPlayerNum serverPlayerNums = 3; // 各区的玩家数量
+}
+
+// 查看玩家所有角色
+message FindAllRolesReq {
+    string openId = 1;
+}
+
+message FindAllRolesResp {
+    int32 rt = 1;
+    repeated client2server.FindRoleVo role = 2;
+}
+
+message ServerPlayerNum {
+    int64 worldId = 1;
+    int32 playerNum = 2;
+}
+
+// 检测玩家名字是否占用
+message CheckNameReq {
+    string uid = 1;
+    string newName = 2;
+}
+
+message CheckNameResp {
+    int32 rt = 1;
+}
+
+message RegisterPlayerBelongReq {
+    int64 playerId = 1;
+    string uid = 2;
+    string channel = 3;
+    int64 worldId = 4;
+    string name = 5;
+    int32 areaNo = 6;
+    int32 clientType = 7;
+    string clientIp = 8;
+    int32 photo = 9;
+    int32 castleLv = 10;
+    string token = 11;
+    string regChannelId = 12;
+    int32 kingLv = 13;
+}
+
+message RegisterPlayerBelongResp {
+    int32 rt = 1;
+}
+
+message MoveServerWorldBelongReq {
+    int64 playerId = 1;
+    string uid = 2;
+    string channel = 3;
+    int64 oldWorldId = 4;
+    int64 newWorldId = 5;
+}
+
+message MoveServerWorldBelongResp {
+    int32 rt = 1;
+}
+
+message CheckLoginSdkReq {
+    string token = 1; // 待验证令牌
+}
+
+message CheckLoginSdkResp {
+    int32 rt = 1;
+    int32 intValue = 2; // 如果失败的话这里会有传回来的失败原因编号
+    string resp = 3; // json结果
+}
+
+message BindGuestReq {
+    string accessToken = 1;
+    string guestAccessToken = 2;
+    string oldOpenId = 3;
+    string newOpenId = 4;
+}
+
+message BindGuestResp {
+    int32 rt = 1;
+    string resp = 2; // json结果
+    repeated WorldPlayerInfo worldPlayerInfos = 3;
+}
+
+// 玩家在所有世界的数据
+message WorldPlayerInfo {
+    int64 worldId = 1;
+    int64 playerId = 2;
+}
+
+// Home到Login的ask请求
+message Home2LoginAskReq {
+    oneof msg {
+        LoginSDKBindInfoReq loginSDKBindInfoReq = 11;
+        LoginSDKBindingReq loginSDKBindingReq = 12;
+        ChangeNameReq changeNameReq = 15;
+        TencentBuyGoodsReq tencentBuyGoodsReq = 17;
+        MidasPayReq midasPayReq = 18;
+        MSDKBackendRequestReq msdkRequestReq = 22;
+        WxGiftCenterReq wxGiftCenterReq = 23;
+    }
+}
+
+// Home到Login的ask返回
+message Home2LoginAskResp {
+
+    oneof msg {
+        LoginSDKBindInfoResp loginSDKBindInfoResp = 11;
+        LoginSDKBindingResp loginSDKBindingResp = 12;
+        ChangeNameResp changeNameResp = 15;
+        TencentBuyGoodsResp tencentBuyGoodsResp = 17;
+        MidasPayResp midasPayResp = 18;
+        MSDKBackendRequestResp msdkRequestResp = 22;
+        WxGiftCenterResp wxGiftCenterResp = 23;
+    }
+}
+
+message LoginSDKBindInfoReq {
+    string openId = 1; // 账号 openId
+}
+
+message LoginSDKBindInfoResp {
+    repeated client2server.LoginSDKBind bind = 1; // 所有绑定信息
+}
+
+message LoginSDKBindingReq {
+    string openId = 1; // 账号 openId
+    client2server.LoginSDKBind bind = 2; // 绑定需求
+}
+
+message LoginSDKBindingResp {
+    int32 rt = 1; // 操作结果
+    repeated client2server.LoginSDKBind bind = 2; // 所有绑定信息
+}
+
+message WxGiftCenterReq {
+    string appid = 1; // 游戏的微信 appid 类型 说明
+    string biz_code = 2; // 游戏在 AMS 的业务 id   string  比如麻将majiang 必填
+    string serialno = 3; // 号， 建议使用 openid+分区d+角色 id+时间戳+随机数，每次请求使用不同的流水号。string 必填
+    string Item_id = 4; // 游戏道具 定义来设置。 查询地址http://idipauth.ied.com/可能为 item_id,ItemId,或其他string 必填
+    string Item_num = 5; // 道具数量，根据游戏不同，名称可能不同，游戏需要根据本游戏 IDIP 发货接口中的字段定义来设置。 查询地址http://idipauth.ied.com/可能为 item_id,ItemId,或其他string 必填
+    int32 price = 6; // 价格 总价 单位为分 uint32 必填
+    string openid = 7; // 发起索要用户的游戏 openid string 必填
+    int32 plat_type = 8; // 平台 1：android 0：ios 支 持 ios 游戏助手了解）uint32 必填
+    int32 area = 9; // 游戏大区 uint32 必填
+    int32 partition_id = 10; // 区服 id uint32 分区服游戏必填
+    string partition_name = 11; // 区服名称 string 分区服游戏必填
+    string role_id = 12; // 角色 id string 分区服游戏必填
+    string role_name = 13; // 角色名称 string 分区服游戏必填
+    int32 stamp = 14; // linux 时间戳 单位秒 uint32 必填
+    string sign = 15; // 必填sign = xx&biz_code=
+}
+
+
+message WxGiftCenterResp {
+    int32 rt = 1;
+    string askOrderid = 2; // 微信索要订单号
+    string weappUsername = 3; // 小程序的原始 id
+    string weappPath = 4; // 小程序的 path
+    string title = 5; // 小程序消息/结构化消息 title
+    string desc = 6; // 小程序消息/结构化消息 desc id
+    string webpageurl = 7;
+}
+
+message MidasPayReq {
+    MidasCookies midasCookies = 1;
+    MidasBasic midasBasic = 2;
+    int64 amt = 3; // 扣除的数量
+    int64 billno = 4; // 唯一订单号
+    int64 playerId = 5;
+}
+
+message MidasPayResp {
+    int32 ret = 1;
+    int64 billno = 2; // 唯一订单号
+    int64 balance = 3; // 预扣后的余额
+    int64 gen_balance = 4; // 赠送游戏币数量（balance中赠送游戏币数量）
+    int64 used_gen_amt = 5; // 本次扣的赠送币的金额
+}
+
+// 尝试发起腾讯充值 索要票据
+message TencentBuyGoodsReq {
+    MidasCookies midasCookies = 1;
+    MidasBasic midasBasic = 2;
+    string payitem = 12;
+    string goodsmeta = 13;
+    string goodsurl = 14;
+    string sig = 15;
+    string amt = 16;
+    string max_num = 17;
+    string appmode = 18;
+    string app_metadata = 19;
+    string userip = 20;
+    string format = 21;
+    string sp_info = 22;
+}
+
+// 米大师参数大块-cookies参数
+message MidasCookies {
+    string session_id = 1;
+    string session_type = 2;
+    string org_loc = 3;
+}
+
+// 米大师参数大块-要传递的通用参数
+message MidasBasic {
+    string openid = 1;
+    string openkey = 2;
+    int32 clientType = 3;
+    string ts = 4;
+    string pf = 5;
+    string pfkey = 6;
+    string zoneid = 7;
+}
+
+
+message TencentBuyGoodsResp {
+    int32 rt = 1;
+    string token = 2; // 交易的token号（ret=0时才保存，token长度不超过64个字符）。在后续的扣费成功后调用应用的发货接口时会将token传给应用，作为本次交易的标识。
+    string urlParams = 3; // ret为0的时候，返回真正购买物品的url的参数，开发者需要把该参数传给sdk支付接口使用户完成真正的购买动作。
+}
+
+// 检测玩家名字是否占用
+message ChangeNameReq {
+    string uid = 1;
+    string newName = 2;
+    int64 worldId = 3;
+    int32 clientType = 4;
+}
+
+message ChangeNameResp {
+    int32 rt = 1;
+}
+
+message Home2LoginTell {
+    oneof msg {
+        HomeAppPushTell homeAppPushTell = 11;
+        SyncInfoTell syncInfoTell = 12;
+        MidasGetBalanceReqTell midasGetBalanceReqTell = 13;
+        MidasPayReqTell midasPayReqTell = 14;
+        MidasCancelPayReqTell midasCancelPayReqTell = 15;
+        MidasPresentReqTell midasPresentReqTell = 16;
+        AchievementReportTell achievementReportTell = 18;
+        SyncBasicInfoTell syncBasicInfoTell = 19;
+    }
+}
+
+message SyncBasicInfoTell {
+    int64 worldId = 1; // 世界ID
+    int64 playerId = 2; // 角色ID
+    int32 castleLv = 3; // 主堡等级
+    string name = 4; // 玩家名
+    string openId = 5; // 玩家账号
+    int32 kingLv = 6; // 角色等级
+    int32 photo = 7; // 玩家头像ID
+    string allianceShortName = 8; // 联盟简称
+    string photoPictureUrl = 9; // 自定义头像URL
+}
+
+message MidasGetBalanceReqTell {
+    MidasCookies midasCookies = 1;
+    MidasBasic midasBasic = 2;
+    int64 playerId = 3;
+}
+
+message MidasPayReqTell {
+    MidasCookies midasCookies = 1;
+    MidasBasic midasBasic = 2;
+    int64 amt = 3; // 扣除的数量
+    int64 billno = 4; // 唯一订单号
+    int64 playerId = 5;
+}
+
+message MidasCancelPayReqTell {
+    MidasCookies midasCookies = 1;
+    MidasBasic midasBasic = 2;
+    int64 billno = 3; // 要回滚的唯一订单号
+    int64 playerId = 4;
+    int64 selfBillno = 5; // 本次流水的唯一订单号 用于自己留底
+}
+
+message MidasPresentReqTell {
+    MidasCookies midasCookies = 1;
+    MidasBasic midasBasic = 2;
+    int64 presenttimes = 3; // 增送的数量
+    int64 billno = 4; // 唯一订单号
+    int64 playerId = 5;
+}
+
+message SyncInfoTell {
+    string openId = 1;
+    int32 photo = 2;
+    int32 castleLv = 3;
+    int64 worldId = 4;
+    int64 clusterId = 5;
+    int32 clientType = 6;
+}
+
+message HomeAppPushTell {
+    string title = 1; // 标题
+    string content = 2; // 内容
+    repeated AppPushTokenInfo tokenInfos = 3;
+}
+
+message SyncNowOnlinePlayerNumTell {
+    int64 worldId = 1;
+    int64 num = 2;
+}
+
+message World2LoginTell {
+    oneof msg {
+        WorldAppPushTell worldAppPushTell = 11;
+        MoveServerWorldBelongReqTell moveServerWorldBelongReqTell = 12;
+        GopErrorRetryReqTell gopErrorRetryReqTell = 13;
+        SyncNowOnlinePlayerNumTell syncNowOnlinePlayerNumTell = 14;
+        UnregisterAccountResultTell unregisterAccountResultTell = 15;
+        AchievementReportTell achievementReportTell = 17;
+        SyncOpPlayerOnlineTimeTell syncOpPlayerOnlineTimeTell = 19;
+
+        CleanDataTell cleanDataTell = 300;
+    }
+}
+
+
+message SyncOpPlayerOnlineTimeTell {
+    string gameappid = 1;
+    int32 timekey = 2;
+    int64 gsid = 3;
+    int32 zoneareaid = 4;
+    int32 dtEventTime = 5;
+    int32 onlinecntios = 6;
+    int32 onlinecntandroid = 7;
+    int32 registernum = 8;
+}
+
+message AchievementReportTell {
+    int32 os = 1;
+    string channelid = 2;
+    string openId = 3;
+    string tokenId = 4;
+
+    repeated client2server.AchievementReportVo reportData = 5;
+}
+
+// 销号成功报备
+message UnregisterAccountResultTell {
+    int64 worldId = 1;
+    string openId = 2;
+    int64 playerId = 3;
+}
+
+// GOP错误之后的重试发起
+message GopErrorRetryReqTell {
+    int32 retryType = 1; // 重试类型
+    int64 worldId = 2;
+    string openId = 3;
+}
+
+// 迁服完毕修改登录服数据
+message MoveServerWorldBelongReqTell {
+    int64 playerId = 1;
+    string uid = 2;
+    string channel = 3;
+    int64 oldWorldId = 4;
+    int64 newWorldId = 5;
+    int32 newAreaNo = 6;
+}
+
+message WorldAppPushTell {
+    string title = 1; // 标题
+    string content = 2; // 内容
+    repeated AppPushTokenInfo tokenInfos = 3;
+}
+
+message AppPushTokenInfo {
+    int32 platform = 1; //平台
+    repeated string tokens = 3; // 根据设备号推送
+}
+
+//========================================================================================
+message Pub2LoginTell {
+    oneof msg {
+        PublicAppPushTell publicAppPushTell = 11;
+    }
+}
+
+message PublicAppPushTell {
+    string title = 1; // 标题
+    string content = 2; // 内容
+    repeated AppPushTokenInfo tokenInfos = 3;
+}
+//===================================================================================================
+message Mgr2LoginAskReq {
+    oneof msg {
+        EvalScriptReq evalScriptReq = 11;
+        QueryPlayersByOpenIdReq queryPlayersByOpenIdReq = 12;
+        LoginSDKBindInfoReq loginSDKBindInfoReq = 13;
+        QueryUnBindReq queryUnBindReq = 14;
+        ImportPlayerLoginReq importPlayerLoginReq = 15;
+    }
+}
+
+message Mgr2LoginAskResp {
+    oneof msg {
+        EvalScriptResp evalScriptResp = 11;
+        QueryPlayersByOpenIdResp queryPlayersByOpenIdResp = 12;
+        LoginSDKBindInfoResp loginSDKBindInfoResp = 13;
+        QueryUnBindResp queryUnBindResp = 14;
+        ImportPlayerLoginResp importPlayerLoginResp = 15;
+    }
+}
+
+message QueryPlayersByOpenIdReq {
+    string openId = 1;
+    string text = 11;
+}
+
+message QueryPlayersByOpenIdResp {
+
+    int32 rt = 2;
+    map<int64, SimplePlayerVO> openIdMapping = 3;
+
+    message SimplePlayerVO {
+        string openId = 1;
+        int64 playerId = 2;
+        int64 worldId = 3;
+    }
+}
+
+message QueryUnBindReq {
+    string openId = 1; // 账号 openId
+    repeated int32 sdkType = 2; // 解绑列表
+}
+
+message QueryUnBindResp {
+    int32 rt = 1; // 操作结果
+}
+
+message ImportPlayerLoginReq {
+    bytes replaceData = 1;
+}
+
+message ImportPlayerLoginResp {
+    int32 rt = 1;
+}
+
+//===================================================================================================
+message Gate2LoginTell {
+    int32 clientMsgNo = 1;
+
+    oneof msg {
+        LoginDealAtLogin loginDealAtLogin = 11;
+        TranslationDealAtLogin translationDealAtLogin = 12;
+        HomeHuaweiyunTextCheckReq homeHuaweiyunTextCheckReqTell = 13;
+        QueryLoginPlayerReq queryLoginPlayerReq = 14;
+        QueryOpenIdRelatedPlayersReq queryOpenIdRelatedPlayersReq = 15;
+        MSDKBackendRequestReq msdkRequestReq = 16;
+        NoSessionRequest noSessionRequest = 17;
+    }
+}
+
+message NoSessionRequest {
+    client2server.NoSessionQuery msg = 1;
+}
+
+// 查询自己openId关联的好友信息
+message MSDKBackendRequestReq {
+    client2server.MSDKBackendRequest msg = 1;
+}
+
+// 查询自己openId关联的好友信息
+message QueryOpenIdRelatedPlayersReq {
+    client2server.QueryOpenIdRelatedPlayers msg = 1;
+    client2server.MSDKBackendRequestRt resp = 2;
+}
+
+// 查询登录服角色
+message QueryLoginPlayerReq {
+    string openId = 1;
+    int64 clusterId = 2;
+    string ipAddr = 3; // 客户端的IP地址
+    int32 clientType = 4;
+}
+
+// 检测敏感字
+message HomeHuaweiyunTextCheckReq {
+    string message = 1; // 聊天对象内容
+    int32 checkNo = 2; // 在网关里的序号
+}
+
+message LoginDealAtLogin {
+    client2server.Login login = 1; // 登录消息
+    int64 clusterId = 2;
+    string ipAddr = 3; // 客户端的IP地址
+}
+
+message TranslationDealAtLogin {
+    string info = 1; // 要翻译的内容
+    string targetLan = 2; // 要翻译的成的语言
+    int64 chatInfoId = 3; // 内容行ID
+}
+
+//===================================================================================================
+// Login->NaviCenter
+message Login2NaviCenterAskReq {
+    oneof msg {
+        NaviAskReq naviAskReq = 11;
+    }
+}
+
+message Login2NaviCenterResp {
+    oneof msg {
+        NaviAskResp naviAskResp = 11;
+    }
+}
+
+// 请求区服导航
+message NaviAskReq {
+    string country = 1; // 地区/国家
+    string adSetChannel = 2; // 玩家质量
+    int32 lanType = 3; // 语言 @Deprecated
+    int32 clientType = 4; // 客户端操作系统类型 0-未知  1-安卓  2-ios 3-PC (不可修改)
+    int32 timeZone = 5; // 时区取整
+    int32 clientLang = 6; // 设备语言
+    string openId = 7; // 账号
+}
+
+message NaviAskResp {
+    int32 rt = 1; // 请求结果
+    int64 naviWorldId = 2; // 导航目标区服
+    int32 naviPartitionId = 3; //  导航目标区服的展示区服ID
+}

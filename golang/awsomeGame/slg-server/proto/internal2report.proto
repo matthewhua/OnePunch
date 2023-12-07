@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package pb4server;
+
+import "client2server.proto";
+import "systemMsg.proto";
+
+option java_package = "pb4server";
+option java_outer_classname = "InternalRkt";
+option java_multiple_files = true;
+
+message ToReportTell {
+    int64 toId = 1;
+
+    oneof msg {
+        World2ReportTell fromWorld = 11;
+        Home2ReportTell fromHome = 12;
+        Login2ReportTell fromLogin = 13;
+    }
+}
+
+message ToReportAsk {
+    int64 toId = 1;
+
+    oneof msg {
+        Mgr2ReportAskReq fromMgr = 13;
+    }
+}
+
+message World2ReportTell {
+    oneof msg {
+        PlatformAchievementTell platformAchievementTell = 11;
+		UploadSensitiveInfoTell uploadSensitiveInfoTell = 12;
+        SyncPlayTimeTell syncPlayTimeTell = 13;
+    }
+}
+
+// 请求accountId
+message SyncPlayTimeTell {
+    int32 factType = 1; // 事实类型, 11为开始，12为心跳，13为结束. 14为对局结束(lol专用)
+    repeated SyncPlayTimeVo syncPlayTimeVos = 2;
+    int64 worldId = 3;
+}
+
+message SyncPlayTimeVo {
+    string userId = 1;
+    int32 duration = 2;
+    int64 playerId = 3;
+}
+
+message Home2ReportTell {
+    oneof msg {
+        PlatformAchievementTell platformAchievementTell = 11;
+        FetchTencentCreditReqTell fetchTencentCreditReqTell = 12;
+    }
+}
+
+message FetchTencentCreditReqTell {
+    string user_id = 1; // 用户账号，目前支持qq号，微信openid，qq openid , rail_id , wegame_common_id，gopenid等账号类型
+    string user_appid = 2; // 用户账号类型标示，找腾讯游戏信用小助手分配
+    int32 account_type = 3; // 账号类型，此处如果账号类型为rail_id填5， qq gopenid填6，微信gopenid填7, wegame平台下的common_id填17， 其他类型可不填
+
+    // 鉴权类型可选值域为1-4, 分别代表：
+    // 1	uin+skey，qq号查询的鉴权方式
+    // 2	微信openid+access_token微信openid查询的鉴权方式
+    // 3	qq openid+access_token
+    //      qq openid的鉴权方式
+    // 4	参数签名鉴权详见参数签名鉴权小节
+    int32 auth_type = 4;
+
+    // 鉴权key，根据不同的鉴权类型填不同的鉴权key，详细如下：
+    // auth_type=1	填skey
+    // auth_type=2	填微信的access_token,
+    // auth_type=3	填qq的access_token
+    // auth_type=4	填签名后的鉴权key，生成规则见参数签名鉴权小节
+    string auth_key = 5;
+    int32 source = 6; // 查询来源，找腾讯游戏信用小助手分配
+    int32 game_id = 7; // 业务安全部分配的游戏id，找腾讯游戏信用小助手分配
+    int32 need_black_tag = 8; // 是否需要查询黑产标签(1|0)，建议接入方接入，填1即可返回黑产标签
+    string client_ip = 9; // 当need_black_tag=1或need_tag_ugc=1或need_tag_dnf_lim_tra=1时必须传入，获取用户的IP（eg: xxx.xxx.xx.xx）
+    int32 need_tag_ugc = 10; // 是否需要查询ugc标签(1|0)，，建议接入方接入，填1即可返回ugc标签
+
+    int64 playerId = 11;
+}
+
+message Login2ReportTell {
+    oneof msg {
+        PlatformAchievementTell platformAchievementTell = 11;
+    }
+}
+
+message PlatformAchievementTell {
+    int32 os = 1;
+    string channelid = 2;
+    string openId = 3;
+    string tokenId = 4;
+
+    repeated client2server.AchievementReportVo reportData = 5;
+}
+
+message UploadSensitiveInfoTell {
+	int32 partition = 1; // 上报的区服
+	int32 uploadType = 2; // 1-玩家名,2-联盟名,3-联盟公告,4-联盟标语,5-联盟宣言
+	int32 txtIndex = 3; // 一个类型如果太大的话会被拆分成多个请求发送
+	repeated UploadSensitiveInfo uploadSensitiveInfos = 4;
+}
+
+message UploadSensitiveInfo {
+	int64 id = 1;
+	string openId = 2;
+	int32 clientType = 3;
+	int32 chanelId = 4;
+	
+	string name = 5; // 根据不同的类型内容不同
+}
+
+
+message Mgr2ReportAskReq {
+    oneof msg {
+        EvalScriptReq evalScriptReq = 11;
+    }
+}
+
+message Mgr2ReporAskResp {
+    oneof msg {
+        EvalScriptResp evalScriptResp = 11;
+    }
+}

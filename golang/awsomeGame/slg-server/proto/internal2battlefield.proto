@@ -1,0 +1,191 @@
+syntax = "proto3";
+
+package pb4server;
+
+import "internal2world.proto";
+import "client2server.proto";
+import "systemMsg.proto";
+
+option java_package = "pb4server";
+option java_outer_classname = "InternalBkt";
+option java_multiple_files = true;
+
+message ToBattleFieldTell {
+    int64 toId = 1;
+
+    oneof msg {
+        World2BattleFieldTell fromWorld = 11;
+    }
+}
+
+message ToBattleFieldAsk {
+    int64 toId = 1;
+
+    oneof msg {
+        World2BattleFieldAskReq fromWorld = 11;
+        Mgr2BattleFieldAskReq fromMgr = 13;
+    }
+}
+
+message World2BattleFieldTell {
+    int64 worldId = 1;
+    int64 playerId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+        BattleFieldOpenTell battleFieldOpenTell = 11;
+        BattleFieldDataSyncTell battleFieldDataSyncTell = 12;
+        BattleFieldGMTell battleFieldGMTell = 13;
+    }
+}
+
+// 战场开启
+message BattleFieldOpenTell {
+    int64 startTime = 1;
+}
+
+message BattleFieldDataSyncTell {
+    LogVo log = 1;
+    repeated client2server.IntToLongKV addSoldiers = 11;
+    repeated client2server.EffectInfo effects = 12;
+    repeated client2server.HeroInformationForProperties heros = 13;
+    map<int32, int32> usingSkinIdMap = 14;
+    map<int32, int32> skinStarMap = 15;
+    repeated BattleFieldDataSyncBuildingData buildingData = 16;
+
+    message BattleFieldDataSyncBuildingData {
+        int64 id = 1;
+        int32 buildingType = 2;
+        int32 lv = 3;
+        int64 eli = 4;
+    }
+}
+
+message BattleFieldGMTell {
+    int32 type = 1;
+    string param = 2;
+}
+
+message World2BattleFieldAskReq {
+    int64 worldId = 1;
+    int64 playerId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+        EnterBattleFieldReq enterBattleFieldReq = 11;
+        ExitBattleFieldReq exitBattleFieldReq = 12;
+        Home2WorldAskReq home2WorldAskReq = 13;
+        AddAllianceMarkAskReq addAllianceMarkAskReq = 14;
+    }
+}
+
+message World2BattleFieldAskResp {
+    int64 playerId = 1;
+    int64 worldId = 2;
+    int32 clientMsgNo = 3;
+
+    oneof msg {
+        EnterBattleFieldRt enterBattleFieldRt = 11;
+        ExitBattleFieldRt exitBattleFieldRt = 12;
+        Home2WorldAskResp home2WorldAskResp = 13;
+        AddAllianceMarkAskRt addAllianceMarkAskRt = 14;
+    }
+}
+
+// 进入战场(带玩家全部数据，重复进入覆盖数据)
+message EnterBattleFieldReq {
+    int32 joinType = 1;
+    string playerData = 2;
+    LogVo log = 3;
+}
+
+message EnterBattleFieldRt {
+    int32 rt = 1;
+    client2server.EnterBattleFieldRt enterRt = 2;
+}
+
+
+message ExitBattleFieldReq {
+    int32 joinType = 1;
+    string playerData = 2;
+}
+
+message ExitBattleFieldRt {
+    int32 rt = 1;
+}
+
+message AddAllianceMarkAskReq {
+    int32 markId = 1;
+    int32 aimsX = 2;
+    int32 aimsY = 3;
+    string content = 4;
+}
+
+message AddAllianceMarkAskRt {
+    int32 rt = 1;
+    int64 id = 2;
+}
+
+//===================================================================================================
+message Mgr2BattleFieldAskReq {
+    oneof msg {
+        EvalScriptReq evalScriptReq = 11;
+    }
+}
+
+message Mgr2BattleFieldAskResp {
+    oneof msg {
+        EvalScriptResp evalScriptResp = 11;
+    }
+}
+
+
+// 废弃
+message BattleField2BattleFieldMgrTell {
+    oneof msg {
+        ChangeBattleFieldTell changeBattleFieldTell = 11;
+    }
+}
+
+// BattleField -> BattleField Manager
+// 世界管理进程将借助这个消息来管理游戏区的唤醒等操作！ 废弃
+message ChangeBattleFieldTell {
+    int64 battleFieldId = 1; //  如果是0 表示是世界进程启动，拉取了所有的区配置；1表示有区的信息变化。
+    repeated string battleField = 2; // 游戏区信息
+    int32 changeType = 3; // 改变类型，1：新增，2：修改，3：删除
+}
+
+// PubMgr -> BattleField Manager
+message PubMgr2BattleFieldMgrTell {
+    oneof msg {
+        RecycleBattleFieldsTell recycleBattleFieldsTell = 11; // 回收战场
+    }
+}
+
+message RecycleBattleFieldsTell {
+    repeated int64 battleFieldId = 1; // 要回收的战场ID
+}
+
+
+// PubMgr -> BattleField Manager
+message PubMgr2BattleFieldMgrAskReq {
+    oneof msg {
+        ApplyBattleFieldsReq applyBattleFieldsReq = 11; // 申请战场
+    }
+}
+
+message PubMgr2BattleFieldMgrAskResp {
+    oneof msg {
+        ApplyBattleFieldsResp applyBattleFieldsResp = 11; // 申请战场
+    }
+}
+
+message ApplyBattleFieldsReq {
+    int32 type = 1; // 申请的战场类型
+    int32 requiredCount = 2; // 申请数量
+}
+
+message ApplyBattleFieldsResp {
+    int32 rt = 1;
+    repeated int64 battleFieldId = 2; // 申请到的战场ID
+}

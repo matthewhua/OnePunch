@@ -1,0 +1,491 @@
+syntax = "proto3";
+package pb4battle;
+
+// 主动三消战斗(无客户端操作)
+message DoEliminateFightReq {
+    int32 battleTime = 1; // 战斗时间
+    EliminateFightData atkFightData = 3; //攻击方数据
+    repeated EliminateFightData defFightDatas = 4; //防守方数据
+    int32 maxRound = 5; //最大回合数
+    int32 ranSeed = 6; //随机种子
+    int32 researchChange = 7; // 科技影响伤害总值(万分比)
+    int32 colourChange = 8; // 科技影响HeroFightReport色系伤害(万分比)
+    int32 gemRandSeed = 9; // 珠子生成专用随机数
+    string tileColours = 10; // 颜色权值
+    FightProtoInfo fightProtoInfos = 11; // 这场战斗需要用到的配置数据
+    PlayerBasicInfo playerBasicInfo = 12;
+    PlayerBasicInfo myPlayerBasicInfo = 13;
+}
+
+message PlayerBasicInfo {
+    string name = 1;
+    int32 photo = 2;
+    string allianceName = 3;
+    string allianceShortName = 4;
+    int32 jjcScore = 5;
+}
+
+// 验证三消战斗协议返回
+message DoEliminateFightResp {
+    int32 rt = 1;
+    int32 fightResult = 2; // 战斗结果
+    string fight = 3; // 具体的战斗过程,用来给客户端生成战斗回放
+    repeated FightStatistics statistics = 4; //统计数据
+    repeated DefHpAfterFight defHpAfterFight = 5; // 防守方战斗后具体情况-仅限于对战玩家(或镜像),不支持多波与相同模板
+    repeated DefHpAfterFight atkHpAfterFight = 6; // 进攻方战斗后具体情况
+}
+
+// 开始一场三消战斗的必要数据,开打的时候会给客户端发这个结构 然后服务器验证的时候会用这个结构 + 客户端传来的操作步骤
+message CheckEliminateFightReq {
+    int32 battleTime = 1; // 战斗时间
+    EliminateFightData atkFightData = 3; //攻击方数据
+    repeated EliminateFightData defFightDatas = 4; //防守方数据
+    string tileColours = 6; // 颜色权值
+    FightProtoInfo fightProtoInfos = 7; // 这场战斗需要用到的配置数据
+    int32 researchChange = 8; // 科技影响伤害总值(万分比)
+    int32 ranSeed = 9; // 随机数
+    int32 gemRandSeed = 10; // 珠子生成专用随机数
+    repeated EliminateItem eliminateItems = 11; // 带入三消的道具
+    repeated int32 atkBackgroundSkills = 12; // 进攻方赠送战场技能
+    repeated int32 defBackgroundSkills = 13; // 防守方赠送战场技能
+    PlayerBasicInfo playerBasicInfo = 14;
+    PlayerBasicInfo myPlayerBasicInfo = 15;
+    int32 comboBan = 16; // 是否限制combo率 值在0-1W之间  0表示不限制 1W表示无combo
+}
+
+message EliminateItem {
+    int32 itemId = 1; // 三消道具ID
+    int32 inCount = 2; // 带入战斗的个数
+    int32 useCount = 3; // 战斗中的使用个数
+}
+
+// 服务器验证三消结构体
+message FullCheckEliminateFightReq {
+    int32 battleTime = 1; // 战斗时间
+    EliminateFight eliminateFight = 2; // 客户端传来的数据
+    CheckEliminateFightReq checkEliminateFightReq = 3; // 验证三消战斗协议
+}
+
+// 验证三消战斗协议返回
+message CheckEliminateFightResp {
+    int32 rt = 1;
+    string fight = 2; // 具体的战斗过程,用来给客户端生成战斗回放
+    repeated FightStatistics statistics = 3; //统计数据
+    string errorLog = 4; // 出错时候的打印传回kotlin记录到ES
+    repeated EliminateItem eliminateItems = 12; // 带入三消的道具+使用情况
+    repeated DefHpAfterFight defHpAfterFight = 13; // 防守方战斗后具体情况-仅限于对战玩家(或镜像),不支持多波与相同模板
+    repeated DefHpAfterFight atkHpAfterFight = 14; // 进攻方战斗后具体情况
+}
+
+message DefHpAfterFight {
+    int32 heroProtoId = 1;
+    int64 hp = 2; // 战斗后血量
+    int64 beforeHp = 3; // 战斗前血量
+    int32 x = 4;
+    int32 y = 5;
+    int64 hurt = 6; // 造成的伤害
+    int32 colour = 7;
+    repeated BeHurtInfo beHurtInfos = 8; // 对各颜色的总输出
+}
+
+message BeHurtInfo {
+    int32 colour = 1;
+    int64 hurt = 2;
+}
+
+// 客户端发来的玩家操作数据
+message EliminateFight {
+    int32 fightResult = 1; //战斗结果
+    repeated EliminateStep eliminateSteps = 2; // 操作记录
+    int32 ranSeed = 3; // 这个是不用来做战斗什么逻辑的 单纯的用来解决客户端连发两次消息 第二次直接返回第一次的结果
+
+}
+
+// 三消步骤
+message EliminateStep {
+    int32 stepType = 1; // 步骤类型 1-交换格子 2-点击特殊格子 3-更改攻击目标 4-释放技能
+    repeated int64 params = 2; // 根据类型决定的参数s
+}
+
+message EliminateFightData {
+    repeated EliminateFightColourData colourDatas = 1; // 组成的战斗单位的数据
+    repeated EliminatePos killWin = 2; // 杀了该坐标的单位就赢
+    repeated EliminatePos canNotKill = 3; // 这些单位不杀也行
+    string killScore = 4;
+}
+
+message EliminatePos {
+    int32 x = 1;
+    int32 y = 2;
+}
+
+message EliminateFightColourData {
+    int32 colour = 1; // 颜色
+    EliminateHeroData hero = 2; // 组成的战斗单位的武将数据
+    EliminateSoliderData solider = 3; // 组成的战斗单位的带兵情况
+    int32 kill = 4; // 杀伤力
+    int32 atk = 5;
+    int32 def = 6;
+    int64 initLive = 7; // 进场血量
+    int64 live = 8; // 血量上限
+    int64 heroFightValue = 9; // 武将战斗力
+    int32 x = 10; // 模型位置X 进攻方默认X = 1
+    int32 y = 11; // 模型位置Y
+    repeated int32 skillList = 12;
+    int32 atkFlag = 13; // 是否是进攻方  0-否 1-是
+    int32 InitRage = 14; // 进场怒气
+    int32 len = 15; // 怪物宽度
+    int32 mingzhong = 16;
+    int32 baoji = 17;
+    int32 baojiHurt = 18;
+}
+
+message EliminateSoliderData {
+    int32 colour = 1; // 颜色
+    repeated EliminateSolider eliminateSoliders = 3; // 组成的战斗单位的带兵情况
+}
+
+message EliminateSolider {
+    int32 lv = 1; // 士兵等级
+    int64 num = 2; // 士兵数量
+}
+
+message GemEffect {
+    int32 effectType = 1;
+    int32 effectValue = 2;
+}
+
+message EliminateHeroData {
+    int64 id = 1;
+    int32 protoId = 2;
+    int32 lv = 3;
+    int32 star = 4;
+    int32 awake = 5;
+    repeated EquipInfo equipInfos = 7;
+    int64 beforeHp = 10; // 进入战斗血量
+    int32 dargon = 12; // 是否是龙 0-否 1-是
+    int32 initRage = 13; // 怒气上线万分比
+    int32 Mingzhong = 18; // 命中
+    int32 Baoji = 19; // 暴击
+    int32 BaojiHurt = 20; // 暴击伤害
+    repeated int32 soliderCardSkills = 21; // 进场主人释放技能(兵卡+部分装备技能)
+    int64 colourAtk = 22; //  属性攻
+    int64 colourStreng = 23; //  属性减抗
+    int64 waterDef = 24; //  水抗
+    int64 fireDef = 25; //  火抗
+    int64 windDef = 26; //  木抗
+    int64 lightDef = 27; //  光抗
+    int64 darkDef = 28; //  暗抗
+    int64 miss = 29; //  闪避
+    repeated int32 followSkills = 30; // 释放技能后的追击技能列表
+}
+
+message FightData {
+    repeated HeroData heroList = 1;
+}
+
+message HeroData {
+    int64 id = 1;
+    int32 protoId = 2;
+    int32 lv = 3;
+    int32 star = 4;
+    int32 awake = 5;
+    int32 asignHp = 6;
+    int32 initMorale = 7; //初始的士气
+    repeated int32 skillList = 8;
+    repeated EquipInfo equipInfos = 9;
+}
+
+message EquipInfo {
+    int32 equipId = 1;
+    int32 equipRank = 2;
+}
+
+message AdditionPropertyInfo {
+    int32 addProperty = 1;
+    int32 addValue = 2;
+}
+
+message OperateRecord {
+    int32 frame = 1;
+    int32 entityId = 2;
+    int32 launchUniqueSkill = 3;
+    int32 resetLaunchUniqueSkillFlag = 4;
+}
+
+message FightStatistics {
+    int32 recordKey = 1;
+    int64 recordValue = 2;
+}
+
+message OperateRecordInOnceBattle {
+    repeated OperateRecord operateRecords = 1; //操作记录
+}
+
+//英雄战报结构
+message HeroFightReport {
+    repeated FightEntity entitys = 1; //所有战斗单位
+    repeated FightRecord records = 2; //战斗请求记录
+    int32 fightResult = 3; //战斗结果
+    repeated FightStatistics statistics = 4; //统计数据
+}
+
+//战斗实体对象
+message FightEntity {
+    int64 id = 1; //唯一ID
+    repeated IntProperty intPropertys = 2; //int属性值
+}
+
+//int属性值
+message IntProperty {
+    int32 propertyType = 1; //属性类别
+    int64 propertyValue = 2; //属性值
+}
+
+//array属性值
+message ArrayProperty {
+    int32 propertyType = 1; //属性类别
+    repeated IntProperty intPropertys = 2; //int属性值
+}
+
+//战斗记录
+message FightRecord {
+    int32 frame = 1; //帧
+    int64 senderId = 2; //发送者Id
+    int64 receiverId = 3; //接受者Id
+    FightRequest request = 4; //请求内容
+}
+
+//战斗行为请求
+message FightRequest {
+    int32 behaviorType = 1; //行为类别
+    repeated IntProperty intPropertys = 2; //int属性值
+    repeated ArrayProperty arrayPropertys = 4; //array属性值
+    repeated FightEntity entitys = 5; //生成的战斗单位
+}
+
+// 战斗使用的相关配置数据
+message FightProtoInfo {
+    BasicInfo basic = 1; // basic表
+    repeated HeroStarProto heroStarProtos = 2;
+    repeated HeroRankProto heroRankProtos = 3;
+    repeated EliminateUnitbase eliminateUnitbases = 4;
+    repeated EliminateSkill eliminateSkills = 5;
+    repeated StateWeightProto stateWeightProto = 6;
+    repeated PosWeightProto posWeightProto = 7;
+    repeated ColourRestrainProto colourRestrainProto = 8;
+    repeated EliminateSkillEffect eliminateSkillEffects = 9;
+    int32 researchChange = 11; // 科技影响伤害总值(万分比)
+    repeated InitSkill atkInitSkills = 16; // 进攻方进场技能
+    repeated InitSkill defInitSkills = 17; // 防守方进场技能
+    repeated EliminatePropsProto eliminatePropsProtos = 18;
+    repeated ActiveCityBattleProto activeCityBattleProtos = 23; // activeCityBattle.xml
+    repeated int32 starWhiteHeroProtoId = 24; // 星象武将模板白名单
+}
+
+// 进场技能
+message InitSkill {
+    int32 initSkillType = 1; // 类型 1-星象技能 2-竞技场加成 3-资源本战场技能 4-联盟战背景技能
+    repeated int32 skillIds = 2; // skillId
+}
+
+// 亲密度指定武将增加星象值
+message HeroLoveAddProperty {
+    int32 heroProtoId = 1;
+    repeated AdditionPropertyInfo defAddPropertys = 2; // 键值对星象万分比(亲密度)的加成
+}
+
+message EliminatePropsProto {
+    int32 id = 1; // 道具ID
+    int32 quality = 2;
+    int32 carry = 3; // 三消携带数量
+    int32 effect = 4; // 三消技能
+}
+
+message BasicInfo {
+    int32 HarmPara = 1;
+    int32 Harm1 = 2;
+    int32 Harm2 = 3;
+    int32 Xiao3AttEmptyAddRage = 4;
+    int32 Xiao3DefRoundAddRage = 5;
+    string attackCd = 6;
+    int32 atkAllWeight = 7;
+    int32 HarmRate = 8;
+    int32 Xiao3AttHitAddRage = 9;
+    int32 Xiao3DefHittedAddRage = 10;
+    int32 LowHpRate = 11;
+    int32 CritMult = 12;
+    int32 TileHarmRate = 13;
+    int32 TileHarmPara = 14;
+    int32 CaromAddHarm = 15;
+    int32 activeCityBattlePara1 = 16; // combo数
+    int32 activeCityBattlePara2 = 17; // 触发炸弹数
+    int32 activeCityBattlePara3 = 18; // 触发钻石数
+    int32 activeCityScorePara1 = 19; // 资源本结算倍率参数
+    int32 activeCityScorePara2 = 20; // 资源本结算积分保底参数
+    string activeCityScorePara3 = 21; // 资源本结算积分累计参数
+    string activeCityScorePara4 = 22; // 资源本结算倍率值
+    int32 activeCityRewardType = 23; // 城池内怪物掉落资源大类型 同奖励格式类型
+    repeated BattleFurorInfo battleFurorInfos = 24; // 战斗狂热技能
+    repeated int32 slgBattleOrder = 25;
+    int64 defenceRate = 26;
+    int32 harmRateNew = 27; //  普攻伤害基数=1.5
+    int32 tileHarmRateNew = 28; //  宝石伤害基数=0.5
+    int32 lethalityRate = 29; //   杀伤参数=15
+    int32 lethalityPara = 30; // 杀伤基数=1
+    int32 harmSLG = 31; // SLG伤害参数
+    int32 clickBoomAnger = 32; // 炸弹额外怒气回复
+    int32 clickDiamondAnger = 33; // 钻石额外怒气回复
+    int32 winScore = 34; // 胜利分数
+    string eliminateKillScore = 35; // 怪物来袭连杀积分倍率  1;1|2;2|3;4|4;6|5;8|6;10|7;15  1杀总分*1,2杀总分*2，，以此类推
+}
+
+message BattleFurorInfo {
+    int32 battleFurorSkill = 24; // 战斗狂热技能id  112
+    int32 battleFurorCount = 25; // 战斗狂热回合数倒计时  50
+}
+
+message HeroStarProto {
+    int32 id = 1;
+    int32 heroProtoId = 2;
+    int32 star = 3;
+    string effectStar = 4;
+}
+
+message HeroRankProto {
+    int32 id = 1;
+    int32 rank = 2;
+    string effect = 3;
+    int32 heroId = 4;
+    string extraEffect = 5;
+    repeated HeroRankProtoVo heroRankProtoVos = 6;
+}
+
+message HeroRankProtoVo {
+    int32 heroLv = 1;
+    string grow = 2;
+}
+
+
+message EliminateUnitbase {
+    int32 id = 1;
+    int32 len = 2;
+    int32 rage = 3;
+    int64 hp = 4;
+    int32 hpGrowth = 5;
+    int32 attackGrowth = 6;
+    int32 defenceGrowth = 7;
+    int32 skill = 9;
+    int32 colour = 10;
+    string starAttribute = 11;
+    int32 attack = 12;
+    int32 defence = 13;
+    int32 hit = 14;
+    int32 crit = 15;
+    int32 critMult = 16;
+    int32 deadMusic = 17;
+    int32 boss = 18;
+    string spine = 19;
+    int32 startRage = 20;
+    int32 atkWay = 21;
+    int32 atkEffect = 22;
+    int32 signType = 23;
+    int32 defSkill = 24;
+    int64 monsterDrop = 25; // 携带资源量
+    int32 heroId = 26; // 武将归属 配置技能生效的英雄id
+}
+
+message ActiveCityBattleProto {
+    int32 id = 1;
+    int32 instanceId = 2;
+    int32 checkPoint = 3;
+    int32 leastReward = 4;
+    int32 rewardPower = 5;
+    int32 boomReward = 6;
+    int32 diamondReward = 7;
+    string comboPower = 8;
+    int32 useCombo = 9;
+}
+
+message EliminateSkill {
+    int32 id = 1;
+    int32 skillId = 2;
+    string name = 3;
+    int32 level = 4;
+    int32 fightValue = 5;
+    string releaseEffect = 6;
+    string icon = 7;
+    string skillDesc = 8;
+    string skillEffs = 9;
+    string friendlyEffect = 10;
+    int32 effectHeroId = 11; // 指定命中的模型
+    int32 skillSuccessRate = 12;
+    int32 skillUseType = 13;
+    int32 endBattle = 14;
+}
+
+message EliminateSkillEffect {
+    int32 id = 1;
+    int32 skillEffType = 2;
+    int32 putRange = 3;
+    int32 aoeNum = 4;
+    int32 repeat = 5;
+    int32 colour = 6;
+    int32 auraHandler = 7;
+    int32 skillType = 8;
+    int32 specialCondition = 9;
+    int32 specialMaxNum = 10;
+    int32 rageHarmRate = 11;
+    int32 isSplash = 12;
+    int32 splashRate = 13;
+    int32 skillEffBaseType = 14;
+    int32 skillEffColour = 15;
+    int32 skillEffBasePoint = 16;
+    int32 isPer = 17;
+    int32 buffEffSuccessRate = 18;
+    int32 buffType = 19;
+    int32 dispelType = 20;
+    int32 dispelValue = 21;
+    string colourHarmRate = 22;
+    string name = 23;
+    string skillEffName = 24;
+    string skillEffIcon = 25;
+    int32 specialRate = 26;
+    int32 effectId = 27;
+    int32 attributeCondition = 28;
+    int32 signType = 29;
+    int32 actSignType = 30;
+    int32 minHurt = 31;
+    int32 skillEffComposition = 32;
+    int32 skillEffIconKind = 33;
+    int32 missJudge = 34; // 释放是否会闪避，1代表会，0代表不会
+    int32 hurtRelifePer = 35;
+    int32 targetEffect = 36;
+}
+
+message StateWeightProto {
+    int32 id = 1;
+    int32 weight = 2;
+    int32 stateType = 3;
+    int32 overlying = 4;
+}
+
+message PosWeightProto {
+    int32 id = 1;
+    int32 ownPos = 2;
+    int32 enemyPos = 3;
+    int32 weight = 4;
+}
+
+message ColourRestrainProto {
+    int32 id = 1;
+    int32 attColour = 2;
+    int32 defColour = 3;
+    int32 restrainPara = 4;
+    int32 slgRestrainPara = 5;
+}
+
+message StarInfo {
+    repeated int32 starAttrs = 1;
+    repeated AdditionPropertyInfo addPropertys = 2;
+}

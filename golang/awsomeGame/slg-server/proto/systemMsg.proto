@@ -1,0 +1,174 @@
+syntax = "proto3";
+
+package pb4server;
+
+option java_package = "pb4server";
+option java_outer_classname = "Systemkt";
+option java_multiple_files = true;
+
+// 通知各sharding，让sharding中的Actor停止
+message HandoffTell {
+}
+
+// home或world通知gate，目标channel无效了，有可能是因为断线，有可能是因为挤号。
+message ChannelExpiredTell {
+}
+
+// world发往gate，验证目标玩家的channel actor是否还有效。
+// 这个消息在游戏区up后群发。游戏区可能会因为服务器启动而up，或者因为负载均衡发生迁移而up。
+message CheckChannelTerminatedTell {
+}
+
+// 唤醒游戏区
+message WakeUpWorld {
+    int64 worldId = 1;
+}
+
+// 唤醒战场
+message WakeUpBattleField {
+    int64 battleFieldId = 1;
+}
+
+// 唤醒公共节点
+message WakeUpPublic {
+    int64 publicId = 1;
+}
+
+// 内部服务器发送给客户端的信封消息
+message ScMsgEnvelope {
+    int32 msgType = 1;
+    int32 clientMsgNo = 2;
+    bytes msgBin = 3;
+    int32 clientRt = 5;
+}
+
+// gate -> home
+// 信封消息
+message ProtoPlayerEnvelope {
+    int32 msgType = 1;
+    int32 clientMsgNo = 2;
+    int64 playerId = 3;
+    bytes msgBin = 4;
+}
+
+// gate -> world
+// 信封消息
+message ProtoWorldEnvelope {
+    int32 msgType = 1;
+    int32 clientMsgNo = 2;
+    int64 playerId = 3;
+    int64 worldId = 4;
+    bytes msgBin = 5;
+}
+
+// gate -> login
+// 信封消息
+message ProtoLoginEnvelope {
+    int32 msgType = 1;
+    int64 clusterId = 2;
+    int32 clientMsgNo = 3;
+    bytes msgBin = 4;
+    int32 loginId = 5;
+}
+
+// world -> battlefield
+// 信封消息
+message ProtoBattleFieldEnvelope {
+    int32 msgType = 1;
+    int32 clientMsgNo = 2;
+    int64 playerId = 3;
+    int64 worldId = 4;
+    int64 battleFieldId = 5;
+    bytes msgBin = 6;
+}
+
+// battlefield -> world
+// 由world转发的信封消息
+message DelegateWorldEnvelope {
+    int32 msgType = 1;
+    int32 clientRt = 2;
+    int64 playerId = 3;
+    int64 worldId = 4;
+    bytes msgBin = 5;
+    int32 clientMsgNo = 6;
+}
+
+// 数据同步消息
+message SyncInfoByAny {
+    int32 syncType = 1; // 同步类型
+    repeated bytes syncInfo = 2; // 同步数据
+    LogVo log = 3;
+}
+
+message LogVo {
+    int64 behId = 1;
+    int32 actionType = 2;
+}
+
+// 进程上执行脚本
+message ExecScriptAtProcessReq {
+    string script = 1; // 脚本
+}
+
+message ExecScriptAtProcessResp {
+    int32 rt = 1;
+    string scriptRt = 2; // 脚本执行返回
+}
+
+// 进程上缓存脚本
+message CacheScriptAtProcessReq {
+    string name = 1;
+    string script = 2;
+}
+
+message CacheScriptAtProcessResp {
+    int32 rt = 1;
+    string scriptRt = 2;
+}
+
+// 执行脚本
+message EvalScriptReq {
+    string name = 1;    //按名字执行
+    string script = 2;   //直接脚本执行
+}
+
+message EvalScriptResp {
+    int32 rt = 1;
+    string scriptRt = 2;
+}
+
+message ReloadConfigReq {
+    string tarName = 1;
+}
+
+message ReloadConfigResp {
+    int32 rt = 1;
+    string msg = 2;
+}
+
+message CleanArea {
+    int64 worldId = 1;
+}
+
+message CleanBattleField {
+    int64 battleFieldId = 1;
+}
+
+message CleanDataTell {
+    int64 worldId = 1;
+    repeated int64 playerId = 2;    //publicId == 0的情况下，取值清数据
+    string user = 3;    //login 使用
+    repeated int64 allianceId = 4;  //pubMgr使用
+    int32 cleanReason = 5; // 清除数据缘由 1-删区 2-销号
+}
+
+message CleanDataOkTell {
+    int64 playerId = 1;
+    int64 allianceId = 2;
+    string user = 3;    //login 使用
+    repeated int64 roomId = 4;  //聊天室Id
+}
+
+message PingTell {
+    int64 playerId = 1;
+}
