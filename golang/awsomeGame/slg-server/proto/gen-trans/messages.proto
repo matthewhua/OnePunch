@@ -1,0 +1,1598 @@
+
+syntax = "proto3";
+
+package messageId; // 替换为您的包名
+
+import "google/protobuf/any.proto"; // 根据需要导入其他依赖的.proto文件
+
+enum MsgType {
+
+
+	UnknownMsg = 0;
+
+	Connected = 10000;
+
+	Disconnected = 10001;
+
+	CLUSTERARRAY = 10021; // 获取集群信息
+
+	CLUSTERSELECT = 10022; // 选择服务器
+
+	ROBOTIDLE = 10023; // 空闲
+
+
+
+	Login = 1; // 发送登录消息，包括账号和密码
+
+	MakeCity = 2; // 创建城池
+
+	EnterGame = 4; // 进入游戏
+
+	EnterGameHome = 5; // 登录玩家服
+
+	CheckWord = 6; // 检测屏蔽字
+
+	LoginSDKBindInfo = 7; // 登录SDK绑定信息
+
+	LoginSDKBinding = 8; // 绑定登录SDK
+
+	Walk = 15; // 部队行军
+
+	PersonalPower = 17; // 查询个人势力
+
+	WalkScout = 18; // 侦查
+
+	AddMark = 19; // 添加土地收藏
+
+	DelMark = 20; // 删除土地收藏
+
+	ServerTime = 21; // 服务器时间
+
+	SearchMapCell = 24; // 找离我最近的指定等级的地块
+
+	FetchVersion = 25; // 获取配置版本信息
+
+	CheckPlayerName = 26; // 实时检测改名
+
+	ChangePlayerName = 27; // 改名
+
+	BatchPlayerSimpleInfoQuery = 29;
+
+	VipShipQuery = 30; // VIP商店商品查询
+
+	VipShipExchange = 31; // VIP商店商品兑换
+
+	MerchantShipQuery = 32; // 商船查询
+
+	MerchantShipExchange = 33; // 商船兑换
+
+	QueryCastleDefInfo = 41; // 查守城英雄
+
+	SetCastleDef = 42; // 设置守城部队
+
+	ChangeSkin = 45; // 切换城堡皮肤
+
+	BuySkin = 47; // 购买城堡皮肤
+
+	CreateInnerCity = 50; // 新建内城建筑
+
+	UnlockInnerCity = 51; // 解锁内城建筑
+
+	UpInnerCity = 52; // 升级内城建筑
+
+	CancelUpInnerCity = 53; // 取消内城建筑升级
+
+	QuickBuyExtendsQueue = 54; // 快速购买临时队列时长
+
+	CancelDestroyInnerCity = 55; // 取消拆除内城建筑
+
+	CollectBuildingRes = 58;
+
+	RefreshMerchantShipAtOnce = 60; // 立即刷新云游商人
+
+	CreateInnerCityDecorationObj = 61; // 建造内城装饰性建筑
+
+	DestroyInnerCityDecorationObj = 62; // 拆除内城装饰性建筑
+
+	MoveInnerCityBuilding = 63; // 移动内城建筑
+
+	MoveInnerCityDecorationObj = 65; // 移动内城装饰性建筑
+
+	QueryLayout = 66; // 查询布局
+
+	CopyLayout = 67; // 复制布局
+
+	EditLayout = 68; // 编辑布局
+
+	ApplyLayout = 69; // 应用布局
+
+	InnerCityDecorationObjDistribute = 70; // 装饰建筑直接放进当前布局
+
+	InnerCityDecorationObjPackUp = 71;
+
+	LayoutFunctionOpen = 72; // 布局功能开启
+
+	HeroAppointAppoint = 81; // 英雄委任委任
+
+	HeroAppointAutoAppoint = 82; // 英雄委任一键委任
+
+	LuckyDiscountShopQuery = 90; // 幸运折扣商店查询
+
+	LuckyDiscountShopRefresh = 91; // 幸运折扣商店刷新
+
+	LuckyDiscountShopBuy = 92; // 幸运折扣商店购买
+
+	GetDetailFightInfo = 104; // 详细战报请求
+
+	GetHeroFightReport = 105; // 获取英雄战战报记录（测试用）
+
+	ChatFightInfoDetail = 106; // 获取聊天时的战报分享的详细信息
+
+	ChangeWorldWatch = 108; // 切换世界视野
+
+	GetAllServerInfo = 109; // 查找所有世界
+
+	QueryCell = 111; // 查询地块
+
+	QueryAllianceWalkLine = 112; // 查询联盟行军线
+
+	GetTaskReward = 113; // 领取任务奖励
+
+	TaskGossipFinish = 114; // 八卦任务完成
+
+	GuideFin = 119; // 新手引导完成一步
+
+	GetUnitTaskReward = 120; // 领取章节任务奖励
+
+	StoryStepChange = 121; // 剧情引导变化
+
+	AllianceUnitTaskQuery = 130;
+
+	AllianceJourneyDraw = 140; // 盟主征途大奖领取
+
+	ItemCompound = 183; // 合成道具
+
+	PlayerTagSet = 200; // 设置玩家标签
+
+	AllianceTagSet = 201; // 设置联盟标签
+
+	TimedPackageQuery = 240; // 定时礼包查询
+
+	TimedPackageDraw = 241; // 定时礼包领取
+
+	ReadAllChatMsg = 295;
+
+	DelStrangerChat = 296;
+
+	OpenNewChatWindow = 297;
+
+	ChangeChatWindow = 298;
+
+	ChangeRoomInfo = 299; // 修改聊天室信息
+
+	Chat = 300; // 发送聊天
+
+	SendChat = 301; // 发送聊天
+
+	CreateScopeMsg = 304; // 生成聊天室
+
+	NoSessionQuery = 302;
+
+	AppointRoomOwner = 309; // 群主转让
+
+	QuitChatRoom = 312; // 退出群组聊天（彻底的离开聊天室）
+
+	QueryGroupMembers = 314; // 查询群组聊天室成员
+
+	AddGroupChatMember = 315; // 向群组聊天室中增加聊天成员
+
+	DelGroupChatMember = 316; // 删除讨论组人员
+
+	DelGroupChat = 317; // 删除讨论组
+
+	GetChatInfo = 319; // 获取聊天内容
+
+	GetLastChatInfo = 320; // 获取最新聊天记录
+
+	InBlack = 321; // 拉入黑名单
+
+	OffBlack = 322; // 移除黑名单
+
+	AssistAllianceChat = 323;
+
+	MoveCity = 360; // 迁城
+
+	ClearPlayerEnterGame = 361; // 被清理的玩家重新上线安排坐标
+
+	QueryMoveCity = 362; // 查询迁城
+
+	AllMails = 450; // 邮件列表查询
+
+	ReadMail = 451; // 阅读邮件
+
+	ReadAllMail = 452; // 一键已读
+
+	DrawMail = 453; // 邮件领取附件
+
+	DrawAllMail = 454; // 一键领取
+
+	DelMail = 455; // 删除邮件
+
+	BatchDelMail = 456; // 批量删除邮件
+
+	SignMail = 457; // 收藏邮件
+
+	SendAllianceMail = 458; // 发送联盟邮件
+
+	QueryMailNumInfo = 459; // 查询邮件数量
+
+	UnSignMail = 460; // 取消收藏邮件
+
+	QueryAllianceRankFirst = 500; // 查询联盟排行榜首页
+
+	QueryRankFirst = 501; // 查询排行榜首页
+
+	QueryRank = 502; // 查询排行
+
+	QueryOpenServerFightValueRank = 503; // 开服战力排行排行榜查询
+
+	QueryOpenServerFightValueDropBag = 504; // 开服战力排行已购礼包查询
+
+	BuyOpenServerFightValueDropBag = 505; // 开服战力排行礼包购买
+
+	QuerySlgDetailOnRank = 506; // 排行榜中的slg战斗信息
+
+	SignQuery = 510; // 签到查询
+
+	SignActive = 511;
+
+	SignDrawBox = 512;
+
+	RebirthPalaceQuery = 610; // 大圣堂查询
+
+	RebirthPalaceFreeRebirth = 611; // 大圣堂免费复活士兵
+
+	RebirthPalaceRebirth = 612; // 大圣堂付费复活士兵
+
+	HeroTrainCampQuery = 620; // 英雄训练营查询
+
+	HeroTrainCampGridOccupyOrRelease = 621; // 英雄训练营格子占用或释放
+
+	HeroTrainCampGridCdClear = 622; // 英雄训练营格子cd清除
+
+	HeroRecommendBoxDraw = 640; // 英雄推荐宝箱领取
+
+	HeroCompound = 670; // 武将合成
+
+	QueryFriendApply = 699; // 查询好友申请
+
+	QueryFriend = 700; // 查询好友信息
+
+	MakeFriend = 701; // 加好友
+
+	RemoveFriend = 702; // 删除好友
+
+	QueryPlayerByName = 709; // 查询玩家
+
+	HandleFriendApply = 710; // 忽略别人的添加好友请求
+
+	JjcQueryInfo = 711; // 查询竞技场
+
+	JjcRefreshChallenge = 712; // 刷新竞技场挑战对手
+
+	JjcGetRewards = 714; // 领取奖励
+
+	GetTimeReward = 718; // 领取累计时间奖励
+
+	BeginJjcFight = 719; // 竞技场开始战斗
+
+	JjcFight = 720; // 竞技场战斗
+
+	BuyJjcCount = 722; // 购买竞技场挑战次数
+
+	SelectJjcAtkForce = 724; // 查询某玩家竞技场防守阵容
+
+	GetRankGold = 725; // 领取排名累计奖励
+
+	QueryJjcShopInfo = 726; // 查询jjc商店
+
+	BuyJjcShopItem = 727; // 购买竞技场商店的东西
+
+	RefreshJjcShopItem = 728; // 刷新竞技场商店的东西
+
+	GainVipDayReward = 740;
+
+	BuyNormalVipGift = 741; // 购买普通VIP特权礼包
+
+	UpVipLevel = 742; // vip升级
+
+	RewardVipDayRewardDeal = 743; // 领取每日VIP经验
+
+	RadarSearchOpen = 781; // 雷达搜索
+
+	RadarTaskVerify = 782; // 雷达任务验证
+
+	RadarTaskDraw = 785; // 领取雷达任务奖励
+
+	RadarUpgrade = 788;
+
+	RadarTaskComplete = 789;
+
+	AllianceCreate = 802; // 联盟创建
+
+	QueryAllianceRandName = 803; // 随机名字
+
+	AllianceJoinById = 804; // 根据联盟ID申请加入联盟
+
+	AllianceJoinCancel = 805; // 玩家取消加入联盟申请
+
+	AllianceDealJoinReq = 806; // 处理玩家加入联盟申请
+
+	SetPowerLimit = 807; // 设置允许申请联盟的势力最低值
+
+	AllianceQueryList = 808; // 查询可加入联盟列表
+
+	AllianceQueryInfo = 809; // 查询联盟概要信息
+
+	AllianceQueryReqList = 810; // 查询申请加入联盟的玩家信息
+
+	AllianceQuit = 811; // 玩家主动退出联盟
+
+	AllianceRemovePlayer = 812; // 从联盟中剔除玩家
+
+	AllianceSetDescpt = 813; // 修改联盟公告
+
+	AllianceSetPos = 814; // 任命玩家在联盟中职位
+
+	AllianceBeInvite = 815; // 接受邀请加入联盟
+
+	AllianceQueryPlayer = 816; // 查询联盟成员信息
+
+	AllianceDismiss = 817; // 联盟解散
+
+	AllianceTp = 818; // 联盟回城请求界面
+
+	SetAllianceFollow = 819; // 设置跟随状态 不用传参数来 直接取反
+
+	AllianceQueryLog = 820; // 查询联盟日志
+
+	AllianceSetApplyPower = 822; // 设置联盟官员申请战斗力
+
+	ApplyAllianceOfficer = 823; // 申请成为联盟官员
+
+	QueryApplyAllianceOfficer = 824; // 查询申请成为联盟官员列表
+
+	CreateAllianceCheckAllianceName = 825; // 检测联盟名是否可用
+
+	DeleteApplyAllianceOfficer = 826; // 删除一条申请职位记录
+
+	AllianceRecallPos = 835; // 罢免玩家帮派职位
+
+	AllianceSetFlag = 837; // 设置联盟旗帜
+
+	QueryApplyAllianceList = 838; // 查询已申请联盟列表
+
+	QueryAllianceActivity = 839; // 查询已申请联盟列表
+
+	CleanrAllianceApplyList = 840; // 检测是否拥有联盟 并且清除他的申请记录 用于进入销号冷静期
+
+	GetRecommendationAllianceInfo = 841;
+
+	BuyAllianceGiftSupportBox = 846;
+
+	QueryAllianceGiftSupportBoxInfo = 847;
+
+	AllianceOpenWaijiao = 895; // 打开联盟外交界面
+
+	WriteAllianceWaijiao = 896; // 写联盟外交
+
+	AllianceNickName = 897; // 设置联盟昵称
+
+	AllianceSetName = 898; // 设置联盟名称或者简称
+
+	AllianceImpeach = 899; // 弹劾盟主
+
+	AllianceInvite = 900; // 邀请玩家加入联盟
+
+	AllianceGiftOpen = 901; // 联盟礼物主界面
+
+	AllianceGiftGet = 902;
+
+	AllianceBigGiftOpen = 903;
+
+	AllianceGiftDelete = 904;
+
+	OpenAllianceCompetitionMain = 906; // 打开联盟总动员主界面
+
+	OpenAllianceCompetitionReward = 907; // 打开联盟总动员领取奖励界面
+
+	GetAllianceCompetitionQuest = 908; // 领取联盟总动员任务
+
+	RemoveAllianceCompetitionQuest = 909; // 删除联盟总动员任务
+
+	BuyAllianceCompetitionQuest = 910; // 购买联盟总动员任务
+
+	RewardAllianceCompetitionQuest = 911; // 领取任务奖励
+
+	CancelAllianceCompetitionQuest = 912; // 有权限的人取消掉任务
+
+	GetAllianceCompetitionReward = 913; // 领取联盟总动员阶段奖励
+
+	OpenAfterAllianceCompetition = 914; // 活动结束打开界面
+
+	QueryInAllianceRank = 915; // 查询联盟内部数据排行榜
+
+	QueryAllianceRank = 916; // 查询联盟排行榜
+
+	QueryAllianceFirstRank = 917; // 查询联盟排行榜首页
+
+	QueryOccupyWonder = 918; // 查询占领的奇观
+
+	RemoveAllianceWaijiao = 919; // 删除联盟留言
+
+	ExchangeKingExp = 924; // 道具兑换成领主经验
+
+	OpenAllianceBag = 925; // 打开联盟仓库
+
+	DonateAllianceBag = 926; // 捐献东西给联盟仓库
+
+	ExchangeAllianceBag = 927; // 从联盟仓库兑换东西
+
+	ChangeAllianceBagSet = 928; // 修改联盟仓库捐献要求
+
+	QueryJjcAllRank = 930; // 打开联盟boss界面
+
+	QueryAllianceEffect = 931; // 查询联盟科技主界面
+
+	AllianceEffectLvUp = 932; // 升级联盟科技
+
+	AllianceDonate = 933; // 捐献联盟科技
+
+	AllianceEffectFirstSet = 934; // 捐献联盟科技
+
+	UseAllianceEffect = 935; // 使用联盟科技技能
+
+	GetAllianceCompetitionOwnQuest = 936;
+
+	RemoveAllianceCompetitionOwnQuest = 937;
+
+	RewardAllianceCompetitionOwnQuest = 938;
+
+	RefreshAllianceCompetitionOwnQuest = 939;
+
+	QueryAllianceCompetitionTask = 940;
+
+	ReceiveAllAllianceCmpttReward = 943;
+
+	RefreshAllianceCompetitionQuest = 944;
+
+	QueryAllianceCompetitionRank = 952;
+
+	BeginEliminateFight = 1000;
+
+	EndEliminateFight = 1001;
+
+	UpdateMainHero = 1006; // 更换领主
+
+	HeroLvUp = 1011; // 武将升级
+
+	HeroStarLvUp = 1012; // 武将升星
+
+	HeroSuperUp = 1013; // 武将进阶
+
+	HeroFragmentExchange = 1014; // 英雄万能碎片兑换
+
+	HeroOneKyUpQuery = 1015; // 英雄一键升级查询
+
+	HeroOneKyUpApply = 1016; // 英雄一键升级应用
+
+	HeroGetStarLvUp = 1019; // 武将兵团升级
+
+	HeroReset = 1021; // 英雄重置
+
+	InvincibleHeroPreviewSpending = 1022;
+
+	HeroFragmentHistoryQuery = 1023;
+
+	ViewHeroPrisoned = 1024;
+
+	HeroBreakLvUp = 1027;
+
+	HeroSlgSkillLvUp = 1028;
+
+	HeroLvUpgradePreview = 1029;
+
+	HeroLvUpgrade = 1030;
+
+	ResearchLvUp = 1051; // 升级科技
+
+	CancelResearchLvUp = 1052; // 取消升级科技
+
+	QueryResearch = 1053;
+
+	ClearTime = 1061; // 秒加速
+
+	BuyResShop = 1062; // 购买resShop表中物品
+
+	UseProp = 1063; // 使用道具
+
+	BuyAndUseProp = 1064; // 购买并使用道具
+
+	DiamondConsumep = 1065;
+
+	SmithyExchangeSplit = 1066;
+
+	OpenAllianceHelp = 1071; // 打开联盟帮助
+
+	SendAllianceHelp = 1072; // 登记帮助信息
+
+	GoAllianceHelp = 1073; // 帮助
+
+	CabbageQuery = 1080; // 偷菜查询自己的数据
+
+	CabbagePlant = 1081; // 偷菜种菜
+
+	CabbageHarvest = 1082; // 偷菜收菜
+
+	CabbageViewOther = 1083; // 偷菜查看其他玩家
+
+	CabbageRollTarget = 1084; // 偷菜摇人
+
+	CabbageStealTarget = 1085; // 偷菜盗窃
+
+	CabbageDrawLvReward = 1086; // 偷菜等级奖励领取
+
+	CabbageBuyExp = 1087; // 偷菜购买经验
+
+	QueryKingInfo = 1216; // 查询君主信息
+
+	LordEquipUp = 1240; // 领主装备锻造/升级
+
+	LordEquipStoneUp = 1241; // 领主装备宝石锻造/升级
+
+	LordTalentUp = 1242; // 领主天赋升级
+
+	LordTalentReset = 1243; // 领主天赋重置
+
+	LordTalentPageSwitch = 1244; // 领主天赋页切换
+
+	LordTalentSkillExecute = 1245; // 领主天赋技能释放
+
+	LordEquipClassSwitch = 1246; // 领主装备类型(套装)切换
+
+	LordEquipStrength = 1247; // 领主装备强化
+
+	LordOneClickLvUpgradePreview = 1248;
+
+	LordOneClickLvUpgrade = 1249;
+
+	WatchWalkGroup = 1251; // 查看行军组
+
+	QueryWalkLineDetailInfo = 1252;
+
+	GoBackHome = 1253; // 召回部队
+
+	StartMass = 1254; // 发起集结
+
+	CancelMass = 1255; // 取消集结
+
+	QueryAllianceMassInfo = 1256; // 查询集结信息
+
+	SetForceOrder = 1257; // 设置部队顺序
+
+	QueryAllianceMemberPos = 1258; // 查询联盟成员坐标
+
+	SendMassMemberHome = 1259; // 集结成员遣返回家
+
+	SendReinforcePlayerHome = 1260; // 遣返增援玩家
+
+	QueryWarnInfo = 1261; // 查询预警信息
+
+	QueryReinforceSoldierInfo = 1262; // 查询增援容量
+
+	CheckCanMass = 1263; // 检测目标点能否集结
+
+	QueryMassInfo = 1264; // 查询集结兵量
+
+	QueryReinforceForceNum = 1265; // 查找增援部队数量
+
+	SetArmyPlan = 1266; // 设置英雄战部队预设
+
+	GetArmyPlan = 1267; // 获取英雄战部队预设
+
+	CheckAllianceArea = 1268; // 检测是否自己的联盟领地
+
+	CheckCpTower = 1290; // Cp爬塔信息查询
+
+	CpTowerQuickPass = 1293; // Cp爬塔一键通关
+
+	CpTowerDrawOutputRes = 1294; // Cp爬塔挂机奖励领取
+
+	CpTowerDrawStarReward = 1295; // Cp爬塔累积星级奖励领取
+
+	CpTowerSweep = 1296; // Cp爬塔满星扫荡
+
+	CpQuickAfk = 1297; // 爬塔快速挂机
+
+	MoveServer = 1300; // 迁服
+
+	InitPlayerSessionAfterMoveServer = 1301; // 迁服成功初始化数据
+
+	AllServerInfo = 1302; // 迁服列表
+
+	MoveServerCost = 1303; // 请求我的战斗力在即将迁往的目标服务器上的排名
+
+	FindChangeServers = 1304; // 查看所有可前往的服务器信息
+
+	ChangePlayer = 1305; // 转服
+
+	FindAllRoles = 1306; // 查找所有角色
+
+	ShopTotalBuy = 1311; // 商店购买物品
+
+	ShopLimitTotalBuy = 1312; // 商店购买物品
+
+	AllianceShopQuery = 1313; // 联盟随机商店查询
+
+	AllianceShopBuyDay = 1314; // 联盟随机商店每日购买
+
+	PersonalShopQuery = 1316;
+
+	PersonalShopExchange = 1317;
+
+	WxGiftCenter = 1318;
+
+	EliminateRandomEventAtkStart = 1351; // 内城随机事件三消战斗开始
+
+	EliminateRandomEventAtkFinsh = 1352; // 内城随机事件三消战斗结束
+
+	SlgRandomEventAtkStart = 1353; // 内城随机事件三消战斗
+
+	RandomEventFortuneRoll = 1354; // 内城随机事件摇天降鸿运倍率
+
+	RandomEventFortuneDraw = 1355; // 内城随机事件领取天降鸿运奖励
+
+	GetOnlineReward = 1401; // 领取在线礼包
+
+	OpenOnlineReward = 1402; // 打开在线礼包
+
+	RefHuoyueduTask = 1403; // 请求刷新活跃度任务
+
+	GetHuoyueduReward = 1404; // 领取活跃度档位奖励
+
+	GetAppreciationReward = 1405; // 领取犒赏令档位奖励
+
+	GetTotalPayReward = 1406; // 领取累充奖励
+
+	QueryMillitaryScore = 1407;
+
+	GetMillitaryStepReward = 1408;
+
+	GetTimintReward = 1409;
+
+	UnlockAppreciationStep = 1410; // 犒赏令解锁档位奖励
+
+	GetMonthReward = 1424;
+
+	GetClubCardInfos = 1425;
+
+	GetPurchaseActivityStepReward = 1452; // 领取自定义活动的阶段奖励
+
+	BuyPurchaseActivity = 1453; // 领取自定义活动的阶段奖励
+
+	GetPurchaseActivityFreeReward = 1454; // 领取自定义活动每日免费礼包
+
+	SendNoticeToLeaderOfAlliance = 1460; // 发送公告给盟主
+
+	QueryFameHall = 1464; // 查询名人堂
+
+	QueryWonderForce = 1465; // 查询奇观部队信息
+
+	GiveUpWonder = 1467;
+
+	EliminateFightError = 1478; // 三消战斗
+
+	SupplyEnergy = 1494;
+
+	CookingInfoQuery = 1500; // 查询食堂餐桌情况
+
+	CookingStart = 1501; // 开始烹饪
+
+	CookingDraw = 1502; // 领取烹饪好的食品(需要至少1个可领取)
+
+	CookingAdjust = 1503; // 增减原料(需要当前队列至少1个没有好)
+
+	QueryWallInfo = 1540;
+
+	RepairWall = 1541;
+
+	WallFireFight = 1542;
+
+	WallStatisticsDataQuery = 1543;
+
+	QueryLottery = 1545;
+
+	PlayLottery = 1546;
+
+	PlayLotteryByWeight = 1547;
+
+	ReceiveLotteryReachProp = 1550;
+
+	PlayLotteryScoreReward = 1551;
+
+	QueryWonderInfo = 1571;
+
+	QueryWonderRank = 1572;
+
+	QueryWonderKillRank = 1573;
+
+	OtherPersonalPower = 1576;
+
+	GetNoticeSetting = 1580;
+
+	ChangeNoticeSetting = 1581;
+
+	GetResetLoginGift = 1584;
+
+	GetLoginGift = 1585;
+
+	GetLoginAutoGift = 1587;
+
+	BuyPurchase = 1588;
+
+	GetHomeActivityReward = 1589;
+
+	QueryDailyReward = 1590;
+
+	ReceiveDailyReward = 1591;
+
+	ChangePlayerLan = 1604; // 修改语言
+
+	QueryMark = 1606; // 查询标记信息
+
+	QueryBuff = 1612; // 查询buff信息
+
+	QueryTask = 1615; // 查询任务
+
+	ReceiveRadarOnlineReward = 1618; // 探测屋在线奖励
+
+	QuerySkin = 1619; // 查询皮肤
+
+	QueryPhoto = 1621; // 修改头像
+
+	ChangePhoto = 1622; // 修改头像
+
+	BuyPhoto = 1623; // 查询头像
+
+	QueryPictureUrl = 1624; // 查询头像url
+
+	QuerySkinEffectInfo = 1625; // 查询skin模块加成(皮肤(包含护卫)，头像框)
+
+	RefreshHomeBuildingView = 1631; // 刷新建筑视图
+
+	BarracksQuickMakeQuery = 1664; // 兵营快速造兵查询
+
+	BarracksQuickMakeApply = 1665; // 兵营快速造兵应用
+
+	BarracksQuickUpQuery = 1666; // 兵营快速升阶查询
+
+	BarracksQuickUpApply = 1667; // 兵营快速升阶应用
+
+	BarracksWoundedDismiss = 1668; // 遣散伤兵
+
+	BarracksDismiss = 1669; // 遣散士兵
+
+	QueryBarracksCancel = 1670; // 查询取消返还的资源
+
+	BarracksMakeStart = 1671; // 开始造兵
+
+	BarracksMakeCancel = 1672; // 取消造兵
+
+	BarracksUpStart = 1673; // 士兵开始升阶
+
+	BarracksUpCancel = 1674; // 士兵升阶取消
+
+	BarracksWoundedSoldierCure = 1675; // 开始治疗伤兵
+
+	BarracksQueueDraw = 1676; // 手动领取兵营队列
+
+	BarracksQueryNewUnlock = 1677; // 查询新解锁的兵种
+
+	BarracksWoundedSoldierCureCancel = 1678; // 伤兵治疗取消
+
+	BarracksWoundedSoldierCureCancelQuery = 1679; // 伤兵治疗取消查询
+
+	ExpeditionQuery = 1680;
+
+	ExpeditionSlgFight = 1681;
+
+	ExpeditionReset = 1682;
+
+	ExpeditionReceiveOutput = 1683;
+
+	ExpeditionQuickAfk = 1684;
+
+	ExpeditionChapterReward = 1687;
+
+	ExpeditionHangUp = 1688;
+
+	BarracksRefugeSoldier = 1689;
+
+	BarracksRefugeSoldierCancel = 1690;
+
+	BuyGiftPackage = 1701; // 客户端报备购买付费礼包
+
+	CancelBuyGiftPackage = 1702; // 客户端取消报备购买付费礼包
+
+	QueryBuyGiftPackageInfo = 1703;
+
+	PayNotice = 1705;
+
+	FindCanBuyGiftPackage = 1706;
+
+	BuyPurchaseActivityDiyGiftPackage = 1709; // 购买活动带的自选礼包
+
+	GmBuyGiftPackage = 1712; // GM获得礼包
+
+	ExchangeGiftPackageItem = 1713;
+
+	QueryInvestActivity = 1714;
+
+	QueryRescueRes = 1725;
+
+	GetRescueRes = 1726;
+
+	WatchRescueNotice = 1727;
+
+	SetForcePlan = 1728;
+
+	ReportElapsed = 1730;
+
+	CheckNameLegal = 1732;
+
+	GetTargetTaskReward = 1733;
+
+	QueryLordActivity = 1734;
+
+	GetLordActivityScoreReward = 1735;
+
+	QueryLordActivityRank = 1736;
+
+	QueryLordActivityHistory = 2092;
+
+	DelForcePlan = 1737;
+
+	PurcaaseActivityRedPoint = 1738;
+
+	GuideInfo = 1741;
+
+	DrawGiftKey = 1799;
+
+	Breakthrough = 1800;
+
+	ExChangeBreakthroughExp = 1801;
+
+	AllianceFightApply = 1812;
+
+	QueryAllianceFightLogs = 1816;
+
+	HeroTrainCardCombine = 1839;
+
+	OpenBigCity = 1851;
+
+	SupplyRes = 1870;
+
+	PveUnlockCloud = 1872;
+
+	PickupResSingle = 1873;
+
+	ResSingleWarFortuneRoll = 1875;
+
+	PickupResSingleFortune = 1877;
+
+	InnerCityAreaClean = 1878;
+
+	FadeCloud = 1879;
+
+	WalkStop = 1883;
+
+	WalkWithForce = 1884;
+
+	WalkPvpFight = 1885;
+
+	WatchOnMiniMap = 1888;
+
+	WatchMapAllCastle = 1889;
+
+	QueryWalkLineDetail = 1900;
+
+	QueryWalkRobotPos = 1906;
+
+	QueryFlagInfo = 1911;
+
+	UpdateFlagInfo = 1912;
+
+	PropExchange = 1919;
+
+	HeroShardStoreQuery = 1920;
+
+	HeroShardStoreBuy = 1921;
+
+	HeroShardStoreTicketBuy = 1922;
+
+	FestivalStoreQuery = 1923;
+
+	FestivalStoreBuy = 1924;
+
+	FestivalTicketBuy = 1925;
+
+	QueryTimeExchangeShop = 1926;
+
+	DinosaurOperate = 1931;
+
+	DinosaurQuery = 1932;
+
+	DinosaurShootAwardPrizes = 1933;
+
+	DinosaurShootStar = 1934;
+
+	CreateAllianceBuild = 2001;
+
+	CancelCreateAllianceBuild = 2002;
+
+	RemoveAllianceBuild = 2003;
+
+	CancelRemoveAllianceBuild = 2004;
+
+	PutOutFireAllianceBuild = 2005;
+
+	QueryAllianceBuilds = 2006;
+
+	ConveneAllianceMembers = 2007;
+
+	TryResponseConvene = 2008;
+
+	ChangeTpFlag = 2009;
+
+	QueryTpFlags = 2010;
+
+	InviteJoinAllianceBuilding = 2011;
+
+	MoveAllianceBuild = 2023;
+
+	OpenFightDayEliminate = 2030;
+
+	QueryHistoryInfo = 2031;
+
+	BuyEliminateChallengeShop = 2032;
+
+	QueryOfflineMsg = 2034;
+
+	CheckTargetCanAtk = 2035;
+
+	SetMassTarget = 2036;
+
+	ResponseMass = 2037;
+
+	QueryEliminateChallengeRank = 2039;
+
+	WorldActivityQuery = 2054;
+
+	WorldActivityDraw = 2055;
+
+	WorldActivityRankRewardDraw = 2056;
+
+	HeroSharedEquipmentsUp = 2070;
+
+	LeaveMapBuild = 2076;
+
+	SendForceExpression = 2079;
+
+	AllianceMark = 2080;
+
+	DeleteAllianceMark = 2081;
+
+	QueryAllianceMark = 2082;
+
+	ClearAllianceMarkReadStat = 2083;
+
+	ReceiveAllianceResReward = 2084;
+
+	QueryAllianceWarehouse = 2085;
+
+	QueryAllianceResNum = 2086;
+
+	QueryAllianceDailyLmt = 2087;
+
+	WalkPvpTransport = 2090;
+
+	QueryTurntableAct = 2093;
+
+	PlayTurntableAct = 2094;
+
+	RefreshTurntableAct = 2095;
+
+	QueryConfigActivity = 2096;
+
+	QueryPartPointActivity = 2097;
+
+	ReceivePartPointActivityReward = 2098;
+
+	QueryPartPointActivityRank = 2099;
+
+	OpenArmyActivity = 2120;
+
+	ApplyArmyActivity = 2121;
+
+	QueryArmyActivityRank = 2122;
+
+	ReserveArmyActivity = 2123;
+
+	CancelReserveArmyActivity = 2124;
+
+	QueryAllianceTipId = 2126;
+
+	GiveAllianceThumbsUp = 2127;
+
+	SendAllianceRecruit = 2128;
+
+	QueryAllianceWorldWonder = 2131;
+
+	AllianceWorldWonderApply = 2132;
+
+	QueryAllianceWorldWonderLog = 2133;
+
+	QueryWorldWonderInfo = 2134;
+
+	QueryWorldWonderForce = 2135;
+
+	WorldWonderSendReward = 2136;
+
+	QueryWorldWonderScore = 2137;
+
+	QueryWorldWonderRewardLog = 2138;
+
+	AllianceWorldWonderCancelApply = 2139;
+
+	ReceiveStationedReward = 2142;
+
+	QueryItemCompoundRecord = 2144;
+
+	QueryActivityStatus = 2145;
+
+	QueryAllianceCalendar = 2165;
+
+	PublishAllianceCalendar = 2166;
+
+	DeleteAllianceCalendar = 2167;
+
+	QueryNpcCityActivity = 2176;
+
+	RecvTssSdkData = 2200;
+
+	CapitalBattleKingSet = 2201; // 盟主设置国王
+
+	CapitalBattleOfficerSet = 2202; // 国王设置官员
+
+	CapitalBattleOpen = 2203; // 打开国王特权界面
+
+	CapitalBattleAnnouncementChange = 2204; // 修改王国公告
+
+	CapitalBattleUseSkill = 2205; // 使用国王技能
+
+	CapitalBattleKingGiveGift = 2206; // 国王颁发礼包
+
+	CapitalBattleOfficerInfoOpen = 2207; // 打开王国官员界面
+
+	CapitalBattleKingGiftInfoOpen = 2208; // 打开王国礼包界面
+
+	CapitalBattleKingMainInfoOpen = 2209; // 打开日月王城主界面
+
+	CapitalBattleGiftLogOpen = 2210; // 打开礼物派发日志界面
+
+	CapitalBattleUseSkillLogOpen = 2211; // 打开技能使用日志界面
+
+	QueryTotalSummon = 2217;
+
+	AssistSummonReport = 2219;
+
+	BeginAutoFightCommonBoss = 2220; // 开始自动打野
+
+	CancelAutoFightCommonBoss = 2221; // 取消自动打野
+
+	QueryYanwuLuckyRecord = 2223;
+
+	QueryLabyrinth = 2224; // 查询迷宫
+
+	RollLabyrinth = 2225; // roll骰子
+
+	RefreshLabyrinth = 2226; // 刷新迷宫
+
+	EndLabyrinth = 2227; // 结束迷宫
+
+	QueryYanwuPlayerByRank = 2228; // 演武场排名详情
+
+	AllianceCallSend = 2231; // 联盟召集
+
+	AllianceCallIgnore = 2232; // 联盟召集忽视
+
+	AllianceMineOpt = 2233;
+
+	FindPath = 2495; // 寻路
+
+	QueryAllAllianceMemberPos = 2496; // 查询所有盟友位置
+
+	WatchAllAllianceBuild = 2497; // 获取全地图联盟建筑信息
+
+	WatchWorld = 2498; // 查看地图
+
+	RequireModuleData = 2500;
+
+	AllianceNewBossOpen = 2502; // 联盟boss开启
+
+	QueryAllianceNewBossInfo = 2504; // 查询联盟boss信息
+
+	UseChargeBuff = 2506; // 使用充能buff
+
+	QueryRelicMassCount = 2507; // 查询巢穴集结次数
+
+	Online = 2516;
+
+	Change = 2517;
+
+	Buy = 2518;
+
+	QuerySelfTreasure = 2520; // 联盟宝藏 2520 - 2530
+
+	QueryAllianceTreasure = 2521;
+
+	WorkTreasure = 2522;
+
+	HelpTreasure = 2523;
+
+	QuickTreasure = 2524;
+
+	RewardTreasure = 2525;
+
+	RefreshTreasure = 2526;
+
+	SendHelpTreasure = 2527;
+
+	QueryFestivalDropLmt = 2529;
+
+	PrivacySwitchOpt = 2530;
+
+	QueryPrivacySwitch = 2531;
+
+	TimeExchangeShop = 2532;
+
+	GetFestivalBossReward = 2533;
+
+	QueryFestivalBossdAtk = 2534;
+
+	QueryFestivalBoss = 2535;
+
+	QueryFestivalRewardRank = 2536;
+
+	EnterBattleField = 2537;
+
+	ExitBattleField = 2539;
+
+	QueryNpcCityOccupyHistory = 2542;
+
+	QueryOccupyNpcCity = 2543;
+
+	QueryNpcCityFirstOccupyRank = 2544;
+
+	QueryTearDownSoldierInfo = 2545;
+
+	CheckCanWalk = 2546; // 检测能否行军
+
+	GiveUpNpcCity = 2547; // 舍弃npc城池
+
+	CancelGiveUpNpcCity = 2548; // 取消舍弃npc城池
+
+	SetNeedSoldier = 2549; // 设置需要的士兵信息
+
+	QueryAllianceSupply = 2562;
+
+	AllianceSupplyRequest = 2563;
+
+	AllianceSupplyGive = 2564;
+
+	AllianceSupplyReceive = 2565;
+
+	AllianceColosseumQuery = 2566;
+
+	AllianceColosseumOpt = 2567;
+
+	NeutralCityQuery = 2571;
+
+	NeutralCityOpt = 2572;
+
+	FollowCommunityQuery = 2580; // 关注社群活动查询
+
+	ReceiveFollowCommunityReward = 2581; // 关注社群活动领奖
+
+	HeroEchoQueryInfo = 2582;
+
+	HeroEchoPurchaseItem = 2583;
+
+	LuckyTreasureInfo = 2584; // 幸运宝箱信息获取
+
+	LuckyTreasureChooseBig = 2585; // 幸运宝箱选择大奖
+
+	PlayLuckyTreasure = 2586; // 开幸运宝箱
+
+	LuckyTreasureGetStageReward = 2587; // 幸运宝箱领取阶段奖励
+
+	QueryPrivateCustomizationGiftInfo = 2591; // 私人定制查询活动信息
+
+	ChangePrivateCustomizationGiftInfo = 2592; // 私人订制活动，礼包自选道具变更信息
+
+	RefreshMoney = 3000; // 刷新资源
+
+	EnterMaintenance = 3001; // 通知客户端，服务器开始维护
+
+	HeroStateChange = 3004; // 武将状态发生变化
+
+	YieldChange = 3009; // 产量变化主推
+
+	HeroChange = 3010; // 武将升级推送
+
+	SurveyCompleteNotice = 3011; // 问卷完成推送
+
+	AssistSummonMailNotice = 3012; // 点赞圣女
+
+	AssistAllianceChatNotice = 3013; // 点赞联盟聊天
+
+	UpdateLandBelong = 3014;
+
+	DecreeChange = 3015; // 令牌变化主推
+
+	AllianceInfoChange = 3018; // 联盟信息变化推送（自己）
+
+	AlliancePosChange = 3023; // 联盟职位变化
+
+	HuoyueduChange = 3034; // 活跃度积分变更推送
+
+	TaskChange = 3035; // 任务变化
+
+	RescueEmailIdUpdate = 3039;
+
+	VisitQuestPop = 3040;
+
+	NoticeInfo = 3055; // 公告信息
+
+	CabbageDataInfo = 3060; // 偷菜数据
+
+	AutoFightCommonBossInfo = 3061; // 自动打野
+
+	ChargeBuffChange = 3062; // 充能buff变更
+
+	RoomDel = 3073; // 删除聊天室
+
+	GroupChatInfo = 3076; // 聊天室消息推送
+
+	PrivateChatInfo = 3079; // 接收私聊消息
+
+	NewChatMessage = 3080; // 接收聊天消息
+
+	BagChange = 3081; // 玩家物品背包变化
+
+	AllianceTopicReplyChange = 3100; // 联盟邮件新主题或新回复通知
+
+	ChatBubbleChange = 3111; // 使用道具获得气泡
+
+	ChangePickUpCount = 3112; // 当日拾取资源点次数
+
+	ChangeNpcCityActivity = 3113; // 神庙活动
+
+	ResearchChange = 3121; // 玩家科技信息变化
+
+	GetAllianceHelp = 3122; // 玩家获得帮助提示窗
+
+	BarracksNumChange = 3123; // 兵数量变化
+
+	BarracksQueueChange = 3126; // 兵营造兵队列变化
+
+	BarracksWoundedSoldierChange = 3127; // 兵营伤兵变更
+
+	BarracksAddFromTrainSuccess = 3128; // 兵营训练成功加兵
+
+	BarracksRefugeSoldierChange = 3129; // 兵营避难兵变更
+
+	VipChange = 3133; // vip变化
+
+	KingExpChange = 3134; // 君主经验变化
+
+	EnterGamePublicRt = 3135; // 进游戏时的public服推送过来的数据
+
+	WalkRobotShow = 3140; // 行军线的新增与删除
+
+	AttackNotice = 3141; // 攻击通知
+
+	WalkGroupChange = 3142; // 行军组变化
+
+	GetNewAllianceGift = 3145; // 获得一个联盟礼物
+
+	AllianceGiftChange = 3146; // 联盟大礼物数据发生变化
+
+	BuffChange = 3151; // buff情况发生变化
+
+	NoticeLanMsg = 3154; // 通知lan消息
+
+	PlayerPowerChange = 3161; // 玩家实力变化
+
+	StoreLimitChange = 3165; // 资源产量上限变化
+
+	CountryPositionChange = 3166; // 官职变化主推
+
+	CastlePosChange = 3167; // 玩家城位置变化
+
+	InnerCityInfoChanged = 3168; // 内城建筑变化
+
+	WonderForceChange = 3169; // 奇观部队变化
+
+	AmnestyCountChange = 3170; // 赦免次数变化
+
+	MonsterDamageInfo = 3176; // 魔物伤害信息推送
+
+	MarkNumChange = 3177; // 玩家收藏变化
+
+	ArenaRankChange = 3178; // 竞技场排名变化
+
+	ArenaRewardGet = 3179; // 无用
+
+	NewLibraryItem = 3183; // 点亮相关功能
+
+	GetRes = 3184;
+
+	FriendApplySuccess = 3185;
+
+	ActivityEnterTimeChange = 3187;
+
+	EnterChatRoomInfo = 3188;
+
+	SendStrangerInfo = 3189;
+
+	WonderOccupied = 3191;
+
+	CheckConfig = 3192;
+
+	NewGrowthFund = 3196; // 成长基金
+
+	AllianceNewBossBuildStateChange = 3197;
+
+	AllianceNewBossOpenWorld = 3198;
+
+	HieronOccupied = 3199;
+
+	WineHallFreeNotice = 3210;
+
+	CabbageBeStolenNotice = 3211;
+
+	InnerCityFatigueChange = 3250; // 无用
+
+	EliminateMonsterOnMapChange = 3260;
+
+	RadarMonsterOnMapChange = 3261;
+
+	EnergySpecialChange = 3270;
+
+	WonderInfoInit = 3304;
+
+	RandomEventInit = 3305; // 内城随机事件初始化推送
+
+	PlayerTagChange = 3320;
+
+	AllianceTagChange = 3321;
+
+	SkinInfoInit = 3350;
+
+	PlayerAddInfoInit = 3351;
+
+	MarkInfoInit = 3353; // 收藏
+
+	WorldWonderStatusChange = 3361;
+
+	KickPlayerOffline = 3371;
+
+	JjcTimeRewardChange = 3372;
+
+	FireEndTimeChange = 3373;
+
+	PlayerEffectChange = 3375;
+
+	ActionQueueChange = 3376;
+
+	RedPointChange = 3377;
+
+	BuildingViewChange = 3378; // 建筑视图
+
+	QueueChange = 3379; // 队列
+
+	GetSurpriseGiftPackage = 3381;
+
+	SuccessGetGiftPackage = 3382;
+
+	ClubCardChange = 3383;
+
+	AppreciationsChange = 3402;
+
+	InstanceTimeChange = 3406;
+
+	AllianceBagScoreChange = 3407;
+
+	NowPurchaseActivityChange = 3408;
+
+	DiamondInfoChange = 3409;
+
+	FightAllianceStateChange = 3412;
+
+	PayNumChange = 3413;
+
+	JjcScoreChange = 3414;
+
+	WalkGroupFightConfirm = 3416;
+
+	AllianceFightScoreChange = 3417;
+
+	WorldCheckPointOccupied = 3421;
+
+	BulletScreenNotice = 3422;
+
+	ResOccupied = 3423;
+
+	WonderWarInfoChange = 3424;
+
+	MonsterInfoChange = 3427;
+
+	FlagInfoChange = 3428;
+
+	AllianceMailNotifier = 3429;
+
+	CellXyConstraintChangeNotifier = 3431; // 无用
+
+	PopupNotice = 3432;
+
+	MassTargetNotice = 3433;
+
+	AllianceBuildNumChange = 3436;
+
+	LandAroundChange = 3437;
+
+	AllianceFightAllRevive = 3438;
+
+	AllianceBuildFireChange = 3439;
+
+	AllianceBuildBeAtk = 3440;
+
+	AllianceFlagSoliderChange = 3443;
+
+	AllianceSoloStateChange = 3444;
+
+	AllianceSoloMainChange = 3445;
+
+	TotalPayRewardChange = 3446;
+
+	WorldActivityChange = 3448;
+
+	WorldActivityLotteryFinish = 3449;
+
+	WalkGroupWipeOutNotice = 3452;
+
+	InstructionNotice = 3453;
+
+	ForceExpressionNotice = 3455;
+
+	LandChangeNotice = 3460;
+
+	AllianceMarkChangeNotice = 3462;
+
+	AllianceMemberPosChangeChangeNotice = 3463;
+
+	AllianceBuildDisappearNotice = 3464;
+
+	WarnDataChangeNotice = 3470;
+
+	AtkNotice = 3471;
+
+	PhotoChange = 3472;
+
+	WarnSpeedDataChangeNotice = 3473;
+
+	PhotoFrameChange = 3474;
+
+	CallRelicChangeNotice = 3475;
+
+	MaxKillBossLvNotice = 3476;
+
+	AllianceTopInfoNotice = 3477;
+
+	ArmyActivityChangeNotice = 3478;
+
+	MoreNoticeLanMsg = 3479;
+
+	ArmyActivityWinNotice = 3481;
+
+	WorldWonderChangeNotice = 3482;
+
+	AllianceCmpttTaskChgNotice = 3486;
+
+	BanInfoNotice = 3490;
+
+	CapitalBattleStateChange = 3491;
+
+	CapitalBattleOfficer = 3492;
+
+	CapitalBattleBelongChange = 3493;
+
+	CapitalBattleBeCannonAtk = 3494;
+
+	JoinNoSuccessTellNotice = 3495;
+
+	MidasMoneyChange = 3496;
+
+	GetResChangeNotice = 3498;
+
+	FunctionBanChangeNotice = 3500;
+
+	CheckTextResultNotice = 3501;
+
+	LordSkinChange = 3502;
+
+	TreasureChangeNotice = 3504;
+
+	NewMailNotice = 3505;
+
+	UiconditionOpenNotice = 3506;
+
+	WorldChatRespNotice = 3507;
+
+	JjcOpenInfoNotice = 3508;
+
+	FestivalRewardChangeNotice = 3510;
+
+	FestivalBossAtkNumChangeNotice = 3511;
+
+	YanwuAttackNumChangeNotice = 3512;
+
+	AllianceCallNotice = 3514;
+
+	LeaveAllianceCdNotice = 3515;
+
+	NpcCityOccupyNotice = 3516;
+
+	NpcCityOccupyChangeNotice = 3517;
+
+	AllianceJourneyChangeNotice = 3530;
+
+	PlunderLimitInfoChangeNotice = 3533;
+
+	ClientUpdateNotice = 3534;
+
+	AllianceColosseumNoticee = 3543;
+
+	AllianceDefCannonAttackNotice = 3550;
+
+	CabbageActivityExpChange = 3560;
+
+	DinosaurNotice = 3561;
+
+	DinosaurMissionNotice = 3562;
+
+	NeutralCityRegisterNotice = 3563;
+
+	QuestionnaireChangeNotice = 3564;
+
+	ArmyActivityRobotChangeNotice = 3565;
+
+	BuyAllianceGiftSupportBoxBuyTimeChange = 3566;
+
+}
+
+// 导入其他依赖的消息类型
+
+
+// 定义其他消息类型...
