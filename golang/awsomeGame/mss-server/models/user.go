@@ -13,3 +13,9 @@ type User struct {
 	Mtime    time.Time `xorm:"mtime"`
 	IsOnline bool      `xorm:"-"`
 }
+
+//xorm 自行指定表名
+
+func (u *User) TableName() string {
+	return "user"
+}

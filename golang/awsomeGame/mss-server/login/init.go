@@ -2,8 +2,11 @@ package login
 
 import (
 	"awsomeGame/db"
-	"awsomeGame/mss-server/web/controller"
+	"awsomeGame/mss-server/login/cmd"
+	"net"
 )
+
+var Router = net.NewRouter()
 
 func Init() {
 	//测试数据库，并且初始化数据库
@@ -13,5 +16,5 @@ func Init() {
 }
 
 func initRouter() {
-	controller.DefaultAccount.Router(Router)
+	cmd.Account.Router(Router)
 }

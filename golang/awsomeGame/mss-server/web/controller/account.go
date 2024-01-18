@@ -3,6 +3,7 @@ package controller
 import (
 	"awsomeGame/mss-server/common"
 	"awsomeGame/mss-server/constant"
+	"awsomeGame/mss-server/web/logic"
 	"awsomeGame/mss-server/web/model"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -28,5 +29,11 @@ func (a *AccountController) Register(ctx *gin.Context) {
 		return
 	}
 	//一般web服务 错误格式 自定义
-	logic.
+	err = logic.DefaultAccountLogic.Register(req)
+	if err != nil {
+		log.Println("注册业务出错", err)
+		ctx.JSON(http.StatusOK, common.Error(err.(*common.MyError).Code(), err.Error()))
+		return
+	}
+	ctx.JSON(http.StatusOK, common.Success(constant.OK, nil))
 }
