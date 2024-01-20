@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/forgoer/openssl"
 	"io"
-	"io/ioutil"
 )
 
 func AesCBCEncrypt(src, key, iv []byte, padding string) ([]byte, error) {
@@ -58,7 +57,7 @@ func UnZip(data []byte) ([]byte, error) {
 	}
 	defer r.Close()
 
-	unzipData, err := ioutil.ReadAll(r)
+	unzipData, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
