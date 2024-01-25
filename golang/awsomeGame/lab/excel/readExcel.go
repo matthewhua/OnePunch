@@ -1,11 +1,34 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/tealeg/xlsx"
 	"log"
+	"os"
 	"path/filepath"
 )
+
+func WriteToFile(filename string, data interface{}) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer file.Close()
+
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	_, err = file.Write(jsonData)
+	if err != nil {
+		return fmt.Errorf("failed to write data to file: %w", err)
+	}
+
+	return nil
+
+}
 
 func main() {
 	// 打开 Excel 文件
