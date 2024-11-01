@@ -15,6 +15,11 @@ public class CityWebFluxController {
   @Autowired
   private CityHandlerWithMongo cityHandler;
 
+  @GetMapping(value = "/greedy")
+  public Mono<String> greedy() {
+    return Mono.just("Welcome to reactive world ~");
+  }
+
   @GetMapping(value = "/{id}")
   public Mono<City> findCityById(@PathVariable("id") Long id) {
     return cityHandler.findCityById(id);
