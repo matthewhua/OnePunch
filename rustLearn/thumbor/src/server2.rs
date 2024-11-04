@@ -12,6 +12,7 @@ use std::{
     hash::{Hash, Hasher},
     sync::Arc,
 };
+use std::net::SocketAddr;
 use axum::{Extension, Router};
 use axum::extract::Path;
 use axum::http::{HeaderMap, HeaderValue};
@@ -46,7 +47,7 @@ async fn main() {
         );
 
     // 运行 web 服务器
-    let addr = "127.0.0.1:3000".parse().unwrap();
+    let addr: SocketAddr = "127.0.0.1:3000".parse().unwrap();
 
     print_test_url("https://images.pexels.com/photos/1562477/pexels-photo-1562477.jpeg?auto=compress&cs=tinysrgb&dpr=3&h=750&w=1260");
 

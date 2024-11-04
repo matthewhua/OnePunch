@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use axum::extract::Path;
 use axum::Router;
 use axum::routing::get;
@@ -29,7 +30,7 @@ async fn main() {
         .route("/image/:spec/:url", get(generate));
 
     // 运行 web 服务器
-    let addr = "127.0.0.1:3000".parse().unwrap();
+    let addr: SocketAddr  = "127.0.0.1:3000".parse().unwrap();
     tracing::debug!("listening on {}", addr);
 
     axum::serve(

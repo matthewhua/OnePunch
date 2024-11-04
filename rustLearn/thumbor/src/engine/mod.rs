@@ -1,6 +1,7 @@
 mod photon;
 use crate::pb::Spec;
 use image::ImageFormat;
+pub use photon::Photon;
 
 // Engine trait：未来可以添加更多的 engine，主流程只需要替换 engine
 pub trait Engine {
