@@ -5,7 +5,6 @@ use prost::Message;
 mod abi;
 
 pub use abi::*;
-use crate::pb::filter::FilterType;
 
 impl ImageSpec {
     pub fn new(specs: Vec<Spec>) -> Self {
@@ -35,10 +34,10 @@ impl TryFrom<&str> for ImageSpec {
 impl filter::FilterType {
     pub fn to_str(&self) -> Option<&'static str> {
         match self {
-            FilterType::Unspecified => None,
-            FilterType::Oceanic => Some("oceanic"),
-            FilterType::Islands => Some("islands"),
-            FilterType::Marine => Some("marine"),
+            filter::FilterType::Unspecified => None,
+            filter::FilterType::Oceanic => Some("oceanic"),
+            filter::FilterType::Islands => Some("islands"),
+            filter::FilterType::Marine => Some("marine"),
         }
     }
 }
