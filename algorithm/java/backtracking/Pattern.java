@@ -1,3 +1,4 @@
+/*
 public class Pattern {
     private boolean matched = false;
     private char[] pattern; // 正则表达式
@@ -34,4 +35,4 @@ public class Pattern {
             rmatch(ti+1, pj+1, text, tlen);
         }
     }
-}
+}*/
