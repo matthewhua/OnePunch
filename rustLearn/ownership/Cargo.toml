@@ -1,0 +1,14 @@
+[package]
+name = "ownership"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "check_copy"
+path = "src/check_copy.rs"
+
+[[bin]]
+name = "ownership1"
+path = "src/ownership1.rs"
+
+[dependencies]

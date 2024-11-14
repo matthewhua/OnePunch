@@ -1,4 +1,5 @@
 mod ownership1;
+mod check_copy;
 
 use std::iter::Iterator;
 
