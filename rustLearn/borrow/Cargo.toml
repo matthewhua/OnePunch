@@ -3,4 +3,12 @@ name = "borrow"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "heap_reference_stack"
+path = "src/heap_reference_stack.rs"
+
+[[bin]]
+name = "heap_reference_stack_outlive"
+path = "src/heap_reference_stack_outlive.rs"
+
 [dependencies]
