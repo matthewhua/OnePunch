@@ -1,7 +1,5 @@
 package org.matt.example;
 
-import org.junit.Test;
-import org.matt.example.com.example.Device;
 
 import java.util.Optional;
 
