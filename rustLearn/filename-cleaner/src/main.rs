@@ -3,7 +3,7 @@ use std::path::Path;
 use regex::Regex;
 use walkdir::WalkDir;
 use indicatif::{ProgressBar, ProgressStyle};
-use log::{info, warn, error};
+use log::{info, error};
 use simple_logger::SimpleLogger;
 use clap::Parser;
 
