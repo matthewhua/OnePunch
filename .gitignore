@@ -1,13 +1,63 @@
-﻿CPPServer
-.idea
-JavaWay/ExcelRobot/target
-JavaWay/gradle
-.idea
-kotlin/.gradle
-kotlin/build
-handScala/out
-JavaWay/javassistDemo/target
-JavaWay/kotlinx-benchmark/.gradle
-kotlin/gradle
-JavaWay/kotlinx-benchmark/gradle
-*.iml
+﻿# ========== 操作系统与通用临时文件 ==========
+.DS_Store       # Mac 系统文件
+Thumbs.db       # Windows 系统文件
+*~              # 类Unix系统临时文件
+*.swp           # Vim 临时文件
+*.swo           # Vim 交换文件
+*.bak           # 备份文件
+*.tmp           # 临时文件
+
+# ========== IDE 配置文件 ==========
+.idea/          # IntelliJ IDEA 配置目录
+*.iml           # IntelliJ IDEA 项目文件
+*.iws           # IntelliJ IDEA 工作区文件
+.vscode/        # VS Code 配置目录
+*.vscode        # VS Code 单文件配置
+.gradle/        # Gradle 缓存目录（IDE 可能关联）
+*.project       # Eclipse 项目文件
+*.classpath     # Eclipse 类路径文件
+.settings/      # Eclipse 配置目录
+
+# ========== 编译产物 & 缓存文件 ==========
+target/         # Rust/Scala 编译输出目录
+classes/        # Java 编译输出目录
+*.class         # Java/Scala 编译生成的类文件
+*.cache         # 各类缓存文件
+*.log           # 日志文件（通用）
+logs/           # 日志目录（通用）
+out/            # 部分IDE的输出目录
+
+# ========== Java 特定 ==========
+*.jar
+*.war
+*.ear
+*.javap
+*.jmap
+*.jstack
+*.snap          # Java 快照文件
+
+# ========== Scala 特定 ==========
+*.scala.html
+*.sbt
+.ivy2/          # Ivy 依赖缓存
+*.ivy
+project/target/ # Scala sbt 项目的编译目录
+build.sbt.lock  # sbt 锁文件
+
+# ========== Rust 特定 ==========
+*.rs.bk         # Rust 备份文件
+Cargo.lock      # Rust 依赖锁文件（视需求保留，这里忽略）
+Cargo.target/   # 部分场景的 Rust 编译目录
+*.rlib          # Rust 静态库
+*.dll           # Rust 动态库（Windows）
+*.so            # Rust 动态库（Linux）
+*.dylib         # Rust 动态库（Mac）
+
+# ========== Gradle 特定 ==========
+build/          # Gradle 构建输出目录（全局及模块内）
+!gradle/wrapper/gradle-wrapper.jar  # 保留 Gradle Wrapper 核心文件（建议提交）
+!**/src/main/**/build/  # 避免误删源码目录内的 build（若有特殊需求）
+!**/src/test/**/build/
+gradle.properties  # 全局 Gradle 配置（若含敏感信息可忽略，否则建议提交）
+local.properties   # 本地配置（如Android SDK路径，含本地信息需忽略）
+*.gradle          # Gradle 任务缓存文件（非脚本）
