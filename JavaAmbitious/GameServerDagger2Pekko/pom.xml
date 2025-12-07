@@ -33,6 +33,7 @@
         <hikaricp.version>5.0.1</hikaricp.version>
         <hibernate.version>6.2.0.Final</hibernate.version>
         <hibernate-types.version>2.21.1</hibernate-types.version>
+        <jackson.version>2.15.3</jackson.version>
         
         <!-- 测试 -->
         <junit.version>4.13.2</junit.version>
@@ -139,6 +140,13 @@
             <groupId>com.vladmihalcea</groupId>
             <artifactId>hibernate-types-60</artifactId>
             <version>${hibernate-types.version}</version>
+        </dependency>
+
+        <!-- Jackson：hibernate-types 依赖 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
         </dependency>
 
         <!-- Jakarta Persistence API（Hibernate 6+ 使用） -->

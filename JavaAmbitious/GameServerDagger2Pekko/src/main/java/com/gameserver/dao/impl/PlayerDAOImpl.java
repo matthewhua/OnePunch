@@ -59,6 +59,7 @@ public class PlayerDAOImpl implements PlayerDAO {
         }
     }
 
+
     @Override
     public boolean save(Player player) {
         try (Session session = sessionFactory.openSession()) {

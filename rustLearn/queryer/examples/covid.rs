@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
     const COL_WIDTH: usize = 20;
     
     // 打印表头
-    println!("\n新冠数据统计:");
+    println!("\x x x:");
     println!("{}", "=".repeat(COL_WIDTH * 5));
     
     // 打印列名

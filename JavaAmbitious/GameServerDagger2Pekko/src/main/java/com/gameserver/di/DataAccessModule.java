@@ -7,11 +7,18 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import dagger.Module;
 import dagger.Provides;
+import org.hibernate.SessionFactory;
+import org.hibernate.boot.MetadataSources;
+import org.hibernate.boot.registry.StandardServiceRegistry;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
+import org.hibernate.cfg.AvailableSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Singleton;
 import javax.sql.DataSource;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 数据访问层依赖注入模块
@@ -85,6 +92,46 @@ public class DataAccessModule {
         return dataSource;
     }
 
+
+    @Provides
+    @Singleton
+    SessionFactory provideSessionFactory(DataSource dataSource, GameServerConfig config) {
+        try {
+            logger.info("[DI] 初始化 Hibernate SessionFactory...");
+            
+            // 根据数据库 URL 自动选择方言
+            String url = config.getDbUrl();
+            String dialect = (url != null && url.contains("postgresql"))
+                    ? "org.hibernate.dialect.PostgreSQLDialect"
+                    : "org.hibernate.dialect.MySQLDialect";
+
+            Map<String, Object> settings = new HashMap<>();
+            settings.put(AvailableSettings.DATASOURCE, dataSource);
+            settings.put(AvailableSettings.DIALECT, dialect);
+            settings.put(AvailableSettings.HBM2DDL_AUTO, "update");
+            settings.put(AvailableSettings.SHOW_SQL, "false");
+            settings.put(AvailableSettings.FORMAT_SQL, "true");
+            settings.put(AvailableSettings.USE_SECOND_LEVEL_CACHE, "false");
+            settings.put("hibernate.jdbc.batch_size", "20");
+            settings.put("hibernate.jdbc.fetch_size", "50");
+
+            StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
+                    .applySettings(settings)
+                    .build();
+
+            SessionFactory sessionFactory = new MetadataSources(registry)
+                    .addAnnotatedClass(com.gameserver.entity.Player.class)
+                    .addAnnotatedClass(com.gameserver.entity.Backpack.class)
+                    .buildMetadata()
+                    .buildSessionFactory();
+            
+            logger.info("[DI] SessionFactory 初始化完成");
+            return sessionFactory;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to build SessionFactory", e);
+        }
+    }
+
     /**
      * 提供 PlayerDAO 单例
      * 
@@ -100,10 +147,10 @@ public class DataAccessModule {
      */
     @Singleton
     @Provides
-    static PlayerDAO providePlayerDAO(DataSource dataSource) {
+    static PlayerDAO providePlayerDAO(SessionFactory sessionFactory) {
         logger.info("[DI] 初始化 PlayerDAO...");
         
-        PlayerDAO playerDAO = new PlayerDAOImpl(dataSource);
+        PlayerDAO playerDAO = new PlayerDAOImpl(sessionFactory);
         
         logger.info("[DI] PlayerDAO 初始化完成");
         

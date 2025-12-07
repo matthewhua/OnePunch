@@ -1,11 +1,9 @@
 package com.gameserver.actor;
 
 import com.gameserver.dao.PlayerDAO;
-import com.gameserver.model.Player;
+import com.gameserver.entity.Player;
 import com.gameserver.service.SkillService;
 import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.dispatch.Dispatchers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,9 +99,9 @@ public class PlayerActor extends AbstractActor {
         if (playerOpt.isPresent()) {
             playerData = playerOpt.get();
             logger.info("[PlayerActor] 玩家登录成功: {}", playerData);
-            
-            // 发送登录成功消息
-            sender().tell(new PlayerMessage.LoginResponse(true, playerData), self());
+            // 删除无用的new Player()调用，使用toModel()方法转换
+            // 发送登录成功消息，使用转换后的模型对象
+            sender().tell(new PlayerMessage.LoginResponse(true, playerData.toModel()), self());
         } else {
             logger.warn("[PlayerActor] 玩家不存在: playerId={}", playerId);
             

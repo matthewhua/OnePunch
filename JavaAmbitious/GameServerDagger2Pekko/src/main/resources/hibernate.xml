@@ -1,0 +1,38 @@
+NEW_FILE_CODE
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+    <session-factory>
+
+        <!-- 数据库连接配置（PostgreSQL） -->
+        <property name="hibernate.connection.driver_class">org.postgresql.Driver</property>
+        <property name="hibernate.connection.url">jdbc:postgresql://localhost:5432/gamedb</property>
+        <property name="hibernate.connection.username">postgres</property>
+        <property name="hibernate.connection.password"></property>
+
+        <!-- Hibernate 方言 -->
+        <property name="hibernate.dialect">org.hibernate.dialect.PostgreSQLDialect</property>
+
+        <!-- 建表策略：开发环境可用 update，生产慎用 -->
+        <property name="hibernate.hbm2ddl.auto">update</property>
+
+        <!-- SQL 日志 -->
+        <property name="hibernate.show_sql">false</property>
+        <property name="hibernate.format_sql">true</property>
+
+        <!-- 批量/抓取优化 -->
+        <property name="hibernate.jdbc.batch_size">20</property>
+        <property name="hibernate.jdbc.fetch_size">50</property>
+
+        <!-- 缓存策略（游戏服建议禁用二级缓存） -->
+        <property name="hibernate.cache.use_second_level_cache">false</property>
+        <property name="hibernate.enable_lazy_load_no_trans">false</property>
+
+        <!-- 映射实体 -->
+        <mapping class="com.gameserver.entity.Player"/>
+        <mapping class="com.gameserver.entity.Backpack"/>
+
+    </session-factory>
+</hibernate-configuration>

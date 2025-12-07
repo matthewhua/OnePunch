@@ -1,6 +1,8 @@
 package com.gameserver.dao;
 
-import com.gameserver.model.Player;
+
+import com.gameserver.entity.Player;
+
 import java.util.Optional;
 
 /**

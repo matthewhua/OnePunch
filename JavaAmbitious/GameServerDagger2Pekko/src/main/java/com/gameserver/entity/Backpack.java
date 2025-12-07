@@ -22,10 +22,10 @@ public class Backpack {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(nullable = false)
+    @Column(name = "player_id", nullable = false)
     private Long playerId;
     
-    @Column(nullable = false)
+    @Column(name = "item_id", nullable = false)
     private Long itemId;
     
     @Column(nullable = false)

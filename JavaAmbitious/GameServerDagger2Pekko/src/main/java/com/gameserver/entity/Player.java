@@ -188,4 +188,21 @@ public class Player {
         equipment.put(slot, itemId);
         this.updatedAt = LocalDateTime.now();
     }
+    
+    /**
+     * 转换为数据模型对象
+     * 将实体对象转换为用于消息传递的不可变模型对象
+     * 
+     * @return 转换后的Player模型对象
+     */
+    public com.gameserver.model.Player toModel() {
+        return com.gameserver.model.Player.builder()
+                .id(this.id)
+                .account(this.account)
+                .level(this.level)
+                .experience(this.experience.intValue()) // 注意：entity中的experience是Long，model中是int
+                .health(this.health)
+                .mana(this.mana)
+                .build();
+    }
 }

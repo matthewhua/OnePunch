@@ -34,7 +34,7 @@ import javax.inject.Singleton;
     GameServerModule.class,
     ActorSystemModule.class,
     DataAccessModule.class,
-    ServiceModule.class
+    ServiceModule.class,
 })
 public interface GameServerComponent {
 
