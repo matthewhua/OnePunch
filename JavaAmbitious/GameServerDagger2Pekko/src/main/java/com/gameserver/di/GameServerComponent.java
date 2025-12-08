@@ -28,13 +28,16 @@ import javax.inject.Singleton;
  * - Dagger2 生成的代码在编译时已确定依赖关系，运行时无竞态条件
  * - ActorSystem 本身线程安全，由 Pekko 框架保证
  * - DAO 和 Service 的线程安全由具体实现保证（使用连接池）
+ * 
+ * 模块化设计：
+ * - InfrastructureModule：基础设施（配置、ActorSystem、数据库）
+ * - BusinessModule：业务逻辑（各种 Service）
+ * - 新增模块时只需在对应的聚合模块中添加，无需修改此处
  */
 @Singleton
 @Component(modules = {
-    GameServerModule.class,
-    ActorSystemModule.class,
-    DataAccessModule.class,
-    ServiceModule.class,
+    InfrastructureModule.class,  // 基础设施模块聚合
+    BusinessModule.class          // 业务逻辑模块聚合
 })
 public interface GameServerComponent {
 
@@ -63,7 +66,7 @@ public interface GameServerComponent {
      */
     GameServerConfig getGameServerConfig();
 
-    // ============ 数据访问层 ============
+    // ============ 数据访问层（仅暴露核心 DAO，其他 DAO 通过 Provider 按需获取） ============
     
     /**
      * 获取玩家 DAO 单例
@@ -76,7 +79,7 @@ public interface GameServerComponent {
      */
     PlayerDAO getPlayerDAO();
 
-    // ============ 业务服务层 ============
+    // ============ 业务服务层（仅暴露常用服务，其他服务通过 Provider 按需获取） ============
     
     /**
      * 获取技能系统服务单例
