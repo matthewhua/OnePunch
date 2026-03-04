@@ -61,3 +61,20 @@ build/          # Gradle 构建输出目录（全局及模块内）
 gradle.properties  # 全局 Gradle 配置（若含敏感信息可忽略，否则建议提交）
 local.properties   # 本地配置（如Android SDK路径，含本地信息需忽略）
 *.gradle          # Gradle 任务缓存文件（非脚本）
+
+# ========== Node.js 特定 ==========
+node_modules/    # 依赖包目录，禁止提交
+npm-debug.log*   # npm 调试日志
+yarn-debug.log*  # Yarn 调试日志
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.lock           # 依赖锁文件（若团队约定提交，可保留；这里统一忽略）
+dist/            # 构建输出目录（如前端打包文件）
+coverage/        # 测试覆盖率报告
+*.tsbuildinfo    # TypeScript 构建信息
+*.js.map         # JavaScript 源码映射文件
+*.d.ts           # 自动生成的类型定义文件（手动维护的可保留）
+*.cmd            # Node.js 命令行脚本（如 cross-env、nodemon 的 cmd 文件）
+*.ps1            # Node.js PowerShell 脚本
+*.bat            # Node.js Batch 脚本（若有）

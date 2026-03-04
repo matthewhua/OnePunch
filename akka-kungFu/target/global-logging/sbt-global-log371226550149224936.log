@@ -1,0 +1,16 @@
+[debug] > Exec(early(addDefaultCommands), None, None)
+[debug] > Exec(addDefaultCommands, None, None)
+[debug] > Exec(early(initialize), None, None)
+[debug] > Exec(initialize, None, None)
+[debug] > Exec(boot, None, None)
+[debug] > Exec(writeSbtVersion, None, None)
+[debug] > Exec(reload, None, None)
+[debug] > Exec(sbtStashOnFailure, None, None)
+[debug] > Exec(onFailure loadFailed, None, None)
+[debug] > Exec(loadp, None, None)
+[info] welcome to sbt 1.8.2 (Azul Systems, Inc. Java 11.0.15)
+[debug] Load.defaultLoad until apply took 90.6701ms
+[debug]           Load.loadUnit: plugins took 95.302ms
+[debug]           Load.loadUnit: defsScala took 0.3916ms
+[debug] [Loading] Scanning directory C:\Users\Administrator\IdeaProjects\OnePunch\akka-kungFu\project
+[debug]             Load.loadUnit: mkEval took 6.6869ms
