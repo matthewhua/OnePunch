@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据结构与算法 - 总览</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.8em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        .card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            color: white;
+            text-decoration: none;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .card h2 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+        .card p {
+            font-size: 1em;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+        .card.postfix {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card.linkedlist {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .card.quicksort {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .card.dfs {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+        .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+        .overview {
+            background: #f5f7fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+        .overview h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        .chapter {
+            background: white;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .chapter h3 {
+            color: #764ba2;
+            margin-bottom: 8px;
+        }
+        .chapter ul {
+            margin-left: 20px;
+            color: #666;
+        }
+        .chapter li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 数据结构与算法可视化</h1>
+        <p class="subtitle">Data Structures and Algorithms Visualization</p>
+        
+        <div class="overview">
+            <h2>课程内容概览</h2>
+            
+            <div class="chapter">
+                <h3>第一章：绪论</h3>
+                <ul>
+                    <li>算法基础：找最大值、温度转换</li>
+                    <li>递归与迭代：阶乘计算、斐波那契数列</li>
+                    <li>算法分析：最大子数组和、最大公约数</li>
+                </ul>
+            </div>
+            
+            <div class="chapter">
+                <h3>第二章：线性表</h3>
+                <ul>
+                    <li>单链表的创建与操作</li>
+                    <li>链表逆置算法</li>
+                    <li>查找中间节点、倒数第k个节点</li>
+                </ul>
+            </div>
+            
+            <div class="chapter">
+                <h3>第三章：栈和队列</h3>
+                <ul>
+                    <li>后缀表达式计算</li>
+                    <li>括号平衡性检验</li>
+                    <li>表达式转换算法</li>
+                    <li>杨辉三角形打印</li>
+                </ul>
+            </div>
+            
+            <div class="chapter">
+                <h3>第四章：数组、广义表和串</h3>
+                <ul>
+                    <li>走迷宫算法</li>
+                </ul>
+            </div>
+            
+            <div class="chapter">
+                <h3>第五章：树与二叉树</h3>
+                <ul>
+                    <li>非递归先序遍历</li>
+                    <li>非递归中序遍历</li>
+                    <li>非递归后序遍历</li>
+                </ul>
+            </div>
+            
+            <div class="chapter">
+                <h3>第六章：图结构</h3>
+                <ul>
+                    <li>深度优先搜索（DFS）</li>
+                    <li>广度优先搜索（BFS）</li>
+                    <li>拓扑排序（深度优先、广度优先）</li>
+                    <li>最小生成树（Prim算法、Kruskal算法）</li>
+                </ul>
+            </div>
+            
+            <div class="chapter">
+                <h3>第七章：内部排序</h3>
+                <ul>
+                    <li>快速排序</li>
+                    <li>堆排序</li>
+                    <li>归并排序（递归、非递归）</li>
+                    <li>基数排序</li>
+                </ul>
+            </div>
+            
+            <div class="chapter">
+                <h3>第八章：查找</h3>
+                <ul>
+                    <li>查找算法相关内容</li>
+                </ul>
+            </div>
+        </div>
+        
+        <h2 style="color: #667eea; margin-bottom: 20px;">🎨 可视化示例</h2>
+        <div class="grid">
+            <a href="visualization_postfix.html" class="card postfix">
+                <span class="icon">📚</span>
+                <h2>后缀表达式计算</h2>
+                <p>使用栈结构计算后缀表达式（逆波兰表达式），演示栈的入栈出栈操作过程。</p>
+                <p style="margin-top: 10px; font-size: 0.9em;">时间复杂度: O(n)</p>
+            </a>
+            
+            <a href="visualization_linkedlist_reverse.html" class="card linkedlist">
+                <span class="icon">🔗</span>
+                <h2>链表逆置</h2>
+                <p>使用三指针法实现单链表的反转，详细展示每一步指针的变化过程。</p>
+                <p style="margin-top: 10px; font-size: 0.9em;">时间复杂度: O(n)，空间复杂度: O(1)</p>
+            </a>
+            
+            <a href="visualization_quicksort.html" class="card quicksort">
+                <span class="icon">⚡</span>
+                <h2>快速排序</h2>
+                <p>分治策略的经典应用，通过选择枢轴元素进行划分，递归排序左右子数组。</p>
+                <p style="margin-top: 10px; font-size: 0.9em;">平均时间复杂度: O(n log n)</p>
+            </a>
+            
+            <a href="visualization_dfs.html" class="card dfs">
+                <span class="icon">🔍</span>
+                <h2>深度优先搜索</h2>
+                <p>图遍历的基本算法，采用递归方式尽可能深地搜索图的分支。</p>
+                <p style="margin-top: 10px; font-size: 0.9em;">时间复杂度: O(V + E)</p>
+            </a>
+        </div>
+        
+        <div style="margin-top: 40px; padding: 20px; background: #f5f7fa; border-radius: 10px; text-align: center;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">💡 使用说明</h3>
+            <p style="color: #666; line-height: 1.8;">
+                点击上方卡片可以查看对应算法的详细可视化流程图和示意图。<br>
+                每个页面包含算法流程图、执行过程演示、算法步骤说明等内容。<br>
+                建议结合源代码一起学习，加深对算法的理解。
+            </p>
+        </div>
+    </div>
+</body>
+</html>
