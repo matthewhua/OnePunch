@@ -8,7 +8,8 @@ Thumbs.db       # Windows 系统文件
 *.tmp           # 临时文件
 
 # ========== IDE 配置文件 ==========
-.idea/          # IntelliJ IDEA 配置目录
+.idea/*         # IntelliJ IDEA 配置目录
+!.idea/runConfigurations/  # 保留运行配置（可选）
 *.iml           # IntelliJ IDEA 项目文件
 *.iws           # IntelliJ IDEA 工作区文件
 .vscode/        # VS Code 配置目录
@@ -17,6 +18,9 @@ Thumbs.db       # Windows 系统文件
 *.project       # Eclipse 项目文件
 *.classpath     # Eclipse 类路径文件
 .settings/      # Eclipse 配置目录
+.fleet/         # Fleet IDE 配置
+.metals/        # Scala Metals 配置
+.bloop/         # Bloop 编译服务器
 
 # ========== 编译产物 & 缓存文件 ==========
 target/         # Rust/Scala 编译输出目录
@@ -46,12 +50,15 @@ build.sbt.lock  # sbt 锁文件
 
 # ========== Rust 特定 ==========
 *.rs.bk         # Rust 备份文件
-Cargo.lock      # Rust 依赖锁文件（视需求保留，这里忽略）
-Cargo.target/   # 部分场景的 Rust 编译目录
+**/target/      # Rust 编译输出目录（所有子目录）
+Cargo.lock      # Rust 依赖锁文件（库项目应忽略，二进制项目应提交）
 *.rlib          # Rust 静态库
 *.dll           # Rust 动态库（Windows）
 *.so            # Rust 动态库（Linux）
 *.dylib         # Rust 动态库（Mac）
+**/*.rs.bk      # Rust 备份文件（所有子目录）
+.rustc_info.json  # Rust 编译器信息
+CACHEDIR.TAG    # Rust target 缓存标记
 
 # ========== Gradle 特定 ==========
 build/          # Gradle 构建输出目录（全局及模块内）
@@ -69,7 +76,7 @@ yarn-debug.log*  # Yarn 调试日志
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-*.lock           # 依赖锁文件（若团队约定提交，可保留；这里统一忽略）
+# 注意：不要使用 *.lock 这样的通配符，会误删重要的锁文件
 dist/            # 构建输出目录（如前端打包文件）
 coverage/        # 测试覆盖率报告
 *.tsbuildinfo    # TypeScript 构建信息
@@ -78,3 +85,70 @@ coverage/        # 测试覆盖率报告
 *.cmd            # Node.js 命令行脚本（如 cross-env、nodemon 的 cmd 文件）
 *.ps1            # Node.js PowerShell 脚本
 *.bat            # Node.js Batch 脚本（若有）
+
+# ========== Maven 特定 ==========
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ========== Python 特定 ==========
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ========== Go 特定 ==========
+*.exe
+*.exe~
+*.test
+*.out
+go.work
+vendor/
+
+# ========== C/C++ 特定 ==========
+*.o
+*.a
+*.out
+*.obj
+*.elf
+*.gch
+*.pch
+*.dSYM/
+*.su
+*.idb
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# ========== 其他常见文件 ==========
+*.pid
+*.seed
+*.pid.lock
+.env
+.env.local
+.env.*.local
+*.orig
+*.rej
+.cache/
