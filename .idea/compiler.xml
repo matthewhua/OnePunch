@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="redPacket" />
+        <module name="javaOOP" />
+        <module name="DesignPattern" />
+        <module name="javassistDemo" />
+        <module name="JavaPerformance" />
+        <module name="redisson" />
+        <module name="fromBlog" />
+        <module name="lettuce" />
+        <module name="redis" />
+        <module name="JPA-with-Hibernate" />
+        <module name="ExcelRobot" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="Concurrency" target="1.8" />
+      <module name="IPersistence" target="11" />
+      <module name="IPersistence_test" target="11" />
+      <module name="mini-guice" target="11" />
+      <module name="mybatis-total" target="11" />
+      <module name="mybatis_multitable" target="1.8" />
+      <module name="quickStart" target="11" />
+    </bytecodeTargetLevel>
+  </component>
+</project>

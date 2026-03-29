@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速排序 - 可视化</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #00f2fe;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .diagram {
+            margin: 30px 0;
+        }
+        svg {
+            width: 100%;
+            height: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        .description {
+            background: #e0f7ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #00f2fe;
+        }
+        .step {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .step-title {
+            font-weight: bold;
+            color: #4facfe;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ 快速排序算法</h1>
+        
+        <div class="description">
+            <h2>算法说明</h2>
+            <p>快速排序采用分治策略，选择一个枢轴元素，将数组分为两部分：小于枢轴的元素和大于枢轴的元素，然后递归排序。</p>
+            <p><strong>平均时间复杂度：</strong> O(n log n)，<strong>最坏时间复杂度：</strong> O(n²)</p>
+        </div>
+
+        <div class="diagram">
+            <h3>快速排序流程图</h3>
+            <svg viewBox="0 0 800 700" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="400" cy="40" rx="60" ry="30" fill="#4facfe" stroke="#333" stroke-width="2"/>
+                <text x="400" y="48" text-anchor="middle" fill="white" font-size="16" font-weight="bold">开始</text>
+                
+                <path d="M 400 100 L 480 150 L 400 200 L 320 150 Z" fill="#FF9800" stroke="#333" stroke-width="2"/>
+                <text x="400" y="155" text-anchor="middle" fill="white" font-size="14" font-weight="bold">left &lt; right?</text>
+                <line x1="400" y1="70" x2="400" y2="100" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                
+                <rect x="320" y="230" width="160" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                <text x="400" y="260" text-anchor="middle" fill="white" font-size="14" font-weight="bold">k = partition()</text>
+                <line x1="400" y1="200" x2="400" y2="230" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                <text x="420" y="220" fill="#333" font-size="12">是</text>
+                
+                <rect x="280" y="310" width="240" height="100" rx="5" fill="#E91E63" stroke="#333" stroke-width="2"/>
+                <text x="400" y="335" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Partition 划分：</text>
+                <text x="400" y="360" text-anchor="middle" fill="white" font-size="12">1. 选择枢轴</text>
+                <text x="400" y="380" text-anchor="middle" fill="white" font-size="12">2. 小于pivot放左边</text>
+                <text x="400" y="400" text-anchor="middle" fill="white" font-size="12">3. 大于pivot放右边</text>
+                <line x1="400" y1="280" x2="400" y2="310" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                
+                <rect x="100" y="450" width="180" height="50" rx="5" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                <text x="190" y="480" text-anchor="middle" fill="white" font-size="13" font-weight="bold">QuickSort(left, k-1)</text>
+                <line x1="350" y1="410" x2="190" y2="450" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                
+                <rect x="520" y="450" width="180" height="50" rx="5" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                <text x="610" y="480" text-anchor="middle" fill="white" font-size="13" font-weight="bold">QuickSort(k+1, right)</text>
+                <line x1="450" y1="410" x2="610" y2="450" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                
+                <path d="M 190 500 Q 80 550 80 150 Q 80 100 320 150" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                <path d="M 610 500 Q 720 550 720 150 Q 720 100 480 150" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                
+                <ellipse cx="400" cy="600" rx="60" ry="30" fill="#4facfe" stroke="#333" stroke-width="2"/>
+                <text x="400" y="608" text-anchor="middle" fill="white" font-size="16" font-weight="bold">结束</text>
+                <line x1="480" y1="150" x2="550" y2="150" stroke="#333" stroke-width="2"/>
+                <line x1="550" y1="150" x2="550" y2="600" stroke="#333" stroke-width="2"/>
+                <line x1="550" y1="600" x2="460" y2="600" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                <text x="560" y="370" fill="#333" font-size="12">否</text>
+                
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+
+        <div class="description">
+            <h3>算法步骤</h3>
+            <div class="step">
+                <div class="step-title">1. 选择枢轴（Pivot）</div>
+                通常选择数组的最后一个元素作为枢轴
+            </div>
+            <div class="step">
+                <div class="step-title">2. 划分（Partition）</div>
+                将数组分为两部分：左边部分所有元素 ≤ 枢轴，右边部分所有元素 > 枢轴
+            </div>
+            <div class="step">
+                <div class="step-title">3. 递归排序</div>
+                对左右两个子数组分别递归调用快速排序
+            </div>
+            <div class="step">
+                <div class="step-title">4. 终止条件</div>
+                当 left >= right 时，子数组只有一个或零个元素，无需排序
+            </div>
+        </div>
+    </div>
+</body>
+</html>

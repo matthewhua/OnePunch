@@ -1,0 +1,98 @@
+[debug] > Exec(early(addDefaultCommands), None, None)
+[debug] > Exec(addDefaultCommands, None, None)
+[debug] > Exec(early(initialize), None, None)
+[debug] > Exec(initialize, None, None)
+[debug] > Exec(boot, None, None)
+[debug] > Exec(writeSbtVersion, None, None)
+[debug] > Exec(reload, None, None)
+[debug] > Exec(sbtStashOnFailure, None, None)
+[debug] > Exec(onFailure loadFailed, None, None)
+[debug] > Exec(loadp, None, None)
+[info] welcome to sbt 1.8.2 (Azul Systems, Inc. Java 11.0.15)
+[debug] Load.defaultLoad until apply took 90.6527ms
+[debug]           Load.loadUnit: plugins took 97.9456ms
+[debug]           Load.loadUnit: defsScala took 0.4439ms
+[debug] [Loading] Scanning directory C:\Users\Administrator\IdeaProjects\OnePunch\akka-kungFu\project
+[debug]             Load.loadUnit: mkEval took 6.5452ms
+[debug] [Loading] Found non-root projects 
+[debug] [Loading] Done in C:\Users\Administrator\IdeaProjects\OnePunch\akka-kungFu\project, returning: ()
+[debug] deducing auto plugins based on known facts Set(Atom(sbt.plugins.CorePlugin)) and clauses Clauses(Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.IvyPlugin)))
+[debug] Clause(Atom(sbt.ScriptedPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.SbtPlugin),Set(Atom(sbt.ScriptedPlugin)))
+[debug] Clause(Atom(sbt.plugins.SemanticdbPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.JUnitXmlReportPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.MiniDependencyTreePlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.CorePlugin),Set(Atom(sbt.plugins.IvyPlugin)))
+[debug] Clause(Atom(sbt.plugins.IvyPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.SemanticdbPlugin)))
+[debug] Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.JUnitXmlReportPlugin)))
+[debug] Clause(Atom(sbt.plugins.CorePlugin),Set(Atom(sbt.plugins.Giter8TemplatePlugin)))
+[debug] Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.MiniDependencyTreePlugin))))
+[debug]   :: deduced result: Matched(sbt.plugins.CorePlugin,sbt.plugins.Giter8TemplatePlugin,sbt.plugins.IvyPlugin,sbt.plugins.JvmPlugin,sbt.plugins.MiniDependencyTreePlugin,sbt.plugins.JUnitXmlReportPlugin,sbt.plugins.SemanticdbPlugin)
+[debug] Plugins.deducer#function took 12.8399 ms
+[info] loading settings for project akka-kungfu-build from plugins.sbt ...
+[debug]               Load.resolveProject(akka-kungfu-build) took 43.4646ms
+[debug]             Load.loadTransitive: finalizeProject(Project(id akka-kungfu-build, base: C:\Users\Administrator\IdeaProjects\OnePunch\akka-kungFu\project, plugins: List(<none>))) took 76.4991ms
+[debug] [Loading] Done in C:\Users\Administrator\IdeaProjects\OnePunch\akka-kungFu\project, returning: (akka-kungfu-build)
+[debug]           Load.loadUnit: loadedProjectsRaw took 275.6179ms
+[debug]           Load.loadUnit: cleanEvalClasses took 8.7071ms
+[debug]         Load.loadUnit(file:/C:/Users/Administrator/IdeaProjects/OnePunch/akka-kungFu/project/, ...) took 389.1608ms
+[debug]       Load.apply: load took 515.3594ms
+[debug]       Load.apply: resolveProjects took 8.7323ms
+[debug]       Load.apply: finalTransforms took 68.3964ms
+[debug]       Load.apply: config.delegates took 12.0163ms
+[debug]       Load.apply: Def.make(settings)... took 493.2612ms
+[debug]       Load.apply: structureIndex took 135.0994ms
+[debug]       Load.apply: mkStreams took 2.0528ms
+[info] loading project definition from C:\Users\Administrator\IdeaProjects\OnePunch\akka-kungFu\project
+[debug] Running task... Cancel: Signal, check cycles: false, forcegc: true
+[debug]     Load.loadUnit: plugins took 2104.3865ms
+[debug]     Load.loadUnit: defsScala took 0.0033ms
+[debug] [Loading] Scanning directory C:\Users\Administrator\IdeaProjects\OnePunch\akka-kungFu
+[debug]       Load.loadUnit: mkEval took 0.5677ms
+[debug] [Loading] Found root project root w/ remaining 
+[debug] deducing auto plugins based on known facts Set(Atom(sbt.plugins.CorePlugin)) and clauses Clauses(Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.IvyPlugin)))
+[debug] Clause(Atom(sbt.ScriptedPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.SbtPlugin),Set(Atom(sbt.ScriptedPlugin)))
+[debug] Clause(Atom(sbt.plugins.SemanticdbPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.JUnitXmlReportPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.MiniDependencyTreePlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbtide.ConfigPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.CorePlugin),Set(Atom(sbt.plugins.IvyPlugin)))
+[debug] Clause(Atom(sbt.plugins.IvyPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.SemanticdbPlugin)))
+[debug] Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.JUnitXmlReportPlugin)))
+[debug] Clause(Atom(sbt.plugins.CorePlugin),Set(Atom(sbt.plugins.Giter8TemplatePlugin)))
+[debug] Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.MiniDependencyTreePlugin))))
+[debug]   :: deduced result: Matched(sbt.plugins.CorePlugin,sbt.plugins.Giter8TemplatePlugin,sbt.plugins.IvyPlugin,sbt.plugins.JvmPlugin,sbt.plugins.MiniDependencyTreePlugin,sbt.plugins.JUnitXmlReportPlugin,sbt.plugins.SemanticdbPlugin)
+[debug] Plugins.deducer#function took 1.2875 ms
+[info] loading settings for project root from build.sbt ...
+[debug]         Load.resolveProject(root) took 1.2716ms
+[debug]       Load.loadTransitive: finalizeProject(Project(id root, base: C:\Users\Administrator\IdeaProjects\OnePunch\akka-kungFu, plugins: List(<none>))) took 3.5718ms
+[debug] [Loading] Done in C:\Users\Administrator\IdeaProjects\OnePunch\akka-kungFu, returning: (root)
+[debug]     Load.loadUnit: loadedProjectsRaw took 97.1531ms
+[debug]     Load.loadUnit: cleanEvalClasses took 5.8263ms
+[debug]   Load.loadUnit(file:/C:/Users/Administrator/IdeaProjects/OnePunch/akka-kungFu/, ...) took 2209.2051ms
+[debug] Load.apply: load took 2235.312ms
+[debug] Load.apply: resolveProjects took 0.1567ms
+[debug] Load.apply: finalTransforms took 7.9145ms
+[debug] Load.apply: config.delegates took 0.8616ms
+[debug] Load.apply: Def.make(settings)... took 64.8254ms
+[debug] Load.apply: structureIndex took 20.5206ms
+[debug] Load.apply: mkStreams took 0.0051ms
+[info] set current project to Akka-Kungfu (in build file:/C:/Users/Administrator/IdeaProjects/OnePunch/akka-kungFu/)
+[warn] there's a key that's not used by any other settings/tasks:
+[warn]  
+[warn] * root / idePackagePrefix
+[warn]   +- C:\Users\Administrator\IdeaProjects\OnePunch\akka-kungFu\build.sbt:8
+[warn]  
+[warn] note: a setting might still be used by a command; to exclude a key from this `lintUnused` check
+[warn] either append it to `Global / excludeLintKeys` or call .withRank(KeyRanks.Invisible) on the key
+[debug] > Exec(sbtPopOnFailure, None, None)
+[debug] > Exec(resumeFromFailure, None, None)
+[debug] > Exec(notifyUsersAboutShell, None, None)
+[debug] > Exec(iflast shell, None, None)
+[debug] > Exec(shell, None, None)
+[info] sbt server started at local:sbt-server-9bef53f774fb2d78fd1b
+[debug] Writing bsp connection file
+[info] started sbt server

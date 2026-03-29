@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深度优先搜索(DFS) - 可视化</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #fa709a;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .diagram {
+            margin: 30px 0;
+        }
+        svg {
+            width: 100%;
+            height: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        .description {
+            background: #fff5f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #fa709a;
+        }
+        .step {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .step-title {
+            font-weight: bold;
+            color: #fa709a;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 深度优先搜索 (DFS)</h1>
+        
+        <div class="description">
+            <h2>算法说明</h2>
+            <p>深度优先搜索（DFS）是图遍历的基本算法之一，采用递归或栈的方式，尽可能深地搜索图的分支。</p>
+            <p><strong>时间复杂度：</strong> O(V + E)，其中V是顶点数，E是边数</p>
+        </div>
+
+        <div class="diagram">
+            <h3>DFS 流程图</h3>
+            <svg viewBox="0 0 800 700" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="400" cy="40" rx="60" ry="30" fill="#fa709a" stroke="#333" stroke-width="2"/>
+                <text x="400" y="48" text-anchor="middle" fill="white" font-size="16" font-weight="bold">开始</text>
+                
+                <rect x="320" y="100" width="160" height="50" rx="5" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                <text x="400" y="130" text-anchor="middle" fill="white" font-size="14" font-weight="bold">初始化visited[]</text>
+                <line x1="400" y1="70" x2="400" y2="100" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                
+                <rect x="320" y="180" width="160" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                <text x="400" y="210" text-anchor="middle" fill="white" font-size="14" font-weight="bold">遍历所有顶点</text>
+                <line x1="400" y1="150" x2="400" y2="180" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                
+                <path d="M 400 260 L 480 310 L 400 360 L 320 310 Z" fill="#FF9800" stroke="#333" stroke-width="2"/>
+                <text x="400" y="318" text-anchor="middle" fill="white" font-size="14" font-weight="bold">顶点已</text>
+                <text x="400" y="335" text-anchor="middle" fill="white" font-size="14" font-weight="bold">访问?</text>
+                <line x1="400" y1="230" x2="400" y2="260" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                
+                <rect x="320" y="390" width="160" height="50" rx="5" fill="#E91E63" stroke="#333" stroke-width="2"/>
+                <text x="400" y="420" text-anchor="middle" fill="white" font-size="14" font-weight="bold">调用DFS1(v)</text>
+                <line x1="400" y1="360" x2="400" y2="390" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                <text x="420" y="380" fill="#333" font-size="12">否</text>
+                
+                <rect x="280" y="470" width="240" height="100" rx="5" fill="#9C27B0" stroke="#333" stroke-width="2"/>
+                <text x="400" y="495" text-anchor="middle" fill="white" font-size="13" font-weight="bold">DFS1 递归：</text>
+                <text x="400" y="515" text-anchor="middle" fill="white" font-size="12">1. 访问顶点v</text>
+                <text x="400" y="535" text-anchor="middle" fill="white" font-size="12">2. 标记visited[v]=1</text>
+                <text x="400" y="555" text-anchor="middle" fill="white" font-size="12">3. 递归访问邻接顶点</text>
+                <line x1="400" y1="440" x2="400" y2="470" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                
+                <path d="M 400 570 Q 500 620 500 310 Q 500 230 480 205" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                
+                <path d="M 480 310 Q 600 310 600 205" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                <text x="550" y="300" fill="#333" font-size="12">是</text>
+                
+                <ellipse cx="400" cy="650" rx="60" ry="30" fill="#fa709a" stroke="#333" stroke-width="2"/>
+                <text x="400" y="658" text-anchor="middle" fill="white" font-size="16" font-weight="bold">结束</text>
+                <line x1="600" y1="230" x2="600" y2="650" stroke="#333" stroke-width="2"/>
+                <line x1="600" y1="650" x2="460" y2="650" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+
+        <div class="diagram">
+            <h3>DFS 遍历示例</h3>
+            <svg viewBox="0 0 900 650" xmlns="http://www.w3.org/2000/svg">
+                <text x="50" y="30" font-size="16" font-weight="bold">示例图：</text>
+                
+                <circle cx="200" cy="100" r="30" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                <text x="200" y="110" text-anchor="middle" fill="white" font-size="20" font-weight="bold">A</text>
+                
+                <circle cx="350" cy="100" r="30" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                <text x="350" y="110" text-anchor="middle" fill="white" font-size="20" font-weight="bold">B</text>
+                
+                <circle cx="500" cy="100" r="30" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                <text x="500" y="110" text-anchor="middle" fill="white" font-size="20" font-weight="bold">C</text>
+                
+                <circle cx="275" cy="220" r="30" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                <text x="275" y="230" text-anchor="middle" fill="white" font-size="20" font-weight="bold">D</text>
+                
+                <circle cx="425" cy="220" r="30" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                <text x="425" y="230" text-anchor="middle" fill="white" font-size="20" font-weight="bold">E</text>
+                
+                <line x1="220" y1="120" x2="330" y2="120" stroke="#666" stroke-width="3"/>
+                <line x1="370" y1="120" x2="480" y2="120" stroke="#666" stroke-width="3"/>
+                <line x1="220" y1="120" x2="260" y2="200" stroke="#666" stroke-width="3"/>
+                <line x1="350" y1="130" x2="290" y2="200" stroke="#666" stroke-width="3"/>
+                <line x1="350" y1="130" x2="410" y2="200" stroke="#666" stroke-width="3"/>
+                <line x1="480" y1="120" x2="440" y2="200" stroke="#666" stroke-width="3"/>
+                
+                <text x="50" y="320" font-size="16" font-weight="bold">DFS 访问顺序（从A开始）：</text>
+                
+                <g transform="translate(50, 350)">
+                    <text x="0" y="0" font-size="14" font-weight="bold" fill="#fa709a">步骤1</text>
+                    <circle cx="30" cy="30" r="25" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                    <text x="30" y="38" text-anchor="middle" fill="white" font-size="18" font-weight="bold">A</text>
+                </g>
+                
+                <g transform="translate(150, 350)">
+                    <text x="0" y="0" font-size="14" font-weight="bold" fill="#fa709a">步骤2</text>
+                    <circle cx="30" cy="30" r="25" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                    <text x="30" y="38" text-anchor="middle" fill="white" font-size="18" font-weight="bold">B</text>
+                </g>
+                
+                <g transform="translate(250, 350)">
+                    <text x="0" y="0" font-size="14" font-weight="bold" fill="#fa709a">步骤3</text>
+                    <circle cx="30" cy="30" r="25" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                    <text x="30" y="38" text-anchor="middle" fill="white" font-size="18" font-weight="bold">C</text>
+                </g>
+                
+                <g transform="translate(350, 350)">
+                    <text x="0" y="0" font-size="14" font-weight="bold" fill="#fa709a">步骤4</text>
+                    <circle cx="30" cy="30" r="25" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                    <text x="30" y="38" text-anchor="middle" fill="white" font-size="18" font-weight="bold">E</text>
+                </g>
+                
+                <g transform="translate(450, 350)">
+                    <text x="0" y="0" font-size="14" font-weight="bold" fill="#fa709a">步骤5</text>
+                    <circle cx="30" cy="30" r="25" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                    <text x="30" y="38" text-anchor="middle" fill="white" font-size="18" font-weight="bold">D</text>
+                </g>
+                
+                <text x="50" y="480" font-size="16" font-weight="bold">访问序列：</text>
+                <text x="50" y="510" font-size="20" font-weight="bold" fill="#4CAF50">A → B → C → E → D</text>
+                
+                <text x="50" y="560" font-size="16" font-weight="bold">递归调用栈：</text>
+                <rect x="50" y="580" width="80" height="35" fill="#E91E63" stroke="#333" stroke-width="2"/>
+                <text x="90" y="602" text-anchor="middle" fill="white" font-size="13" font-weight="bold">DFS(D)</text>
+                
+                <rect x="140" y="580" width="80" height="35" fill="#9C27B0" stroke="#333" stroke-width="2"/>
+                <text x="180" y="602" text-anchor="middle" fill="white" font-size="13" font-weight="bold">DFS(E)</text>
+                
+                <rect x="230" y="580" width="80" height="35" fill="#FF9800" stroke="#333" stroke-width="2"/>
+                <text x="270" y="602" text-anchor="middle" fill="white" font-size="13" font-weight="bold">DFS(C)</text>
+                
+                <rect x="320" y="580" width="80" height="35" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                <text x="360" y="602" text-anchor="middle" fill="white" font-size="13" font-weight="bold">DFS(B)</text>
+                
+                <rect x="410" y="580" width="80" height="35" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                <text x="450" y="602" text-anchor="middle" fill="white" font-size="13" font-weight="bold">DFS(A)</text>
+            </svg>
+        </div>
+
+        <div class="description">
+            <h3>算法步骤</h3>
+            <div class="step">
+                <div class="step-title">1. 初始化</div>
+                创建visited数组，标记所有顶点为未访问状态
+            </div>
+            <div class="step">
+                <div class="step-title">2. 遍历所有顶点</div>
+                对每个未访问的顶点调用DFS1递归函数
+            </div>
+            <div class="step">
+                <div class="step-title">3. DFS1递归函数</div>
+                访问当前顶点v并标记为已访问，然后递归访问所有未访问的邻接顶点
+            </div>
+            <div class="step">
+                <div class="step-title">4. 回溯</div>
+                当某个顶点的所有邻接顶点都已访问，回溯到上一层继续搜索
+            </div>
+        </div>
+    </div>
+</body>
+</html>

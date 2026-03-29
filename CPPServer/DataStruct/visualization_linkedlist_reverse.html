@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>链表逆置 - 可视化</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #f5576c;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .diagram {
+            margin: 30px 0;
+        }
+        svg {
+            width: 100%;
+            height: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        .description {
+            background: #fff0f3;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #f5576c;
+        }
+        .step {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .step-title {
+            font-weight: bold;
+            color: #f5576c;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 链表逆置算法</h1>
+        
+        <div class="description">
+            <h2>算法说明</h2>
+            <p>链表逆置使用三指针法（left, middle, right），通过改变节点的指针方向来实现链表的反转。</p>
+            <p><strong>时间复杂度：</strong> O(n)，<strong>空间复杂度：</strong> O(1)</p>
+        </div>
+
+        <div class="diagram">
+            <h3>原始链表</h3>
+            <svg viewBox="0 0 1000 150" xmlns="http://www.w3.org/2000/svg">
+                <!-- Head节点 -->
+                <rect x="50" y="40" width="80" height="60" rx="5" fill="#9C27B0" stroke="#333" stroke-width="2"/>
+                <text x="90" y="75" text-anchor="middle" fill="white" font-size="16" font-weight="bold">Head</text>
+                
+                <!-- 节点1 -->
+                <rect x="200" y="40" width="60" height="60" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                <text x="230" y="75" text-anchor="middle" fill="white" font-size="20" font-weight="bold">1</text>
+                <polygon points="260,70 280,60 280,80" fill="#4CAF50"/>
+                
+                <!-- 节点2 -->
+                <rect x="350" y="40" width="60" height="60" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                <text x="380" y="75" text-anchor="middle" fill="white" font-size="20" font-weight="bold">2</text>
+                <polygon points="410,70 430,60 430,80" fill="#4CAF50"/>
+                
+                <!-- 节点3 -->
+                <rect x="500" y="40" width="60" height="60" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                <text x="530" y="75" text-anchor="middle" fill="white" font-size="20" font-weight="bold">3</text>
+                <polygon points="560,70 580,60 580,80" fill="#4CAF50"/>
+                
+                <!-- 节点4 -->
+                <rect x="650" y="40" width="60" height="60" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                <text x="680" y="75" text-anchor="middle" fill="white" font-size="20" font-weight="bold">4</text>
+                <polygon points="710,70 730,60 730,80" fill="#4CAF50"/>
+                
+                <!-- NULL -->
+                <text x="780" y="75" font-size="18" font-weight="bold" fill="#E91E63">NULL</text>
+                
+                <!-- 箭头 -->
+                <line x1="130" y1="70" x2="200" y2="70" stroke="#333" stroke-width="3" marker-end="url(#arrow)"/>
+                <line x1="260" y1="70" x2="350" y2="70" stroke="#333" stroke-width="3" marker-end="url(#arrow)"/>
+                <line x1="410" y1="70" x2="500" y2="70" stroke="#333" stroke-width="3" marker-end="url(#arrow)"/>
+                <line x1="560" y1="70" x2="650" y2="70" stroke="#333" stroke-width="3" marker-end="url(#arrow)"/>
+                <line x1="710" y1="70" x2="760" y2="70" stroke="#333" stroke-width="3" marker-end="url(#arrow)"/>
+                
+                <defs>
+                    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+
+        <div class="diagram">
+            <h3>逆置过程演示</h3>
+            <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+                <!-- 步骤1: 初始化 -->
+                <g transform="translate(0, 0)">
+                    <text x="50" y="20" font-size="16" font-weight="bold" fill="#f5576c">步骤1: 初始化指针</text>
+                    
+                    <rect x="100" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="130" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">1</text>
+                    
+                    <rect x="220" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="250" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">2</text>
+                    
+                    <rect x="340" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="370" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">3</text>
+                    
+                    <rect x="460" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="490" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">4</text>
+                    
+                    <line x1="160" y1="65" x2="220" y2="65" stroke="#333" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <line x1="280" y1="65" x2="340" y2="65" stroke="#333" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <line x1="400" y1="65" x2="460" y2="65" stroke="#333" stroke-width="2" marker-end="url(#arrow2)"/>
+                    
+                    <text x="130" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#E91E63">left</text>
+                    <text x="250" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#FF9800">middle</text>
+                    <text x="130" y="130" text-anchor="middle" font-size="12" fill="#666">left->next = NULL</text>
+                </g>
+                
+                <!-- 步骤2 -->
+                <g transform="translate(0, 180)">
+                    <text x="50" y="20" font-size="16" font-weight="bold" fill="#f5576c">步骤2: 第一次反转</text>
+                    
+                    <rect x="100" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="130" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">1</text>
+                    
+                    <rect x="220" y="40" width="60" height="50" rx="5" fill="#FF9800" stroke="#333" stroke-width="2"/>
+                    <text x="250" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">2</text>
+                    
+                    <rect x="340" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="370" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">3</text>
+                    
+                    <rect x="460" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="490" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">4</text>
+                    
+                    <path d="M 220 65 Q 160 20 160 65" stroke="#4CAF50" stroke-width="3" fill="none" marker-end="url(#arrow2)"/>
+                    <line x1="280" y1="65" x2="340" y2="65" stroke="#333" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <line x1="400" y1="65" x2="460" y2="65" stroke="#333" stroke-width="2" marker-end="url(#arrow2)"/>
+                    
+                    <text x="250" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#E91E63">left</text>
+                    <text x="370" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#FF9800">middle</text>
+                    <text x="490" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#9C27B0">right</text>
+                    <text x="250" y="130" text-anchor="middle" font-size="12" fill="#666">middle->next = left</text>
+                </g>
+                
+                <!-- 步骤3 -->
+                <g transform="translate(0, 360)">
+                    <text x="50" y="20" font-size="16" font-weight="bold" fill="#f5576c">步骤3: 第二次反转</text>
+                    
+                    <rect x="100" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="130" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">1</text>
+                    
+                    <rect x="220" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="250" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">2</text>
+                    
+                    <rect x="340" y="40" width="60" height="50" rx="5" fill="#FF9800" stroke="#333" stroke-width="2"/>
+                    <text x="370" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">3</text>
+                    
+                    <rect x="460" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="490" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">4</text>
+                    
+                    <path d="M 220 65 Q 160 20 160 65" stroke="#4CAF50" stroke-width="3" fill="none" marker-end="url(#arrow2)"/>
+                    <path d="M 340 65 Q 280 20 280 65" stroke="#4CAF50" stroke-width="3" fill="none" marker-end="url(#arrow2)"/>
+                    <line x1="400" y1="65" x2="460" y2="65" stroke="#333" stroke-width="2" marker-end="url(#arrow2)"/>
+                    
+                    <text x="370" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#E91E63">left</text>
+                    <text x="490" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#FF9800">middle</text>
+                </g>
+                
+                <!-- 步骤4 -->
+                <g transform="translate(0, 540)">
+                    <text x="50" y="20" font-size="16" font-weight="bold" fill="#f5576c">步骤4: 完成逆置</text>
+                    
+                    <rect x="100" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="130" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">1</text>
+                    
+                    <rect x="220" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="250" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">2</text>
+                    
+                    <rect x="340" y="40" width="60" height="50" rx="5" fill="#2196F3" stroke="#333" stroke-width="2"/>
+                    <text x="370" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">3</text>
+                    
+                    <rect x="460" y="40" width="60" height="50" rx="5" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                    <text x="490" y="70" text-anchor="middle" fill="white" font-size="18" font-weight="bold">4</text>
+                    
+                    <path d="M 220 65 Q 160 20 160 65" stroke="#4CAF50" stroke-width="3" fill="none" marker-end="url(#arrow2)"/>
+                    <path d="M 340 65 Q 280 20 280 65" stroke="#4CAF50" stroke-width="3" fill="none" marker-end="url(#arrow2)"/>
+                    <path d="M 460 65 Q 400 20 400 65" stroke="#4CAF50" stroke-width="3" fill="none" marker-end="url(#arrow2)"/>
+                    
+                    <text x="490" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#E91E63">left (新头)</text>
+                    <text x="250" y="130" text-anchor="middle" font-size="12" fill="#666">head->next = left</text>
+                </g>
+                
+                <defs>
+                    <marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+
+        <div class="diagram">
+            <h3>逆置后的链表</h3>
+            <svg viewBox="0 0 1000 150" xmlns="http://www.w3.org/2000/svg">
+                <!-- Head节点 -->
+                <rect x="50" y="40" width="80" height="60" rx="5" fill="#9C27B0" stroke="#333" stroke-width="2"/>
+                <text x="90" y="75" text-anchor="middle" fill="white" font-size="16" font-weight="bold">Head</text>
+                
+                <!-- 节点4 -->
+                <rect x="200" y="40" width="60" height="60" rx="5" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                <text x="230" y="75" text-anchor="middle" fill="white" font-size="20" font-weight="bold">4</text>
+                
+                <!-- 节点3 -->
+                <rect x="350" y="40" width="60" height="60" rx="5" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                <text x="380" y="75" text-anchor="middle" fill="white" font-size="20" font-weight="bold">3</text>
+                
+                <!-- 节点2 -->
+                <rect x="500" y="40" width="60" height="60" rx="5" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                <text x="530" y="75" text-anchor="middle" fill="white" font-size="20" font-weight="bold">2</text>
+                
+                <!-- 节点1 -->
+                <rect x="650" y="40" width="60" height="60" rx="5" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                <text x="680" y="75" text-anchor="middle" fill="white" font-size="20" font-weight="bold">1</text>
+                
+                <!-- NULL -->
+                <text x="780" y="75" font-size="18" font-weight="bold" fill="#E91E63">NULL</text>
+                
+                <!-- 箭头 -->
+                <line x1="130" y1="70" x2="200" y2="70" stroke="#333" stroke-width="3" marker-end="url(#arrow3)"/>
+                <line x1="260" y1="70" x2="350" y2="70" stroke="#333" stroke-width="3" marker-end="url(#arrow3)"/>
+                <line x1="410" y1="70" x2="500" y2="70" stroke="#333" stroke-width="3" marker-end="url(#arrow3)"/>
+                <line x1="560" y1="70" x2="650" y2="70" stroke="#333" stroke-width="3" marker-end="url(#arrow3)"/>
+                <line x1="710" y1="70" x2="760" y2="70" stroke="#333" stroke-width="3" marker-end="url(#arrow3)"/>
+                
+                <defs>
+                    <marker id="arrow3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+
+        <div class="description">
+            <h3>算法步骤</h3>
+            <div class="step">
+                <div class="step-title">1. 初始化三个指针</div>
+                left = head->next（第一个节点）<br>
+                middle = left->next（第二个节点）<br>
+                left->next = NULL（断开第一个节点的指针）
+            </div>
+            <div class="step">
+                <div class="step-title">2. 循环处理</div>
+                当 middle != NULL 时：<br>
+                - right = middle->next（保存下一个节点）<br>
+                - middle->next = left（反转指针）<br>
+                - left = middle（移动left指针）<br>
+                - middle = right（移动middle指针）
+            </div>
+            <div class="step">
+                <div class="step-title">3. 更新头节点</div>
+                head->next = left（将头节点指向新的第一个节点）
+            </div>
+        </div>
+    </div>
+</body>
+</html>

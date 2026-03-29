@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/JavaAmbitious/pom.xml" />
+        <option value="$PROJECT_DIR$/JavaWay/DesignPattern/pom.xml" />
+        <option value="$PROJECT_DIR$/JavaWay/pom.xml" />
+      </list>
+    </option>
+    <option name="ignoredFiles">
+      <set>
+        <option value="$PROJECT_DIR$/JavaAmbitious/Concurrency/pom.xml" />
+        <option value="$PROJECT_DIR$/JavaAmbitious/mini-guice/pom.xml" />
+        <option value="$PROJECT_DIR$/JavaAmbitious/mybatis-total/IPersistence/pom.xml" />
+        <option value="$PROJECT_DIR$/JavaAmbitious/mybatis-total/IPersistence_test/pom.xml" />
+        <option value="$PROJECT_DIR$/JavaAmbitious/mybatis-total/mybatis_multitable/pom.xml" />
+        <option value="$PROJECT_DIR$/JavaAmbitious/mybatis-total/pom.xml" />
+        <option value="$PROJECT_DIR$/JavaAmbitious/mybatis-total/quickStart/pom.xml" />
+      </set>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="zulu-11" project-jdk-type="JavaSDK" />
+</project>
