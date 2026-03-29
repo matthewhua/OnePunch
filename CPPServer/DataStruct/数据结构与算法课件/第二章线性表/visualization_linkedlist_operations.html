@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单链表操作 - 可视化</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #764ba2;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #764ba2;
+        }
+        .section-title {
+            color: #764ba2;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        .diagram {
+            margin: 20px 0;
+        }
+        svg {
+            width: 100%;
+            height: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+        }
+        .description {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .highlight {
+            color: #68d391;
+            font-weight: bold;
+        }
+        .comment {
+            color: #a0aec0;
+        }
+        .operation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .operation-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-top: 4px solid #764ba2;
+        }
+        .operation-title {
+            color: #764ba2;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .complexity {
+            background: #e6fffa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 单链表操作可视化</h1>
+        
+        <div class="section">
+            <h2 class="section-title">1. 链表结构定义</h2>
+            <div class="code-block">
+                <span class="comment">// 链表节点结构</span><br>
+                <span class="highlight">typedef struct LinkNode</span> {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;int data;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">struct LinkNode</span> *next;<br>
+                } LinkNode;<br><br>
+                <span class="highlight">typedef LinkNode* LinkList;</span>
+            </div>
+            <div class="diagram">
+                <svg viewBox="0 0 800 120" xmlns="http://www.w3.org/2000/svg">
+                    <!-- 节点结构图 -->
+                    <rect x="100" y="30" width="120" height="60" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <line x1="160" y1="30" x2="160" y2="90" stroke="#333" stroke-width="2"/>
+                    <text x="130" y="65" text-anchor="middle" fill="white" font-size="14" font-weight="bold">data</text>
+                    <text x="210" y="65" text-anchor="middle" fill="white" font-size="14" font-weight="bold">next</text>
+                    
+                    <text x="350" y="65" font-size="16" fill="#333">一个节点</text>
+                    
+                    <!-- 多个节点连接 -->
+                    <rect x="500" y="30" width="80" height="60" rx="5" fill="#764ba2" stroke="#333" stroke-width="2"/>
+                    <text x="540" y="65" text-anchor="middle" fill="white" font-size="14" font-weight="bold">data</text>
+                    
+                    <rect x="600" y="30" width="80" height="60" rx="5" fill="#764ba2" stroke="#333" stroke-width="2"/>
+                    <text x="640" y="65" text-anchor="middle" fill="white" font-size="14" font-weight="bold">data</text>
+                    
+                    <line x1="580" y1="60" x2="600" y2="60" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+                    
+                    <text x="700" y="65" font-size="16" fill="#333">...</text>
+                    
+                    <defs>
+                        <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">2. 初始化链表</h2>
+            <div class="code-block">
+                <span class="highlight">int initList(LinkList *head)</span> {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;*head = (LinkNode*)malloc(sizeof(LinkNode));<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;if (*head == NULL) {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return FALSE;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;(*head)->next = NULL;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;return TRUE;<br>
+                }
+            </div>
+            <div class="diagram">
+                <svg viewBox="0 0 800 150" xmlns="http://www.w3.org/2000/svg">
+                    <!-- 头结点 -->
+                    <rect x="200" y="40" width="100" height="60" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="250" y="75" text-anchor="middle" fill="white" font-size="16" font-weight="bold">头结点</text>
+                    
+                    <!-- NULL -->
+                    <text x="400" y="75" font-size="18" font-weight="bold" fill="#E91E63">NULL</text>
+                    
+                    <!-- 箭头 -->
+                    <line x1="300" y1="70" x2="380" y2="70" stroke="#333" stroke-width="3" marker-end="url(#arrow2)"/>
+                    
+                    <text x="250" y="120" text-anchor="middle" font-size="14" fill="#666">head指针指向头结点</text>
+                    
+                    <defs>
+                        <marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+            <div class="description">
+                <p>带头结点的单链表初始化：创建一个头结点，其next指针指向NULL。</p>
+                <p><strong>时间复杂度：</strong> O(1)，<strong>空间复杂度：</strong> O(1)</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">3. 插入操作</h2>
+            <div class="code-block">
+                <span class="highlight">int insertmy(LinkList *head, int pos, int value)</span> {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;LinkNode *p, *newNode;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;int i;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;if (*head == NULL) return FALSE;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;p = *head;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 移动到插入位置的前一个节点</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;for (i = 0; i < pos && p != NULL; i++) {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;p = p->next;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;if (p == NULL) return FALSE;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;newNode = (LinkNode*)malloc(sizeof(LinkNode));<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;newNode->data = value;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;newNode->next = p->next;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;p->next = newNode;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;return TRUE;<br>
+                }
+            </div>
+            <div class="diagram">
+                <svg viewBox="0 0 1000 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- 插入前 -->
+                    <text x="50" y="30" font-size="16" font-weight="bold" fill="#764ba2">插入前：</text>
+                    
+                    <rect x="100" y="50" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="130" y="80" text-anchor="middle" fill="white" font-size="14" font-weight="bold">1</text>
+                    
+                    <rect x="200" y="50" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="230" y="80" text-anchor="middle" fill="white" font-size="14" font-weight="bold">2</text>
+                    
+                    <rect x="300" y="50" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="330" y="80" text-anchor="middle" fill="white" font-size="14" font-weight="bold">4</text>
+                    
+                    <line x1="160" y1="75" x2="200" y2="75" stroke="#333" stroke-width="2" marker-end="url(#arrow3)"/>
+                    <line x1="260" y1="75" x2="300" y2="75" stroke="#333" stroke-width="2" marker-end="url(#arrow3)"/>
+                    
+                    <!-- 插入后 -->
+                    <text x="50" y="130" font-size="16" font-weight="bold" fill="#764ba2">插入后：</text>
+                    
+                    <rect x="100" y="150" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="130" y="180" text-anchor="middle" fill="white" font-size="14" font-weight="bold">1</text>
+                    
+                    <rect x="200" y="150" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="230" y="180" text-anchor="middle" fill="white" font-size="14" font-weight="bold">2</text>
+                    
+                    <rect x="300" y="120" width="60" height="50" rx="5" fill="#E91E63" stroke="#333" stroke-width="2"/>
+                    <text x="330" y="150" text-anchor="middle" fill="white" font-size="14" font-weight="bold">3</text>
+                    
+                    <rect x="300" y="180" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="330" y="210" text-anchor="middle" fill="white" font-size="14" font-weight="bold">4</text>
+                    
+                    <line x1="160" y1="175" x2="200" y2="175" stroke="#333" stroke-width="2" marker-end="url(#arrow3)"/>
+                    <line x1="260" y1="175" x2="330" y2="145" stroke="#333" stroke-width="2" marker-end="url(#arrow3)"/>
+                    <line x1="360" y1="145" x2="330" y2="180" stroke="#333" stroke-width="2" marker-end="url(#arrow3)"/>
+                    <line x1="360" y1="200" x2="400" y2="200" stroke="#333" stroke-width="2" marker-end="url(#arrow3)"/>
+                    
+                    <text x="450" y="175" font-size="14" fill="#666">在位置2插入值3</text>
+                    
+                    <defs>
+                        <marker id="arrow3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+            <div class="complexity">
+                <strong>时间复杂度：</strong> O(n)，最坏情况下需要遍历到链表末尾
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">4. 删除操作</h2>
+            <div class="code-block">
+                <span class="highlight">int removemy(LinkList *head, int pos, int *value)</span> {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;LinkNode *p, *q;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;int i;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;if (*head == NULL || (*head)->next == NULL) return FALSE;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;p = *head;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 移动到删除位置的前一个节点</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;for (i = 0; i < pos && p->next != NULL; i++) {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;p = p->next;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;if (p->next == NULL) return FALSE;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;q = p->next;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;*value = q->data;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;p->next = q->next;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;free(q);<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;return TRUE;<br>
+                }
+            </div>
+            <div class="diagram">
+                <svg viewBox="0 0 1000 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- 删除前 -->
+                    <text x="50" y="30" font-size="16" font-weight="bold" fill="#764ba2">删除前：</text>
+                    
+                    <rect x="100" y="50" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="130" y="80" text-anchor="middle" fill="white" font-size="14" font-weight="bold">1</text>
+                    
+                    <rect x="200" y="50" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="230" y="80" text-anchor="middle" fill="white" font-size="14" font-weight="bold">2</text>
+                    
+                    <rect x="300" y="50" width="60" height="50" rx="5" fill="#E91E63" stroke="#333" stroke-width="2"/>
+                    <text x="330" y="80" text-anchor="middle" fill="white" font-size="14" font-weight="bold">3</text>
+                    
+                    <rect x="400" y="50" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="430" y="80" text-anchor="middle" fill="white" font-size="14" font-weight="bold">4</text>
+                    
+                    <line x1="160" y1="75" x2="200" y2="75" stroke="#333" stroke-width="2" marker-end="url(#arrow4)"/>
+                    <line x1="260" y1="75" x2="300" y2="75" stroke="#333" stroke-width="2" marker-end="url(#arrow4)"/>
+                    <line x1="360" y1="75" x2="400" y2="75" stroke="#333" stroke-width="2" marker-end="url(#arrow4)"/>
+                    
+                    <!-- 删除后 -->
+                    <text x="50" y="130" font-size="16" font-weight="bold" fill="#764ba2">删除后：</text>
+                    
+                    <rect x="100" y="150" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="130" y="180" text-anchor="middle" fill="white" font-size="14" font-weight="bold">1</text>
+                    
+                    <rect x="200" y="150" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="230" y="180" text-anchor="middle" fill="white" font-size="14" font-weight="bold">2</text>
+                    
+                    <rect x="300" y="150" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="330" y="180" text-anchor="middle" fill="white" font-size="14" font-weight="bold">4</text>
+                    
+                    <line x1="160" y1="175" x2="200" y2="175" stroke="#333" stroke-width="2" marker-end="url(#arrow4)"/>
+                    <line x1="260" y1="175" x2="300" y2="175" stroke="#333" stroke-width="2" marker-end="url(#arrow4)"/>
+                    
+                    <text x="450" y="175" font-size="14" fill="#666">删除位置2的值3</text>
+                    
+                    <defs>
+                        <marker id="arrow4" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">5. 查找操作</h2>
+            <div class="operation-grid">
+                <div class="operation-card">
+                    <div class="operation-title">按值查找</div>
+                    <div class="code-block">
+                        <span class="highlight">int find(LinkList *head, int value)</span> {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;LinkNode *p;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;int pos = 0;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;p = (*head)->next;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;while (p != NULL) {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (p->data == value) return pos;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;p = p->next;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pos++;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;return ERROR;<br>
+                        }
+                    </div>
+                    <div class="complexity">
+                        <strong>时间复杂度：</strong> O(n)
+                    </div>
+                </div>
+                
+                <div class="operation-card">
+                    <div class="operation-title">查找倒数第k个结点</div>
+                    <div class="code-block">
+                        <span class="highlight">LinkNode *findKth(LinkList *head, int k)</span> {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;LinkNode *front, *rear;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;front = rear = *head;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;for (i = 0; i < k; i++)<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;front = front->next;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;while (front != NULL) {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;front = front->next;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rear = rear->next;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;return rear;<br>
+                        }
+                    </div>
+                    <div class="complexity">
+                        <strong>时间复杂度：</strong> O(n)<br>
+                        <strong>算法：</strong> 双指针法
+                    </div>
+                </div>
+                
+                <div class="operation-card">
+                    <div class="operation-title">查找中间结点</div>
+                    <div class="code-block">
+                        <span class="highlight">LinkNode *findMiddle(LinkList *head)</span> {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;LinkNode *front, *rear;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;front = rear = *head;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;while (front != NULL) {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;front = front->next;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (front != NULL) {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;front = front->next;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rear = rear->next;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;return rear;<br>
+                        }
+                    </div>
+                    <div class="complexity">
+                        <strong>时间复杂度：</strong> O(n)<br>
+                        <strong>算法：</strong> 快慢指针法
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">6. 链表逆置</h2>
+            <div class="code-block">
+                <span class="highlight">int reverse(LinkList *head)</span> {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;LinkNode *left, *middle, *right;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;left = (*head)->next;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;if (left != NULL) middle = left->next;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;left->next = NULL;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;while (middle != NULL) {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;right = middle->next;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;middle->next = left;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;left = middle;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;middle = right;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;(*head)->next = left;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;return TRUE;<br>
+                }
+            </div>
+            <div class="diagram">
+                <svg viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg">
+                    <!-- 逆置前 -->
+                    <text x="50" y="30" font-size="16" font-weight="bold" fill="#764ba2">逆置前：</text>
+                    
+                    <rect x="100" y="50" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="130" y="80" text-anchor="middle" fill="white" font-size="14" font-weight="bold">1</text>
+                    
+                    <rect x="200" y="50" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="230" y="80" text-anchor="middle" fill="white" font-size="14" font-weight="bold">2</text>
+                    
+                    <rect x="300" y="50" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="330" y="80" text-anchor="middle" fill="white" font-size="14" font-weight="bold">3</text>
+                    
+                    <rect x="400" y="50" width="60" height="50" rx="5" fill="#667eea" stroke="#333" stroke-width="2"/>
+                    <text x="430" y="80" text-anchor="middle" fill="white" font-size="14" font-weight="bold">4</text>
+                    
+                    <line x1="160" y1="75" x2="200" y2="75" stroke="#333" stroke-width="2" marker-end="url(#arrow5)"/>
+                    <line x1="260" y1="75" x2="300" y2="75" stroke="#333" stroke-width="2" marker-end="url(#arrow5)"/>
+                    <line x1="360" y1="75" x2="400" y2="75" stroke="#333" stroke-width="2" marker-end="url(#arrow5)"/>
+                    
+                    <!-- 逆置后 -->
+                    <text x="50" y="130" font-size="16" font-weight="bold" fill="#764ba2">逆置后：</text>
+                    
+                    <rect x="100" y="150" width="60" height="50" rx="5" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                    <text x="130" y="180" text-anchor="middle" fill="white" font-size="14" font-weight="bold">4</text>
+                    
+                    <rect x="200" y="150" width="60" height="50" rx="5" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                    <text x="230" y="180" text-anchor="middle" fill="white" font-size="14" font-weight="bold">3</text>
+                    
+                    <rect x="300" y="150" width="60" height="50" rx="5" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                    <text x="330" y="180" text-anchor="middle" fill="white" font-size="14" font-weight="bold">2</text>
+                    
+                    <rect x="400" y="150" width="60" height="50" rx="5" fill="#4CAF50" stroke="#333" stroke-width="2"/>
+                    <text x="430" y="180" text-anchor="middle" fill="white" font-size="14" font-weight="bold">1</text>
+                    
+                    <line x1="160" y1="175" x2="200" y2="175" stroke="#333" stroke-width="2" marker-end="url(#arrow5)"/>
+                    <line x1="260" y1="175" x2="300" y2="175" stroke="#333" stroke-width="2" marker-end="url(#arrow5)"/>
+                    <line x1="360" y1="175" x2="400" y2="175" stroke="#333" stroke-width="2" marker-end="url(#arrow5)"/>
+                    
+                    <!-- 算法步骤说明 -->
+                    <text x="50" y="230" font-size="16" font-weight="bold" fill="#764ba2">三指针法：</text>
+                    <text x="50" y="260" font-size="14" fill="#666">left: 前一个节点</text>
+                    <text x="250" y="260" font-size="14" fill="#666">middle: 当前节点</text>
+                    <text x="450" y="260" font-size="14" fill="#666">right: 下一个节点</text>
+                    
+                    <defs>
+                        <marker id="arrow5" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+            <div class="complexity">
+                <strong>时间复杂度：</strong> O(n)，<strong>空间复杂度：</strong> O(1)
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">7. 完整测试程序</h2>
+            <div class="code-block">
+                <span class="highlight">int main()</span> {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;LinkList head = NULL;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;int arr[] = {1, 2, 3, 4, 5};<br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 初始化链表</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;initList(&head);<br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 从数组创建链表</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;createMyListFromArray(&head, arr, 5);<br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 插入、删除、查找等操作...</span><br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 逆置链表</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;reverse(&head);<br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;return 0;<br>
+                }
+            </div>
+        </div>
+    </div>
+</body>
+</html>
