@@ -1,1 +1,0 @@
-/usr/bin/c++ -g CMakeFiles/MapContainer.dir/MapContainer.cpp.o -o MapContainer 
