@@ -1,0 +1,146 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+/**
+ * 民意信箱系统协议
+ * 
+ * 扩展号占用范围：
+ * - Base.ext = 9401 ~ 9450 (预留50个扩展号)
+ * 
+ * 系统说明：
+ * 1. 民意值系统：通过幸存者状态得到基础民意值，后续根据信件，紧急求助来获取和扣除民意值
+ * 2. 信件：收到幸存者来信，有正面和负面来信，会影响民意值
+ * 3. 紧急求助：收到幸存者来信的紧急求助，通过选项会获得或者扣除民意值
+ */
+
+// ==================== 功能数据 ====================
+
+/**
+ * 民意信箱数据
+ */
+option java_outer_classname = "OpinionLetterBoxPb";
+message OpinionLetterBoxDataPb {
+    optional int32 opinion = 1;                            // 当前民意值
+    optional int32 highestOpinion = 2;                     // 最高民意值
+    repeated TwoInt historyHighestOpinion = 3;             // 历史最高民意值(v1:最高民意值, v2:时间点, 单位秒)
+    repeated OpinionLetterPb letter = 4;                   // 信件列表
+    repeated OpinionLetterHelpPb letterHelp = 5;           // 紧急求助列表
+	optional int32 lastTriggerTime = 6;                    // 上次触发信件的时间
+	optional int32 olTimeOffset = 7;                       // 功能解锁当日在线时长偏移值(不传给客户端)
+	repeated OpinionLetterHelpReplyPb letterHelpReply = 8; // 紧急求助回信列表(不传给客户端)
+	optional bool specialHeroSended = 9;                   // 特殊英雄信件是否发送过(不传给客户端)
+}
+
+/**
+ * 民意信箱 - 信件
+ */
+message OpinionLetterPb {
+    optional int32 letterId = 1;      // 信件id(s_letter配置里的id)
+    optional int32 senderId = 2;      // 发件人id(s_letter_survivorinfo配置里的id)
+    optional int32 receivingTime = 3; // 接收时间点
+}
+
+/**
+ * 民意信箱 - 紧急求助
+ */
+message OpinionLetterHelpPb {
+    optional int32 uniqueId = 1;      // 唯一id
+    optional int32 letterHelpId = 2;  // 紧急求助id(s_letter_help配置里的id)
+    optional int32 senderId = 3;      // 发件人id(s_letter_survivorinfo配置里的id)
+	optional int32 receivingTime = 4; // 接收时间点
+    optional int32 select = 5;        // 选择项(未选择时为0)
+}
+
+/**
+ * 民意信箱 - 紧急求助回信
+ */
+message OpinionLetterHelpReplyPb {
+    optional int32 bindUniqueId = 1; // 回信绑定的紧急求助唯一id
+    optional int32 letterHelpId = 2; // 紧急求助回信id(s_letter_help配置里的id)
+    optional int32 senderId = 3;     // 发件人id(s_letter_survivorinfo配置里的id)
+	optional int32 sendTime = 4;     // 发送时间点
+}
+
+// ==================== 请求/响应协议 ====================
+
+/**
+ * 触发民意信件
+ */
+message TriggerOpinionLetterRq {
+    optional int32 libraryId = 1; // 触发的信件库id
+    
+    extend Base {
+        optional TriggerOpinionLetterRq ext = 9401;
+    }
+}
+
+message TriggerOpinionLetterRs {
+    optional int32 libraryId = 1;        // 触发的信件库id
+    optional OpinionLetterPb letter = 2; // 信件数据
+    
+    extend Base {
+        optional TriggerOpinionLetterRs ext = 9402;
+    }
+}
+
+/**
+ * 选择紧急求助选项
+ */
+message SelectOpinionLetterHelpRq {
+    optional int32 uniqueId = 1; // 紧急求助唯一id
+	optional int32 select = 2;   // 选择的选项
+    
+    extend Base {
+        optional SelectOpinionLetterHelpRq ext = 9403;
+    }
+}
+
+message SelectOpinionLetterHelpRs {
+    optional int32 uniqueId = 1; // 紧急求助唯一id
+	optional int32 select = 2;   // 选择的选项
+    
+    extend Base {
+        optional SelectOpinionLetterHelpRs ext = 9404;
+    }
+}
+
+// ==================== 推送协议 ====================
+
+/**
+ * [推送]触发紧急求助
+ */
+message SyncOpinionLetterHelpRs {
+    optional OpinionLetterHelpPb letterHelp = 1; // 紧急求助数据
+    
+    extend Base {
+        optional SyncOpinionLetterHelpRs ext = 9435;
+    }
+}
+
+/**
+ * [推送]民意值改变
+ */
+message SyncOpinionChangeRs {
+    optional int32 opinion = 1;        // 民意值
+	optional int32 highestOpinion = 2; // 最高民意值(如果此值被刷新才会推送)
+    
+    extend Base {
+        optional SyncOpinionChangeRs ext = 9436;
+    }
+}
+
+/**
+ * [推送]基础民意值改变
+ */
+message SyncBaseOpinionChangeRs {
+    optional int32 buildOpinion = 1;    // 建筑民意值
+	optional int32 survivorOpinion = 2; // 幸存者民意值
+    
+    extend Base {
+        optional SyncBaseOpinionChangeRs ext = 9437;
+    }
+}

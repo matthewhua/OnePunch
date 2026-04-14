@@ -1,0 +1,138 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================常量定义================================
+
+// 社交关系类型定义
+enum SocialRelationType {
+  RELATION_UNKNOWN = 0;        // 未知关系
+  RELATION_FRIEND = 1;         // 好友
+  RELATION_BLACK = 2;          // 黑名单
+  RELATION_MENTOR = 3;         // 导师
+  RELATION_MENTEE = 4;         // 学徒
+  RELATION_ENEMY = 5;          // 敌人
+  RELATION_ALLIED = 6;         // 盟友
+}
+
+// 社交关系状态定义
+enum SocialRelationStatus {
+  STATUS_NONE = 0;           // 无关系
+  STATUS_PENDING = 1;        // 待验证
+  STATUS_BUILT = 2;          // 已建交
+}
+
+// 社交关系操作定义
+enum SocialRelationOperation {
+  OPERATION_NONE = 0;        // 无操作
+  OPERATION_AGREE = 1;       // 同意关系
+  OPERATION_REJECT = 2;      // 拒绝关系
+}
+
+// ================================模块定义================================
+
+// 社交功能数据
+option java_outer_classname = "SocialPb";
+message SocialFunction {
+  repeated BaseRelation social = 1; // 社交关系
+  extend FunctionClientBase {
+    optional SocialFunction ext = 35;
+  }
+}
+
+
+// ================================结构定义================================
+
+// 社交关系基础结构
+message BaseRelation {
+  required int32 id = 1;       // 关系ID
+  required int64 playerId = 2; // 玩家ID
+  optional int32 relation = 3; // 关系类型, 对应SocialRelationDefine枚举定义
+  optional int32 status = 4;   // 关系状态, 对应SocialRelationStatus枚举定义
+  optional int32 time = 5;     // 状态时间（秒）
+  extensions 51 to 60;
+}
+
+// 好友关系结构
+message FriendRelation {
+  extend BaseRelation {
+    optional FriendRelation ext = 51;
+  }
+}
+
+// 黑名单关系结构
+message BlackRelation {
+  extend BaseRelation {
+    optional BlackRelation ext = 52;
+  }
+}
+
+// ================================广播定义================================
+
+// 社交事件
+message SocialEvent {
+  required BaseRelation socialRelation = 1; // 社交关系
+  extend BroadEvent {
+    optional SocialEvent socialEvent = 54;
+  }
+}
+
+
+
+// ================================序列化结构定义================================
+
+
+
+// ================================协议定义================================
+// 协议号范围[7701-7750]
+
+// 添加社交关系
+message SocialRelationAddRq {
+  required int64 playerId = 1; // 玩家ID
+  optional int32 type = 2;     // 要建立关系类型
+  extend Base {
+    optional SocialRelationAddRq ext = 7701;
+  }
+}
+
+message SocialRelationAddRs {
+  optional BaseRelation baseRelation = 1; // 建立的关系
+  extend Base {
+    optional SocialRelationAddRs ext = 7702;
+  }
+}
+
+// 删除社交关系
+message SocialRelationRemoveRq {
+  required int32 relationId = 1; // 关系ID
+  extend Base {
+    optional SocialRelationRemoveRq ext = 7703;
+  }
+}
+
+message SocialRelationRemoveRs {
+  required int32 relationId = 1; // 关系ID
+  extend Base {
+    optional SocialRelationRemoveRs ext = 7704;
+  }
+}
+
+// 社交关系操作
+message SocialRelationOperationRq {
+  repeated int32 relationId = 1; // 关系ID
+  required int32 operation = 2;  // 操作类型
+  extend Base {
+    optional SocialRelationOperationRq ext = 7705;
+  }
+}
+
+message SocialRelationOperationRs {
+  repeated int32 relationId = 1; // 关系ID
+  optional int32 operation = 2;  // 操作类型
+  extend Base {
+    optional SocialRelationOperationRs ext = 7706;
+  }
+}

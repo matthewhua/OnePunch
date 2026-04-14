@@ -1,4 +1,4 @@
-﻿# ========== 操作系统与通用临时文件 ==========
+# ========== 操作系统与通用临时文件 ==========
 .DS_Store       # Mac 系统文件
 Thumbs.db       # Windows 系统文件
 *~              # 类Unix系统临时文件
@@ -8,7 +8,7 @@ Thumbs.db       # Windows 系统文件
 *.tmp           # 临时文件
 
 # ========== IDE 配置文件 ==========
-.idea/*         # IntelliJ IDEA 配置目录
+**/.idea/         # IntelliJ IDEA 配置目录 (所有层级)
 !.idea/runConfigurations/  # 保留运行配置（可选）
 *.iml           # IntelliJ IDEA 项目文件
 *.iws           # IntelliJ IDEA 工作区文件
@@ -23,7 +23,7 @@ Thumbs.db       # Windows 系统文件
 .bloop/         # Bloop 编译服务器
 
 # ========== 编译产物 & 缓存文件 ==========
-target/         # Rust/Scala 编译输出目录
+**/target/         # Rust/Scala 编译输出目录 (所有层级)
 classes/        # Java 编译输出目录
 *.class         # Java/Scala 编译生成的类文件
 *.cache         # 各类缓存文件

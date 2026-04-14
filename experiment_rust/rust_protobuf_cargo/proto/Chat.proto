@@ -1,0 +1,398 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================常量定义================================
+
+// 聊天室定义
+enum ChatRoomDefine {
+  SERVER_CHANNEL = 1;           // 区服聊天频道
+  CAMP_CHANNEL = 2;             // 阵营聊天频道
+  AREA_CHANNEL = 3;             // 区域聊天频道
+  GROUP_CHANNEL = 4;            // 群聊聊天频道
+  PRIVATE_CHANNEL = 5;          // 私聊聊天频道
+}
+
+// 聊天消息类型定义
+enum ChatMsgTypeDefine {
+  CHAT_MSG_TYPE_PUBLIC = 101;   // 公共聊天
+  CHAT_MSG_TYPE_PRIVATE = 102;  // 玩家私聊
+  CHAT_MSG_TYPE_SYSTEM = 103;   // 系统通知
+  CHAT_MSG_TYPE_BROADCAST = 104; // 全服广播(使用广播样式展示,主界面滚屏播报)
+}
+
+// 聊天消息消耗类型定义
+enum ChatCostTypeDefine {
+  CHAT_COST_TYPE_NORMAL = 0;   // 普通消息, 不消耗物品
+  CHAT_COST_TYPE_PROP = 1;     // 喇叭消息, 消耗喇叭道具
+  CHAT_COST_TYPE_CURRENCY = 2; // 喇叭消息, 消耗喇叭等价货币
+}
+
+// ================================模块定义================================
+
+// 聊天功能数据
+option java_outer_classname = "ChatPb";
+message ChatFunction {
+  repeated IntLong lastChatTime = 1;        // k: 对应ChatRoomDefine定义, v: 上次发送聊天的时间 (毫秒)
+  optional int64 silenceTime = 2;           // 禁言时间戳 (毫秒)
+  repeated int64 blackList = 3;             // 聊天黑名单
+  optional ChatSystemSetting setting = 4;   // 聊天系统设置
+  repeated ChatRoomSetting roomSetting = 5; // 聊天室设置
+  repeated IntLong templateChatTime = 6;    // k: templateId, v: 上次发送模板聊天时间 (毫秒)
+  extend FunctionClientBase {
+    optional ChatFunction ext = 29;
+  }
+}
+
+
+// ================================结构定义================================
+// 玩家聊天信息
+message BaseChat {
+  optional int64 msgId = 1;         // 消息id   [服务器生成, 客户端只读]
+  optional int32 msgType = 2;       // 消息类型, 对应ChatMsgTypeDefine定义
+  optional int32 templateId = 3;    // 模板id
+  optional int32 roomType = 4;      // 聊天室类型, 对应ChatRoomDefine定义
+  optional int32 roomId = 5;        // 聊天室id  [服务器生成, 客户端只读]
+  optional int32 time = 6;          // 聊天时间  [服务器生成, 客户端只读]
+  optional string content = 7;      // 消息内容
+  repeated string param = 8;        // 额外参数, 如分享坐标、分享战报
+  repeated string tParam = 9;       // 标题参数
+  repeated string cParam = 10;      // 内容参数
+  extensions 51 to 60;
+}
+
+// 以下状态如无特殊备注, 则为发送消息时的瞬时状态, 如玩家昵称和头像等
+message RoleChatMsg {
+  required ChatPlayerSummary roleInfo = 1; // 角色信息 [服务器生成, 客户端只读]
+  extensions 21 to 50;
+  extend BaseChat {
+    optional RoleChatMsg roleChatMsg = 51;
+  }
+}
+
+// 系统聊天消息
+message SystemChatMsg {
+  extend BaseChat {
+    optional SystemChatMsg systemChatMsg = 52;
+  }
+}
+
+// 聊天室
+message BaseChatRoom {
+  required int32 roomType = 1;        // 聊天室类型, 对应ChatRoomDefine定义
+  required int32 roomId = 2;          // 聊天室id
+  repeated BaseChat messageCache = 3; // 聊天消息缓存
+  extensions 21 to 50;
+}
+
+// 公共聊天室
+message PublicChatRoom {
+  extend BaseChatRoom {
+    optional PublicChatRoom ext = 21;
+  }
+}
+
+// 私聊聊天室
+message PrivateChatRoom {
+  required int64 senderId = 1;    // 发送者id
+  required int64 receiverId = 2;  // 接收者id
+  extend BaseChatRoom {
+    optional PrivateChatRoom ext = 22;
+  }
+}
+
+// 群聊聊天室
+message GroupChatRoom {
+  required int64 sponsorId = 1;       // 群聊发起者
+  repeated TwoInt portraitAndFrame = 2;// 群聊头像与头像框
+  optional string groupName = 3;      // 群聊名称
+  repeated int64 member = 4;          // 群聊参与者
+  extend BaseChatRoom {
+    optional GroupChatRoom ext = 23;
+  }
+}
+
+// 聊天系统设置
+message ChatSystemSetting {
+  optional int32 addFriendCampfireLv = 1;     // 添加好友需要的篝火等级
+  optional bool allowStrangerChat = 2;        // 允许陌生人聊天
+  optional int32 strangerChatCampfireLv = 3;  // 陌生人聊天需要的篝火等级
+  optional int32 allowStrangerChatTime = 4;   // 允许陌生人聊天时间
+}
+
+// 聊天室设置
+message ChatRoomSetting {
+  optional int32 roomType = 1;        // 聊天室类型
+  optional int32 roomId = 2;          // 聊天室id
+  optional bool isPinned = 3;         // 是否置顶
+  optional int32 pinTime = 4;         // 置顶时间
+  optional bool isMuted = 5;          // 是否屏蔽聊天 [预留, 服务器将不再广播该聊天室的消息]
+  optional bool isNotify = 6;         // 是否通知 (客户端不显示新消息的提示)
+}
+
+// --------------------------------ChatPlayerSummary------------------------------------------------------------
+// 玩家概要
+message ChatPlayerSummary {
+  required int32 level = 1;         // 篝火等级
+  required string nick = 2;         // 昵称
+  required int64 roleId = 3;        // 玩家id
+  optional int32 portrait = 4;      // 头像
+  optional int32 portraitFrame = 5; // 头像框
+  optional int32 camp = 6;          // 阵营
+  optional int32 vip = 7;           // vip等级
+  optional int32 job = 8;           // 官职
+  optional int32 area = 9;          // 区域
+  optional int32 chatSkin = 10;     // 聊天皮肤
+}
+
+
+// ================================广播定义================================
+
+// 聊天事件
+message ChatEvent {
+  required BaseChat chat = 1;
+  extend BroadEvent {
+    optional ChatEvent chatEvent = 53;
+  }
+}
+
+// 聊天室事件, 如群聊创建、销毁、成员加入、离开
+message ChatRoomEvent {
+  required BaseChatRoom room = 1;
+  extend BroadEvent {
+    optional ChatRoomEvent roomEvent = 55;
+  }
+}
+
+
+
+// ================================序列化结构定义================================
+
+// 公共聊天序列化结构
+message SerGlobalChat {
+  repeated BaseChatRoom room = 1;           // 游戏服各个聊天室信息
+  optional int32 generate = 2;              // 自增id [服务器序列化字段, 协议交互中不存在]
+}
+
+
+// ================================协议定义================================
+// 协议号范围[7601-7650]
+
+// 获取聊天室聊天信息 [初始化聊天室以及聊天信息]
+message GetChatRoomMsgRq {
+  extend Base {
+    optional GetChatRoomMsgRq ext = 7601;
+  }
+}
+
+message GetChatRoomMsgRs {
+  repeated BaseChatRoom room = 1;         // 聊天室信息
+  extend Base {
+    optional GetChatRoomMsgRs ext = 7602;
+  }
+}
+
+// 发送公共聊天/系统跑马灯 [包含群聊]
+message SendPublicChatRq {
+  optional BaseChat chat = 1;
+  optional int32 chatCostType = 2;  // 消息消耗类型, 见 ChatCostTypeDefine 定义(世界频道+开启状态下消耗全服广播道具, 消息以广播样式展示)
+  extend Base {
+    optional SendPublicChatRq ext = 7603;
+  }
+}
+
+message SendPublicChatRs {
+  optional IntLong lastChatTime = 1;        // k: 对应ChatRoomDefine定义, v: 上次发送聊天的时间 (毫秒)
+  extend Base {
+    optional SendPublicChatRs ext = 7604;
+  }
+}
+
+// 操作聊天黑名单
+message OperateBlackRq {
+  required int32 opType = 1;               // 操作类型, 1: 添加, 2: 移除
+  repeated int64 roleId = 2;               // 角色id
+  extend Base {
+    optional OperateBlackRq ext = 7605;
+  }
+}
+
+message OperateBlackRs {
+  extend Base {
+    optional OperateBlackRs ext = 7606;
+  }
+}
+
+// 发送私聊消息
+message SendPrivateChatRq {
+  required int64 consumerId = 1;              // 接受消息角色id
+  required BaseChat chat = 2;
+  extend Base {
+    optional SendPrivateChatRq ext = 7607;
+  }
+}
+
+message SendPrivateChatRs {
+  optional IntLong lastChatTime = 1;        // k: 对应ChatRoomDefine定义, v: 上次发送聊天的时间 (毫秒)
+  extend Base {
+    optional SendPrivateChatRs ext = 7608;
+  }
+}
+
+// 创建群聊
+message CreateGroupChatRoomRq {
+  repeated int64 invitee = 1;             // 受邀的玩家id
+  extend Base {
+    optional CreateGroupChatRoomRq ext = 7609;
+  }
+}
+
+message CreateGroupChatRoomRs {
+  optional int32 roomType = 1;
+  optional int32 roomId = 2;
+  extend Base {
+    optional CreateGroupChatRoomRs ext = 7610;
+  }
+}
+
+// 置顶/取消置顶聊天室
+message PinnedChatRoomRq {
+  required int32 roomType = 1;          // 聊天室类型
+  required int32 roomId = 2;            // 聊天室id
+  extend Base {
+    optional PinnedChatRoomRq ext = 7611;
+  }
+}
+
+message PinnedChatRoomRs {
+  optional ChatRoomSetting roomSetting = 1;
+  extend Base {
+    optional PinnedChatRoomRs ext = 7612;
+  }
+}
+
+// 屏蔽/取消屏蔽聊天室
+message MutedChatRoomRq {
+  required int32 roomType = 1;          // 聊天室类型
+  required int32 roomId = 2;            // 聊天室id
+  extend Base {
+    optional MutedChatRoomRq ext = 7613;
+  }
+}
+
+message MutedChatRoomRs {
+  optional ChatRoomSetting roomSetting = 1;
+  extend Base {
+    optional MutedChatRoomRs ext = 7614;
+  }
+}
+
+// 邀请进入群聊
+message InviteGroupChatRoomRq {
+  required int32 roomId = 1;        // 聊天室ID
+  repeated int64 inviteeIds = 2;    // 被邀请者ID列表
+  extend Base {
+    optional InviteGroupChatRoomRq ext = 7615;
+  }
+}
+
+message InviteGroupChatRoomRs {
+  extend Base {
+    optional InviteGroupChatRoomRs ext = 7616;
+  }
+}
+
+// 踢出群聊
+message KickGroupChatRoomRq {
+  required int32 roomId = 1;        // 聊天室ID
+  repeated int64 kickRoleId = 2;    // 被踢出的角色ID
+  extend Base {
+    optional KickGroupChatRoomRq ext = 7617;
+  }
+}
+
+message KickGroupChatRoomRs {
+  extend Base {
+    optional KickGroupChatRoomRs ext = 7618;
+  }
+}
+
+// 退出群聊 [协议返回后, 客户端主动清除当前聊天室设置]
+message LeaveGroupChatRoomRq {
+  required int32 roomId = 1;        // 聊天室ID
+  extend Base {
+    optional LeaveGroupChatRoomRq ext = 7619;
+  }
+}
+
+message LeaveGroupChatRoomRs {
+  optional int32 roomId = 1;
+  extend Base {
+    optional LeaveGroupChatRoomRs ext = 7620;
+  }
+}
+
+// 解散群聊
+message DisbandGroupChatRoomRq {
+  required int32 roomId = 1;        // 聊天室ID
+  extend Base {
+    optional DisbandGroupChatRoomRq ext = 7621;
+  }
+}
+
+message DisbandGroupChatRoomRs {
+  optional int32 roomId = 1;
+  extend Base {
+    optional DisbandGroupChatRoomRs ext = 7622;
+  }
+}
+
+// 修改群名
+message RenameGroupChatRoomRq {
+  required int32 roomId = 1;              // 聊天室id
+  required string groupName = 2;          // 群聊名称
+  extend Base {
+    optional RenameGroupChatRoomRq ext = 7623;
+  }
+}
+
+message RenameGroupChatRoomRs {
+  extend Base {
+    optional RenameGroupChatRoomRs ext = 7624;
+  }
+}
+
+// 修改聊天系统设置
+message ModifyChatSystemSettingRq {
+  required ChatSystemSetting setting = 1;
+  extend Base {
+    optional ModifyChatSystemSettingRq ext = 7625;
+  }
+}
+
+message ModifyChatSystemSettingRs {
+  extend Base {
+    optional ModifyChatSystemSettingRs ext = 7626;
+  }
+}
+
+// 发送战斗援助聊天
+message SendBattleHelpChatRq {
+  required int32 battleType = 1;  // 战斗类型, 对应 BattleTypeDefine
+  extend Base {
+    optional SendBattleHelpChatRq ext = 7627;
+  }
+}
+
+message SendBattleHelpChatRs {
+  optional IntLong lastHelpChatTime = 1;    // k: battleType, v: battleType映射模板最近一次发送时间 (毫秒)
+  extend Base {
+    optional SendBattleHelpChatRs ext = 7628;
+  }
+}
+
+
+

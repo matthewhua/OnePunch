@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 分割器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.95rem;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 720px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 32px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 上传区域 */
+        .upload-zone {
+            border: 2px dashed rgba(102, 126, 234, 0.4);
+            border-radius: 12px;
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .upload-zone .icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+
+        .upload-zone p {
+            font-size: 1rem;
+            color: #aaa;
+        }
+
+        .upload-zone .file-name {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-info {
+            display: none;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+        }
+
+        .file-info.visible {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-info .pages-badge {
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* 模式选择 */
+        .mode-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            color: #ccc;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .mode-btn:hover {
+            border-color: rgba(102, 126, 234, 0.5);
+            background: rgba(102, 126, 234, 0.08);
+        }
+
+        .mode-btn.active {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.15);
+            color: white;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.2);
+        }
+
+        .mode-btn .mode-icon {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        /* 输入区域 */
+        .input-section {
+            margin-bottom: 24px;
+        }
+
+        .input-section label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .input-section input[type="text"],
+        .input-section input[type="number"] {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-section input:focus {
+            border-color: #667eea;
+        }
+
+        .input-section .hint {
+            margin-top: 6px;
+            font-size: 0.82rem;
+            color: #666;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* 按钮 */
+        .split-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .split-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .split-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .split-btn.loading {
+            pointer-events: none;
+        }
+
+        .split-btn.loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 200%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.15),
+                transparent
+            );
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(50%); }
+        }
+
+        /* 结果区域 */
+        .results {
+            margin-top: 24px;
+            display: none;
+        }
+
+        .results.visible {
+            display: block;
+        }
+
+        .results h3 {
+            margin-bottom: 12px;
+            color: #667eea;
+        }
+
+        .result-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .result-item:hover {
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .result-item .info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result-item .info .file-icon {
+            font-size: 1.4rem;
+        }
+
+        .result-item .info .name {
+            font-weight: 500;
+        }
+
+        .result-item .info .pages {
+            font-size: 0.82rem;
+            color: #888;
+        }
+
+        .download-btn {
+            padding: 8px 16px;
+            border: 1px solid #667eea;
+            border-radius: 6px;
+            background: transparent;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .download-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .download-all-btn {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .download-all-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        /* 错误提示 */
+        .error-msg {
+            display: none;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            color: #ef4444;
+            font-size: 0.9rem;
+        }
+
+        .error-msg.visible {
+            display: block;
+        }
+
+        /* 成功提示 */
+        .success-msg {
+            display: none;
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            color: #22c55e;
+            font-size: 0.9rem;
+        }
+
+        .success-msg.visible {
+            display: block;
+        }
+
+        /* 底部信息 */
+        .footer {
+            margin-top: 24px;
+            text-align: center;
+            color: #555;
+            font-size: 0.82rem;
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 1.8rem; }
+            .container { padding: 20px; }
+            .mode-selector { flex-direction: column; }
+            .upload-zone { padding: 32px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <h1>✂️ PDF 分割器</h1>
+    <p class="subtitle">真正分割 PDF 文件，而不是隐藏页面</p>
+
+    <div class="container">
+        <!-- 上传区域 -->
+        <div class="upload-zone" id="uploadZone">
+            <div class="icon">📄</div>
+            <p id="uploadText">拖拽 PDF 文件到此处，或点击选择文件</p>
+            <input type="file" id="fileInput" accept=".pdf,application/pdf">
+        </div>
+
+        <!-- 文件信息 -->
+        <div class="file-info" id="fileInfo">
+            <span id="fileInfoText"></span>
+            <span class="pages-badge" id="pagesBadge"></span>
+        </div>
+
+        <!-- 模式选择 -->
+        <div class="mode-selector">
+            <button class="mode-btn active" id="modePagesBtn" onclick="setMode('pages')">
+                <span class="mode-icon">📑</span>
+                按页码范围提取
+            </button>
+            <button class="mode-btn" id="modeSplitBtn" onclick="setMode('split')">
+                <span class="mode-icon">✂️</span>
+                按固定页数分割
+            </button>
+        </div>
+
+        <!-- 页码范围输入 -->
+        <div class="input-section" id="pagesInput">
+            <label for="pagesValue">页码范围</label>
+            <input type="text" id="pagesValue" placeholder="例如: 1-3,5,7-9">
+            <p class="hint">支持范围 (1-3) 和单页 (5)，用逗号分隔</p>
+        </div>
+
+        <!-- 分割页数输入 -->
+        <div class="input-section hidden" id="splitInput">
+            <label for="splitValue">每份页数</label>
+            <input type="number" id="splitValue" min="1" value="1" placeholder="输入每份包含的页数">
+            <p class="hint">PDF 将按此页数拆分为多个文件</p>
+        </div>
+
+        <!-- 分割按钮 -->
+        <button class="split-btn" id="splitBtn" onclick="doSplit()" disabled>
+            🔪 开始分割
+        </button>
+
+        <!-- 错误提示 -->
+        <div class="error-msg" id="errorMsg"></div>
+
+        <!-- 结果区域 -->
+        <div class="results" id="results">
+            <div class="success-msg visible" id="successMsg"></div>
+            <h3>📦 分割结果</h3>
+            <div id="resultList"></div>
+            <button class="download-all-btn" id="downloadAllBtn" onclick="downloadAll()" style="display:none">
+                ⬇️ 下载全部
+            </button>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>使用 Rust + lopdf 构建 · 真正的 PDF 页面分割</p>
+    </div>
+
+    <script>
+        let currentMode = 'pages';
+        let currentFile = null;
+        let totalPages = 0;
+        let splitResults = [];
+
+        // 模式切换
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('modePagesBtn').classList.toggle('active', mode === 'pages');
+            document.getElementById('modeSplitBtn').classList.toggle('active', mode === 'split');
+            document.getElementById('pagesInput').classList.toggle('hidden', mode !== 'pages');
+            document.getElementById('splitInput').classList.toggle('hidden', mode !== 'split');
+        }
+
+        // 文件选择
+        const fileInput = document.getElementById('fileInput');
+        const uploadZone = document.getElementById('uploadZone');
+
+        fileInput.addEventListener('change', function (e) {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // 拖拽支持
+        uploadZone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        });
+
+        uploadZone.addEventListener('dragleave', function () {
+            uploadZone.classList.remove('drag-over');
+        });
+
+        uploadZone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        async function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showError('请选择 PDF 文件');
+                return;
+            }
+
+            currentFile = file;
+            document.getElementById('uploadText').innerHTML =
+                '<span class="file-name">📎 ' + file.name + '</span>';
+
+            // 获取文件信息
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const resp = await fetch('/api/info', { method: 'POST', body: formData });
+                const data = await resp.json();
+
+                if (data.success) {
+                    totalPages = data.total_pages;
+                    const infoEl = document.getElementById('fileInfo');
+                    document.getElementById('fileInfoText').textContent = data.file_name;
+                    document.getElementById('pagesBadge').textContent = totalPages + ' 页';
+                    infoEl.classList.add('visible');
+                    document.getElementById('splitBtn').disabled = false;
+                    hideError();
+                } else {
+                    showError(data.message);
+                }
+            } catch (e) {
+                showError('获取文件信息失败: ' + e.message);
+            }
+        }
+
+        async function doSplit() {
+            if (!currentFile) {
+                showError('请先选择 PDF 文件');
+                return;
+            }
+
+            const btn = document.getElementById('splitBtn');
+            btn.classList.add('loading');
+            btn.textContent = '⏳ 处理中...';
+            btn.disabled = true;
+            hideError();
+            hideResults();
+
+            const formData = new FormData();
+            formData.append('file', currentFile);
+            formData.append('mode', currentMode);
+
+            if (currentMode === 'pages') {
+                const pages = document.getElementById('pagesValue').value.trim();
+                if (!pages) {
+                    showError('请输入页码范围');
+                    resetBtn();
+                    return;
+                }
+                formData.append('pages', pages);
+            } else {
+                const n = parseInt(document.getElementById('splitValue').value);
+                if (!n || n < 1) {
+                    showError('每份页数必须大于 0');
+                    resetBtn();
+                    return;
+                }
+                formData.append('split_every', n.toString());
+            }
+
+            try {
+                const resp = await fetch('/api/split', { method: 'POST', body: formData });
+                const data = await resp.json();
+
+                if (data.success) {
+                    splitResults = data.files;
+                    showResults(data.message, data.files);
+                } else {
+                    showError(data.message);
+                }
+            } catch (e) {
+                showError('分割请求失败: ' + e.message);
+            }
+
+            resetBtn();
+        }
+
+        function resetBtn() {
+            const btn = document.getElementById('splitBtn');
+            btn.classList.remove('loading');
+            btn.textContent = '🔪 开始分割';
+            btn.disabled = !currentFile;
+        }
+
+        function showResults(message, files) {
+            const container = document.getElementById('results');
+            const list = document.getElementById('resultList');
+            const successMsg = document.getElementById('successMsg');
+
+            successMsg.textContent = '✅ ' + message;
+            list.innerHTML = '';
+
+            files.forEach(function (file, index) {
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                item.innerHTML =
+                    '<div class="info">' +
+                    '  <span class="file-icon">📄</span>' +
+                    '  <div>' +
+                    '    <div class="name">' + file.name + '</div>' +
+                    '    <div class="pages">' + file.page_count + ' 页</div>' +
+                    '  </div>' +
+                    '</div>' +
+                    '<a class="download-btn" href="#" onclick="downloadFile(' + index + '); return false;">下载</a>';
+                list.appendChild(item);
+            });
+
+            document.getElementById('downloadAllBtn').style.display =
+                files.length > 1 ? 'inline-block' : 'none';
+
+            container.classList.add('visible');
+        }
+
+        function downloadFile(index) {
+            const file = splitResults[index];
+            const byteString = atob(file.data);
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            const blob = new Blob([ab], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadAll() {
+            splitResults.forEach(function (_, index) {
+                setTimeout(function () {
+                    downloadFile(index);
+                }, index * 300);
+            });
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = '❌ ' + msg;
+            el.classList.add('visible');
+        }
+
+        function hideError() {
+            document.getElementById('errorMsg').classList.remove('visible');
+        }
+
+        function hideResults() {
+            document.getElementById('results').classList.remove('visible');
+        }
+    </script>
+</body>
+</html>

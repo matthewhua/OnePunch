@@ -1,1 +1,0 @@
-/usr/bin/c++ -g CMakeFiles/STLPrinciple.dir/STLPrinciple.cpp.o -o STLPrinciple 

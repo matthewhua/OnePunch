@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="com.wenjun.codeepiphany.challenge.settings">
+    <option name="challenges">
+      <map>
+        <entry key="$PROJECT_DIR$/LC/无重复字符的最长子串.go">
+          <value>
+            <ChallengeSettingsStateItem>
+              <option name="challengeId" value="1986006699332472832" />
+              <option name="challengeLanguageId" value="1986006699554770944" />
+              <option name="defaultTestCases">
+                <TestCase>
+                  <option name="expectedOutput" value="3" />
+                  <option name="input" value="&quot;abcabcbb&quot;" />
+                </TestCase>
+                <TestCase>
+                  <option name="expectedOutput" value="1" />
+                  <option name="input" value="&quot;bbbbb&quot;" />
+                </TestCase>
+                <TestCase>
+                  <option name="expectedOutput" value="3" />
+                  <option name="input" value="&quot;pwwkew&quot;" />
+                </TestCase>
+              </option>
+              <option name="dojo" value="leetcodecn" />
+              <option name="language" value="go" />
+              <option name="solutionId" value="1986006699579936768" />
+              <option name="testCases">
+                <TestCase>
+                  <option name="expectedOutput" value="3" />
+                  <option name="input" value="&quot;abcabcbb&quot;" />
+                </TestCase>
+                <TestCase>
+                  <option name="expectedOutput" value="1" />
+                  <option name="input" value="&quot;bbbbb&quot;" />
+                </TestCase>
+                <TestCase>
+                  <option name="expectedOutput" value="3" />
+                  <option name="input" value="&quot;pwwkew&quot;" />
+                </TestCase>
+              </option>
+            </ChallengeSettingsStateItem>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

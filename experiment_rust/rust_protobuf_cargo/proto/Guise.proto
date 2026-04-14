@@ -1,0 +1,51 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================模块定义================================
+// function 12 外观数据
+option java_outer_classname = "GuisePb";
+message GuiseDataFunction {
+  optional int32 portrait = 1;              // 头像
+  repeated int32 unlockedPortrait = 2;      // 已解锁头像
+  optional int32 portraitFrame = 3;         // 头像框
+  repeated int32 unlockedPortraitFrame = 4; // 已解锁头像框
+  optional int32 title = 5;                 // 称号
+  repeated int32 unlockedTitle = 6;         // 已解锁称号
+  extend FunctionClientBase {
+    optional GuiseDataFunction ext = 22;
+  }
+}
+
+// ================================结构定义================================
+
+// ================================协议定义================================
+// 协议号范围[7001-7250]
+// 修改头像
+message ModifyPortraitRq {
+  required int32 portrait = 1; // 头像
+  extend Base {
+    optional ModifyPortraitRq ext = 7001;
+  }
+}
+
+message ModifyPortraitRs {
+  optional int32 portrait = 1; // 头像
+  extend Base {
+    optional ModifyPortraitRs ext = 7002;
+  }
+}
+
+// ================================推送定义================================
+// 协议号范围[7251-7300]
+// [推送] 同步外观数据改变
+message SyncGuiseDataChangeRs {
+  repeated int32 unlockedPortrait = 1;      // 已解锁头像
+  repeated int32 unlockedPortraitFrame = 2; // 已解锁头像框
+  repeated int32 unlockedTitle = 3;         // 已解锁称号
+  extend Base {
+    optional SyncGuiseDataChangeRs ext = 7251;
+  }
+}

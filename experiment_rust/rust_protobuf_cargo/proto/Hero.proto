@@ -1,0 +1,547 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================常量定义================================
+// 游戏中英雄外出执行任务、战斗等行为的类型定义, 如副本战斗、外出采集、攻城、掠地等
+enum HeroExpeditionType {
+  NORMAL_COMBAT = 1;    // 普通副本
+}
+
+// ================================模块定义================================
+// function 2 英雄数据
+option java_outer_classname = "HeroPb";
+message HeroDataFunction {
+  repeated Hero hero = 1;                   // 英雄列表
+  repeated RecruitData heroRecruit = 2;     // 英雄招募数据列表
+  repeated TwoInt echoData = 3;             // 等级共鸣数据列表(v1: 英雄id(没放英雄则为0), v2: 冷却完成时间点(秒))
+  repeated Formation formation = 4;         // 编队数据
+  repeated BarracksData barracksData = 5;   // 兵营数据
+  repeated TwoInt levelResetCDData = 6;     // 等级重置冷却数据列表(v1: 英雄id, v2: 冷却完成时间点(秒))
+  repeated int32 topHeroes = 7;             // 当前共鸣上阵的英雄id列表
+  optional HospitalDataPb hospitalData = 8; // 医院数据
+  extend FunctionClientBase {
+    optional HeroDataFunction ext = 12;
+  }
+}
+
+// ================================结构定义================================
+// 英雄
+message Hero {
+  required int32 heroId = 1;            // 英雄id
+  required int32 level = 2;             // 等级(共鸣后这个值会变)
+  required int32 originalLevel = 3;     // 原始等级
+  required int32 tier = 4;              // 阶级
+  optional int32 fight = 5;             // 战斗力
+  optional int32 line = 6;              // 兵排数
+  repeated TwoInt attr = 7;             // 属性(v1: 属性类型, v2: 数值)
+  repeated TwoInt skill = 8;            // 技能(v1: 技能id, v2: 等级)
+  repeated TwoInt equip = 9;            // 装备(v1: 装备栏位, v2: 装备唯一id)
+  optional int32 armyCount = 10;        // 目前携带兵力
+  repeated IntDouble tdAttr = 11;       // TD城防英雄属性(v1: 属性类型, v2: 数值)
+  repeated TwoInt storyReward = 12;     // 英雄故事奖励状态(v1: s_hero_story表storyId, v2: 奖励状态, 0代表未领取, 1代表已领取, 是否能领取客户端判断, 服务端校验)
+  optional ExclusiveEquip exEquip = 13; // 专属装备(没有专属装备时没有这个值)
+}
+
+// 英雄属性变更信息
+message HeroAttrChangeInfo {
+  required int32 heroId = 1;     // 英雄id
+  optional int32 line = 2;       // 兵排数
+  optional int32 fight = 3;      // 战斗力
+  repeated TwoInt attr = 4;      // 属性(v1: 属性类型, v2: 数值)
+  repeated IntDouble tdAttr = 5; // td篝火英雄属性(v1: 属性类型, v2: 数值)
+}
+
+// 兵营数据
+message BarracksData {
+  optional int32 buildId = 1;            // 兵营建筑id
+  optional int32 alreadyArmy = 2;        // 已有兵力数量
+  optional int32 trainingArmy = 3;       // 正在训练兵力数量(这个值为0代表未在训练)
+  optional int32 trainingFinishTime = 4; // 训练完成时间点(秒)(这个值比当前时间小代表未在训练)
+}
+
+// 专属装备
+message ExclusiveEquip {
+  optional int32 id = 1;    // 专属装备id
+  optional int32 level = 2; // 等级
+  optional int32 fight = 3; // 战力
+}
+
+// 医院数据
+message HospitalDataPb {
+  optional int32 injuredArmy = 1;        // 伤兵数量
+  optional int32 treatingArmy = 2;       // 正在治疗伤兵数量(这个值为0代表未在治疗)
+  optional int32 treatingFinishTime = 3; // 治疗完成时间点(秒)(这个值比当前时间小代表未在治疗)
+  optional int32 helpId = 4;             // 阵营帮助唯一id
+  optional int32 helpNum = 5;            // 阵营帮助次数
+}
+
+// ================================协议定义================================
+// 协议号范围[2001-2300]
+// 英雄合成
+message HeroCompositeRq {
+  required int32 heroId = 1; // 英雄id
+  extend Base {
+    optional HeroCompositeRq ext = 2001;
+  }
+}
+
+message HeroCompositeRs {
+  optional Hero hero = 1; // 英雄信息
+  extend Base {
+    optional HeroCompositeRs ext = 2002;
+  }
+}
+
+// 英雄升级
+message HeroLevelUpRq {
+  required int32 heroId = 1; // 英雄id
+  extend Base {
+    optional HeroLevelUpRq ext = 2003;
+  }
+}
+
+message HeroLevelUpRs {
+  optional Hero hero = 1; // 英雄信息
+  extend Base {
+    optional HeroLevelUpRs ext = 2004;
+  }
+}
+
+// 英雄升阶
+message HeroTierUpRq {
+  required int32 heroId = 1; // 英雄id
+  extend Base {
+    optional HeroTierUpRq ext = 2005;
+  }
+}
+
+message HeroTierUpRs {
+  optional Hero hero = 1; // 英雄信息
+  extend Base {
+    optional HeroTierUpRs ext = 2006;
+  }
+}
+
+// 英雄技能升级
+message HeroSkillLevelUpRq {
+  required int32 heroId = 1;  // 英雄id
+  required int32 skillId = 2; // 技能id
+  extend Base {
+    optional HeroSkillLevelUpRq ext = 2007;
+  }
+}
+
+message HeroSkillLevelUpRs {
+  optional Hero hero = 1; // 英雄信息
+  extend Base {
+    optional HeroSkillLevelUpRs ext = 2008;
+  }
+}
+
+// 英雄等级重置
+message HeroLevelResetRq {
+  required int32 heroId = 1; // 英雄id
+  extend Base {
+    optional HeroLevelResetRq ext = 2009;
+  }
+}
+
+message HeroLevelResetRs {
+  optional int32 heroId = 1;          // 英雄id
+  optional int32 cdTime = 2;          // 重置冷却完成时间点(秒)
+  optional ChangeInfo changeInfo = 3; // 返还资源
+  extend Base {
+    optional HeroLevelResetRs ext = 2010;
+  }
+}
+
+// 购买清除英雄等级重置冷却时间
+message BuyClearHeroLevelResetCDTimeRq {
+  required int32 heroId = 1; // 英雄id
+  extend Base {
+    optional BuyClearHeroLevelResetCDTimeRq ext = 2011;
+  }
+}
+
+message BuyClearHeroLevelResetCDTimeRs {
+  optional int32 heroId = 1; // 英雄id
+  extend Base {
+    optional BuyClearHeroLevelResetCDTimeRs ext = 2012;
+  }
+}
+
+// 通用碎片兑换指定英雄碎片
+message HeroFragmentExchangeRq {
+  required int32 heroId = 1; // 英雄id
+  required int32 number = 2; // 兑换数量
+  extend Base {
+    optional HeroFragmentExchangeRq ext = 2013;
+  }
+}
+
+message HeroFragmentExchangeRs {
+  extend Base {
+    optional HeroFragmentExchangeRs ext = 2014;
+  }
+}
+
+// 英雄招募
+message HeroRecruitRq {
+  required int32 recruitType = 1;     // 招募type
+  required int32 recruitNumIndex = 2; // 招募次数的索引(recruitNum字段)
+  optional int32 recruitCostType = 3; // 招募消耗类型, 1 道具消耗, 2 货币消耗
+  extend Base {
+    optional HeroRecruitRq ext = 2101;
+  }
+}
+
+message HeroRecruitRs {
+  optional ChangeInfo changeInfo = 1;     // 奖励信息
+  optional int32 recruitType = 2;         // 招募type
+  optional int32 recruitNumIndex = 3;     // 招募次数的索引(recruitNum字段)
+  optional int32 usedFreeCount = 4;       // 已抽取免费次数
+  optional int32 nextFreeTime = 5;        // 下一次免费抽取时间点(秒)(免费次数用完后传第二天零点)
+  optional int32 todayRecruitedCount = 6; // 今日已招募次数
+  repeated TwoInt scheduleChange = 7;     // 累积抽取进度值改变(v1: 招募type, v2: 进度值)
+  extend Base {
+    optional HeroRecruitRs ext = 2102;
+  }
+}
+
+// 等级共鸣上下阵
+message LevelEchoInsideRq {
+  required bool isUp = 1;    // 是否上阵
+  required int32 index = 2;  // 位置索引
+  optional int32 heroId = 3; // 英雄id(上阵需要传)
+  extend Base {
+    optional LevelEchoInsideRq ext = 2151;
+  }
+}
+
+message LevelEchoInsideRs {
+  required bool isUp = 1;      // 是否上阵
+  required int32 index = 2;    // 位置索引
+  optional int32 heroId = 3;   // 英雄id(上阵需要传)
+  optional int32 newLevel = 4; // 上阵之后的新等级(上阵需要传)
+  optional int32 cdTime = 5;   // 冷却完成时间点(秒)(下阵需要传)
+  extend Base {
+    optional LevelEchoInsideRs ext = 2152;
+  }
+}
+
+// 购买共鸣位置冷却时间重置
+message BuyEchoCDResetRq {
+  required int32 index = 1; // 位置索引
+  extend Base {
+    optional BuyEchoCDResetRq ext = 2153;
+  }
+}
+
+message BuyEchoCDResetRs {
+  optional int32 index = 1; // 位置索引
+  extend Base {
+    optional BuyEchoCDResetRs ext = 2154;
+  }
+}
+
+// 校验施放技能(用来校验巫医和祭司的技能施放)
+message CheckCastSkillRq {
+  required int32 buffId = 1; // 施放的技能buffId
+  extend Base {
+    optional CheckCastSkillRq ext = 2155;
+  }
+}
+
+message CheckCastSkillRs {
+  optional int32 buffId = 1; // 施放的技能buffId
+  optional bool result = 2;  // true为施放成功, false为施放失败
+  extend Base {
+    optional CheckCastSkillRs ext = 2156;
+  }
+}
+
+// 编队上阵
+message FormationUpRq {
+  required int32 formationId = 1; // 编队id
+  required int32 index = 2;       // 索引位置(从0开始)
+  required int32 heroId = 3;      // 英雄id
+  extend Base {
+    optional FormationUpRq ext = 2157;
+  }
+}
+
+message FormationUpRs {
+  repeated Formation formation = 1; // 编队数据
+  optional int32 heroId = 2;        // 被顶下阵英雄id(如果有才会传)
+  extend Base {
+    optional FormationUpRs ext = 2158;
+  }
+}
+
+// 编队下阵
+message FormationDownRq {
+  required int32 formationId = 1; // 编队id
+  required int32 index = 2;       // 索引位置(从0开始)
+  extend Base {
+    optional FormationDownRq ext = 2159;
+  }
+}
+
+message FormationDownRs {
+  optional Formation formation = 1; // 编队数据
+  optional int32 heroId = 2;        // 下阵英雄id
+  extend Base {
+    optional FormationDownRs ext = 2160;
+  }
+}
+
+// 兵营训练
+message BarracksTrainingRq {
+  required int32 buildId = 1; // 兵营建筑id
+  required int32 type = 2;    // 训练类型(1: 普通训练; 2: 立即完成)
+  required int32 number = 3;  // 训练数量
+  extend Base {
+    optional BarracksTrainingRq ext = 2161;
+  }
+}
+
+message BarracksTrainingRs {
+  optional BarracksData barracksData = 1; // 兵营数据
+  extend Base {
+    optional BarracksTrainingRs ext = 2162;
+  }
+}
+
+// 兵营训练加速
+message BarracksTrainingSpeedUpRq {
+  required int32 buildId = 1;   // 兵营建筑id
+  required int32 type = 2;      // 加速类型(1: 道具加速, 该类型需要传下面两个参数; 2: 立即完成; 3: 道具一键加速)
+  optional int32 propId = 3;    // 加速道具id
+  optional int32 useNumber = 4; // 加速道具使用数量
+  extend Base {
+    optional BarracksTrainingSpeedUpRq ext = 2163;
+  }
+}
+
+message BarracksTrainingSpeedUpRs {
+  optional BarracksData barracksData = 1; // 兵营数据
+  extend Base {
+    optional BarracksTrainingSpeedUpRs ext = 2164;
+  }
+}
+
+// 兵营取消训练
+message BarracksTrainingCancelRq {
+  required int32 buildId = 1; // 兵营建筑id
+  extend Base {
+    optional BarracksTrainingCancelRq ext = 2165;
+  }
+}
+
+message BarracksTrainingCancelRs {
+  optional int32 buildId = 1; // 兵营建筑id
+  extend Base {
+    optional BarracksTrainingCancelRs ext = 2166;
+  }
+}
+
+// 快速补兵
+message FastReplenishRq {
+  required int32 formationId = 1; // 编队id
+  extend Base {
+    optional FastReplenishRq ext = 2167;
+  }
+}
+
+message FastReplenishRs {
+  repeated Hero hero = 1; // 英雄信息
+  extend Base {
+    optional FastReplenishRs ext = 2168;
+  }
+}
+
+// 领取英雄故事奖励
+message ReceiveHeroStoryRewardRq {
+  required int32 storyId = 1; // 故事id
+  extend Base {
+    optional ReceiveHeroStoryRewardRq ext = 2169;
+  }
+}
+
+message ReceiveHeroStoryRewardRs {
+  optional int32 storyId = 1; // 故事id
+  extend Base {
+    optional ReceiveHeroStoryRewardRs ext = 2170;
+  }
+}
+
+// 英雄专属装备激活与强化
+message ExclusiveEquipLevelUpRq {
+  required int32 heroEquipId = 1; // 英雄专属装备id
+  extend Base {
+    optional ExclusiveEquipLevelUpRq ext = 2171;
+  }
+}
+
+message ExclusiveEquipLevelUpRs {
+  optional ExclusiveEquip exEquip = 1; // 专属装备
+  extend Base {
+    optional ExclusiveEquipLevelUpRs ext = 2172;
+  }
+}
+
+// 医院治疗伤兵
+message HospitalTreatRq {
+  required int32 type = 1;    // 治疗类型(1: 普通治疗; 2: 立即完成)
+  required int32 number = 2;  // 治疗数量
+  extend Base {
+    optional HospitalTreatRq ext = 2173;
+  }
+}
+
+message HospitalTreatRs {
+  optional HospitalDataPb hospitalData = 1; // 医院数据
+  extend Base {
+    optional HospitalTreatRs ext = 2174;
+  }
+}
+
+// 医院治疗加速
+message HospitalTreatSpeedUpRq {
+  required int32 type = 1;      // 加速类型(1: 道具加速, 该类型需要传下面两个参数; 2: 立即完成; 3: 道具一键加速)
+  optional int32 propId = 2;    // 加速道具id
+  optional int32 useNumber = 3; // 加速道具使用数量
+  extend Base {
+    optional HospitalTreatSpeedUpRq ext = 2175;
+  }
+}
+
+message HospitalTreatSpeedUpRs {
+  optional HospitalDataPb hospitalData = 1; // 医院数据
+  extend Base {
+    optional HospitalTreatSpeedUpRs ext = 2176;
+  }
+}
+
+// 医院取消治疗
+message HospitalTreatCancelRq {
+  extend Base {
+    optional HospitalTreatCancelRq ext = 2177;
+  }
+}
+
+message HospitalTreatCancelRs {
+  optional HospitalDataPb hospitalData = 1; // 医院数据
+  extend Base {
+    optional HospitalTreatCancelRs ext = 2178;
+  }
+}
+
+// 兵营领取士兵
+message BarracksTrainingReceiveRq {
+  required int32 buildId = 1; // 兵营建筑id
+  extend Base {
+    optional BarracksTrainingReceiveRq ext = 2179;
+  }
+}
+
+message BarracksTrainingReceiveRs {
+  optional BarracksData barracksData = 1; // 兵营数据
+  extend Base {
+    optional BarracksTrainingReceiveRs ext = 2180;
+  }
+}
+
+// ================================推送定义================================
+// 协议号范围[2301-2500]
+// [推送]获得英雄
+message SyncHeroAddRs {
+  repeated Hero hero = 1; // 英雄信息
+  extend Base {
+    optional SyncHeroAddRs ext = 2301;
+  }
+}
+
+// [推送]英雄属性变更
+message SyncHeroAttrChangeRs {
+  repeated HeroAttrChangeInfo heroAttrChangeInfo = 1; // 英雄属性变更信息
+  extend Base {
+    optional SyncHeroAttrChangeRs ext = 2302;
+  }
+}
+
+// [推送]共鸣等级变更
+message SyncEchoLevelChangeRs {
+  optional int32 echoLevel = 1; // 共鸣等级
+  repeated int32 topHeroes = 2; // 当前共鸣上阵的英雄id列表
+  extend Base {
+    optional SyncEchoLevelChangeRs ext = 2303;
+  }
+}
+
+// [推送]编队新增
+message SyncFormationAddRs {
+  repeated Formation formation = 1; // 编队数据
+  extend Base {
+    optional SyncFormationAddRs ext = 2304;
+  }
+}
+
+// [推送]兵营训练完成
+message SyncBarracksTrainingFinishRs {
+  repeated int32 buildId = 1; // 兵营建筑id
+  extend Base {
+    optional SyncBarracksTrainingFinishRs ext = 2305;
+  }
+}
+
+// [推送]编队状态变更
+message SyncFormationStateChangeRs {
+  repeated TwoInt states = 1; // 状态数据(v1: 编队id, v2: 编队状态)
+  extend Base {
+    optional SyncFormationStateChangeRs ext = 2306;
+  }
+}
+
+// [推送]兵营数据更新
+message SyncBarracksDataUpdateRs {
+  repeated BarracksData barracksData = 1; // 兵营数据
+  extend Base {
+    optional SyncBarracksDataUpdateRs ext = 2307;
+  }
+}
+
+// [推送]编队删除
+message SyncFormationRemoveRs {
+  repeated int32 formationId = 1; // 编队id
+  extend Base {
+    optional SyncFormationRemoveRs ext = 2308;
+  }
+}
+
+// [推送]英雄更新
+message SyncHeroUpdateRs {
+  repeated Hero hero = 1; // 英雄信息
+  extend Base {
+    optional SyncHeroUpdateRs ext = 2309;
+  }
+}
+
+//推送招募信息
+message SyncRecruitInfoRs {
+  repeated RecruitData heroRecruit = 1;
+  extend Base {
+    optional SyncRecruitInfoRs ext = 2310;
+  }
+}
+
+// [推送]医院数据更新(包含医院治疗完成和收治伤兵)
+message SyncHospitalDataUpdateRs {
+  optional HospitalDataPb hospitalData = 1; // 医院数据
+  extend Base {
+    optional SyncHospitalDataUpdateRs ext = 2311;
+  }
+}

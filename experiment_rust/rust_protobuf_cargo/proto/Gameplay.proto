@@ -1,0 +1,546 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+import "Camp.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================模块定义================================
+// function 17 玩法功能数据
+option java_outer_classname = "GameplayPb";
+message GameplayDataFunction {
+  repeated BaseWeeklyGameplayData globalWeeklyGameplayData = 1;   // 全局周常玩法数据(不做存储, 只传给客户端)
+  repeated BaseWeeklyGameplayData personalWeeklyGameplayData = 2; // 个人周常玩法数据
+  extend FunctionClientBase {
+    optional GameplayDataFunction ext = 28;
+  }
+}
+
+// 全局玩法数据(只服务端存储)
+message GlobalGameplayData {
+  repeated BaseWeeklyGameplayData globalWeeklyGameplayData = 1; // 全局周常玩法数据
+}
+
+// ================================枚举定义================================
+// 玩法状态
+enum GameplayState {
+  CLOSE = 0;         // 关闭
+  DISPLAY_BEGIN = 1; // 预显示
+  GAMEPLAY_OPEN = 2; // 开启
+  DISPLAY_END = 3;   // 结束展示
+}
+
+// ================================结构定义================================
+// 基础玩法数据
+message BaseWeeklyGameplayData {
+  optional int32 uniqueId = 1; // s_week_activity_time 表的 id
+  optional int32 gameplayId = 2; // s_week_activity_time 表的 activityId
+  optional int32 gameplayType = 3; // s_week_activity_time 表的 activityType
+  optional bool settlement = 4; // 是否已结算
+  repeated int32 executedJobs = 5; // 已执行的定时任务 [服务器序列化字段, 协议交互中不存在]
+  extensions 98 to 99;
+}
+
+// 全局玩法数据, 时间表示的是本次或者下次的时间
+message GlobalWeeklyGameplayData {
+  optional int32 lastOpenTime = 1; // 上次开启时间(服务器使用, 用于控制xx周一次的循环)
+  optional int32 displayBeginTime = 2; // 预显示时间
+  optional int32 beginTime = 3; // 开始时间
+  optional int32 endTime = 4; // 结束时间
+  optional int32 displayEndTime = 5; // 展示期结束时间
+  repeated int32 otherTime = 6; // 其他时间
+  extensions 100 to 999;
+  extend BaseWeeklyGameplayData {
+    optional GlobalWeeklyGameplayData ext = 98;
+  }
+}
+
+// 个人玩法数据
+message PersonalWeeklyGameplayData {
+  optional int32 displayBeginTime = 1; // 排期的预显示开始时间(秒)，用于同一档位重复开启时识别轮次并重置数据 [服务器序列化字段, 协议交互中不存在]
+  extensions 1000 to 1999;
+  extend BaseWeeklyGameplayData {
+    optional PersonalWeeklyGameplayData ext = 99;
+  }
+}
+
+// ================================叛军来袭================================
+
+// 叛军来袭-全局数据
+message GlobalRebelArmyStrikeData {
+  repeated CampRebelsArmyGamePlayData rebelsData = 1;      // 阵营数据
+  repeated RebelsHistoryRank rebelRank = 2;                // 叛军排行 [服务器序列化字段, 协议交互中不存在]
+  extend GlobalWeeklyGameplayData {
+    optional GlobalRebelArmyStrikeData ext = 101;
+  }
+}
+
+// 叛军来袭-个人数据
+message PersonalRebelArmyStrikeData {
+  optional int32 defenceFailedCount = 1;  // 防守失败的次数
+  optional int32 ticketCampId = 2;        // 门票所在阵营
+  optional int32 ticketValidTime = 3;     // 门票有效时间
+  repeated int32 looseCount = 4;          // 失败的波次
+  optional int64 score = 5;               // 当前的积分
+  repeated int32 claimReward = 6;         // 已领取的积分奖励
+  extend PersonalWeeklyGameplayData {
+    optional PersonalRebelArmyStrikeData ext = 1001;
+  }
+}
+
+// 叛军来袭-阵营数据
+message CampRebelsArmyGamePlayData {
+  optional int32 campId = 1;          // 阵营id
+  optional int32 reservationTime = 2; // 预约时间
+  optional int32 chooseLv = 3;        // 本次选择的难度
+  optional int64 nowScore = 4;        // 当前的积分
+  optional int32 nowCount = 5;        // 当前波数
+  optional int32 nextCountTime = 6;   // 下波出怪时间
+  optional int32 pos = 7;             // 本次活动指定出怪坐标
+  optional int32 startTime = 8;       // 活动开始时间戳
+  optional int32 endTime = 9;         // 活动结束时间戳
+  optional int32 defenseCity = 10;    // 防守城市id
+  optional int64 hisHighScore = 11;   // 历史最高积分
+}
+
+// 叛军来袭-历史排行
+message RebelsHistoryRank {
+  optional int32 time = 1; //结算当天的时间
+  optional int32 rankType = 2; // 排行类型
+  repeated RankItem rank = 3; //玩家排行
+}
+
+// 叛军来袭-防守城市数据
+message RebelsDefenseCityData {
+  required int32 cityId = 1; // 城市id
+  required int32 campId = 2; // 归属阵营
+  optional TwoInt garrisonCnt = 3;  // v1: 当前驻军数量, v2: 最大驻军数量
+  optional int64 fight = 4;         // 驻军总战斗力
+}
+
+// 叛军来袭-个人防守进度
+message RebelPersonDefenseProgress {
+  required int64 roleId = 1;        // 玩家id
+  optional string nick = 2;         // 昵称
+  optional int32 portrait = 3;      // 头像
+  optional int32 portraitFrame = 4; // 头像框
+  optional int32 failedCount = 5;   // 防守失败的次数
+  optional bool isOnline = 6;       // 是否在线
+  optional int32 pos = 7;           // 玩家所在坐标
+  optional TwoInt garrisonCnt = 8;  // v1: 当前驻军数量, v2: 最大驻军数量
+}
+
+// ================================狩猎陷阱================================
+
+// 狩猎陷阱-全局玩法数据
+message GlobalHuntingTrapData {
+  repeated CampHuntingTrapData campHuntingTrapData = 1; // 阵营狩猎陷阱数据
+  extend GlobalWeeklyGameplayData {
+    optional GlobalHuntingTrapData ext = 102;
+  }
+}
+
+// 阵营狩猎陷阱玩法数据
+message CampHuntingTrapData {
+  required int32 camp = 1; // 阵营
+  optional int32 pos = 2; // 陷阱位置 -1: 未放置陷阱
+  optional int32 startTime = 3; // 狩猎开始时间
+  optional int32 endTime = 4; // 狩猎结束时间
+  optional HuntingTrapStrengthen strengthenData = 5; // 陷阱强化数据
+  optional int32 bossId = 6; // bossId
+  optional int64 damageScore = 7; // 阵营累计伤害积分
+  optional int32 serverOpenDay = 8; // 活动开启时对应的服务器开服天数, 用于固定奖励配置
+  optional int32 battleCount = 9;   // [服务器使用] 活动期间战斗次数
+}
+
+// 狩猎陷阱强化数据
+message HuntingTrapStrengthen {
+  required int32 lv = 1; // 陷阱等级
+  required int32 exp = 2; // 陷阱经验
+}
+
+// 狩猎陷阱-个人玩法数据
+message PersonalHuntingTrapData {
+  required int64 damageScore = 1; // 本次活动伤害积分
+  required HuntingTrapAchievement achievement = 2; // 狩猎成就
+  optional int64 damageScoreUpdateTime = 3; // 伤害积分最后更新时间, 用于排行榜同分时按时间排序 [服务器使用]
+  extend PersonalWeeklyGameplayData {
+    optional PersonalHuntingTrapData ext = 1002;
+  }
+}
+
+// 狩猎成就
+message HuntingTrapAchievement {
+  required int64 historyMaxDamageScore = 1; // 历史最高伤害积分
+  repeated int32 receivedRewardIds = 2; // 已领取的奖励id
+}
+
+// ================================布狄卡的反击================================
+
+// 布狄卡的反击-全局玩法数据
+message GlobalBoudicaRevengeData {
+  optional int32 taskId = 1;            // 本期任务id
+  repeated int32 exchangeIds = 2;       // 本期兑换的奖励id
+  extend GlobalWeeklyGameplayData {
+    optional GlobalBoudicaRevengeData ext = 103;
+  }
+}
+
+// 布狄卡的反击-个人玩法数据
+message PersonalBoudicaRevengeData {
+  optional int32 pirateFleetPos = 1;    // 召唤的海盗舰队位置
+  optional int32 joinerRecvCount = 2;   // 加入者已领取奖励次数
+  optional int32 defeatCount = 3;       // 已击败的海盗舰队数量
+  repeated int32 receivedRewardIds = 4; // 已领取的奖励id
+  repeated TwoInt exchangeRecord = 5;   // 兑换记录, 每个元素表示[兑换id, 兑换次数]
+  extend PersonalWeeklyGameplayData {
+    optional PersonalBoudicaRevengeData ext = 1003;
+  }
+}
+
+// ================================协议定义================================
+// 协议号范围[9001-10000]
+
+
+// ------------------------------狩猎陷阱 [9101 - 9120]--------------------------------------
+// 放置陷阱、迁移建筑
+message PlaceHuntingTrapRq {
+  required int32 pos = 1; // 陷阱位置(左下角坐标)
+  extend Base {
+    optional PlaceHuntingTrapRq ext = 9101;
+  }
+}
+
+message PlaceHuntingTrapRs {
+  required int32 pos = 1; // 陷阱位置
+  extend Base {
+    optional PlaceHuntingTrapRs ext = 9102;
+  }
+}
+
+// 开启陷阱
+message OpenHuntingTrapRq {
+  optional int32 startTime = 1; // 预约的开始时间, 单位: 秒, 不传或0表示立即开启
+  extend Base {
+    optional OpenHuntingTrapRq ext = 9103;
+  }
+}
+
+message OpenHuntingTrapRs {
+  optional int32 startTime = 1; // 狩猎陷阱开启时间
+  optional int32 endTime = 2; // 狩猎陷阱结束时间
+  extend Base {
+    optional OpenHuntingTrapRs ext = 9104;
+  }
+}
+
+// 强化陷阱
+message StrengthenHuntingTrapRq {
+  required int32 num = 1; // 捐献数量
+  extend Base {
+    optional StrengthenHuntingTrapRq ext = 9105;
+  }
+}
+
+message StrengthenHuntingTrapRs {
+  optional ChangeInfo changeInfo = 1; // 变化信息
+  required HuntingTrapStrengthen strengthenData = 2; // 强化后的陷阱数据
+  extend Base {
+    optional StrengthenHuntingTrapRs ext = 9106;
+  }
+}
+
+// 领取成就奖励
+message ReceiveHuntingTrapAchievementRewardRq {
+  repeated int32 id = 1; // 奖励id
+  extend Base {
+    optional ReceiveHuntingTrapAchievementRewardRq ext = 9107;
+  }
+}
+
+message ReceiveHuntingTrapAchievementRewardRs {
+  optional ChangeInfo changeInfo = 1; // 变化信息
+  required HuntingTrapAchievement achievement = 2; // 狩猎成就
+  extend Base {
+    optional ReceiveHuntingTrapAchievementRewardRs ext = 9108;
+  }
+}
+
+// 获取伤害排行榜
+message GetHuntingTrapDamageRankRq {
+  optional int32 page = 1; // 第几页, 从1开始, 每页默认20个
+  extend Base {
+    optional GetHuntingTrapDamageRankRq ext = 9109;
+  }
+}
+
+message GetHuntingTrapDamageRankRs {
+  required int32 page = 1; // 第几页, 每页默认20个
+  repeated RankItem rankItem = 2; // 排行榜信息列表
+  required RankItem myRank = 3;   // 自身排行榜信息
+  optional int32 totalPage = 4;   // 排行榜总页数
+  extend Base {
+    optional GetHuntingTrapDamageRankRs ext = 9110;
+  }
+}
+
+// ------------------------------布狄卡的反击 [9121 - 9140]--------------------------------------
+
+// 召唤海盗舰队
+message SummonPirateFleetRq {
+  extend Base {
+    optional SummonPirateFleetRq ext = 9121;
+  }
+}
+
+message SummonPirateFleetRs {
+  extend Base {
+    optional SummonPirateFleetRs ext = 9122;
+  }
+}
+
+// 领取布狄卡的反击奖励
+message ReceiveBoudicaRevengeRewardRq {
+  required int32 id = 1; // 奖励id
+  extend Base {
+    optional ReceiveBoudicaRevengeRewardRq ext = 9223;
+  }
+}
+
+message ReceiveBoudicaRevengeRewardRs {
+  optional ChangeInfo changeInfo = 1; // 变化信息
+  required int32 id = 2; // 奖励id
+  extend Base {
+    optional ReceiveBoudicaRevengeRewardRs ext = 9224;
+  }
+}
+
+// 兑换活动奖励
+message ExchangeActivityRq {
+  required int32 exchangeId = 1; // 兑换id, 对应s_activity_exchange表的id
+  extend Base {
+    optional ExchangeActivityRq ext = 9225;
+  }
+}
+
+message ExchangeActivityRs {
+  optional ChangeInfo rewardChange = 1; // 奖励的变化
+  required int32 exchangeId = 2; // 兑换id, 对应s_activity_exchange表的id
+  extend Base {
+    optional ExchangeActivityRs ext = 9226;
+  }
+}
+
+// ------------------------------布狄卡的反击 [9141 - 9160]--------------------------------------
+
+// ######### 叛军来袭 7001 - 7020 #######
+// 打开叛军来袭[暂无用处]
+message OpenRebelsArmyRq {
+  extend Base {
+    optional OpenRebelsArmyRq ext = 9141;
+  }
+}
+
+message OpenRebelsArmyRs {
+  extend Base {
+    optional OpenRebelsArmyRs ext = 9142;
+  }
+}
+
+
+// 指挥官报名叛军来袭[立即开启]
+message ApplyRebelsArmyActivityRq {
+  optional int32 chooseLv = 1;
+  extend Base {
+    optional ApplyRebelsArmyActivityRq ext = 9143;
+  }
+}
+
+message ApplyRebelsArmyActivityRs {
+  extend Base {
+    optional ApplyRebelsArmyActivityRs ext = 9144;
+  }
+}
+
+// 预约叛军来袭
+message ReserveRebelsArmyActivityRq {
+  optional int32 chooseLv = 1; // 本次预约选择的难度
+  optional int32 openTime = 2; // 本次预约选择的开始时间
+  extend Base {
+    optional ReserveRebelsArmyActivityRq ext = 9145;
+  }
+}
+
+message ReserveRebelsArmyActivityRs {
+  optional int32 chooseLv = 1; // 本次预约选择的难度
+  optional int32 openTime = 2; // 本次预约选择的开始时间
+  extend Base {
+    optional ReserveRebelsArmyActivityRs ext = 9146;
+  }
+}
+
+// 调整预约叛军来袭
+message UpdateRebelsArmyActivityRq {
+  optional int32 chooseLv = 1; // 本次预约选择的难度
+  optional int32 openTime = 2; // 本次预约选择的开始时间
+  extend Base {
+    optional UpdateRebelsArmyActivityRq ext = 9147;
+  }
+}
+
+// 调整预约叛军来袭奖励
+message UpdateRebelsArmyActivityRs {
+  optional int32 chooseLv = 1; // 本次预约选择的难度
+  optional int32 openTime = 2; // 本次预约选择的开始时间
+  extend Base {
+    optional UpdateRebelsArmyActivityRs ext = 9148;
+  }
+}
+
+// 叛军来袭-查看当前排行
+message QueryArmyActivityRankRq {
+  optional int32 rankType = 1;      // 排行类型, 对应RankTypeDefine定义
+  extend Base {
+    optional QueryArmyActivityRankRq ext = 9149;
+  }
+}
+
+message QueryArmyActivityRankRs {
+  repeated RankItem rankItem = 1;    // 排行榜信息列表
+  optional RankItem myRank = 2;      // 自身排行榜信息
+  optional int32 rankType = 3;       // 排行类型, 对应RankTypeDefine定义
+  extend Base {
+    optional QueryArmyActivityRankRs ext = 9150;
+  }
+}
+
+
+// 叛军来袭-查看历史排行
+message QueryRebelsArmyHistoryRankRq {
+  optional int32 time = 1;    // 时间戳, 玩法开启时间
+  optional int32 rankType = 2;// 排行类型, 对应RankTypeDefine定义
+  extend Base {
+    optional QueryRebelsArmyHistoryRankRq ext = 9151;
+  }
+}
+
+message QueryRebelsArmyHistoryRankRs {
+  optional int32 time = 1;    // 时间戳
+  optional int32 rankType = 2;// 排行类型, 对应RankTypeDefine定义
+  repeated RankItem rankItem = 3;    // 排行榜信息列表
+  extend Base {
+    optional QueryRebelsArmyHistoryRankRs ext = 9152;
+  }
+}
+
+// 叛军来袭-查看历史排行所有时间戳
+message QueryRebelsArmyHistoryTimeRq {
+  extend Base {
+    optional QueryRebelsArmyHistoryTimeRq ext = 9153;
+  }
+}
+
+message QueryRebelsArmyHistoryTimeRs {
+  repeated int32 time = 1;  // 时间戳, 对应玩法的开启时间
+  extend Base {
+    optional QueryRebelsArmyHistoryTimeRs ext = 9154;
+  }
+}
+
+// 叛军来袭- 领取积分奖励
+message ClaimRebelsArmyScoreAwardRq {
+  optional int32 awardId = 1; // 奖励id
+  optional bool claimAll = 2;  // 是否领取全部
+  extend Base {
+    optional ClaimRebelsArmyScoreAwardRq ext = 9155;
+  }
+}
+
+message ClaimRebelsArmyScoreAwardRs {
+  optional int32 awardId = 1; // 奖励id
+  optional bool claimAll = 2;  // 是否领取全部
+  repeated int32 claimedAwardIds = 3; // 领取的奖励id
+  extend Base {
+    optional ClaimRebelsArmyScoreAwardRs ext = 9156;
+  }
+}
+
+// 查询可防守城市列表
+message QueryDefenseCityListRq {
+  extend Base {
+    optional QueryDefenseCityListRq ext = 9157;
+  }
+}
+
+message QueryDefenseCityListRs {
+  optional int32 commanderPos = 1;    // 指挥官位置
+  repeated RebelsDefenseCityData defenseCityList = 2; // 防守城市列表
+  extend Base {
+    optional QueryDefenseCityListRs ext = 9158;
+  }
+}
+
+// 选择防守城市
+message ChooseDefenseCityRq {
+  optional int32 cityId = 1; // 城市id
+  extend Base {
+    optional ChooseDefenseCityRq ext = 9159;
+  }
+}
+
+message ChooseDefenseCityRs {
+  optional int32 cityId = 1; // 城市id
+  extend Base {
+    optional ChooseDefenseCityRs ext = 9160;
+  }
+}
+
+// 查询阵营成员防守进度
+message QueryCampMemberProgressRq {
+  extend Base {
+    optional QueryCampMemberProgressRq ext = 9161;
+  }
+}
+
+message QueryCampMemberProgressRs {
+  repeated RebelPersonDefenseProgress memberProgress = 1; // 阵营成员防守进度 (仅显示排行前20的玩家)
+  extend Base {
+    optional QueryCampMemberProgressRs ext = 9162;
+  }
+}
+
+
+
+// ================================推送定义================================
+// 协议号范围[10001-11000]
+// [推送]同步玩法活动数据
+message SyncGameplayDataRs {
+  repeated BaseWeeklyGameplayData globalWeeklyGameplayData = 1;   // 全局周常玩法数据
+  repeated BaseWeeklyGameplayData personalWeeklyGameplayData = 2; // 个人周常玩法数据
+  extend Base {
+    optional SyncGameplayDataRs ext = 10001;
+  }
+}
+
+
+// 叛军来袭-活动变化推送
+message SyncRebelsArmyActivityChangeRs {
+  optional int32 tickets = 1; // 是否拥有门票 0否1是
+  optional string openPlayerName = 2; // 操作者名字
+  optional int32 chooseLvTime = 3; // 叛军来袭活动开始时间戳
+  extend Base {
+    optional SyncRebelsArmyActivityChangeRs ext = 10010;
+  }
+}
+
+
+// 叛军来袭活动获胜通知
+message ArmyActivityWinNotice {
+  optional int32 result = 1; // 活动结果
+  optional int32 chooseLv = 3; // 叛军来袭选择难度
+  extend Base {
+    optional ArmyActivityWinNotice ext = 10011;
+  }
+}
+
