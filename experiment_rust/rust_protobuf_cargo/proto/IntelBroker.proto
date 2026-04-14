@@ -1,0 +1,147 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+import "Battle.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================模块定义================================
+// function 21 情报商会数据
+option java_outer_classname = "IntelBrokerPb";
+message IntelBrokerFunction {
+  optional int32 lv = 1;                // 等级
+  optional int32 progress = 2;          // 进度
+  repeated IntelData intelData = 3;     // 情报数据
+  optional IntelData bossIntel = 4;     // boss类型情报数据(特殊情报, 除了玩家自己战胜当前boss, 刷出下一个boss情报任务.不会随任何规则改变)
+  repeated IntelData intelQueue = 5;    // 情报替补任务 服务器使用
+  optional int32 maxBossConfigId = 6;   // 最大boss配置id 服务器使用
+  optional int32 dailyAttackPirateCnt = 7; // 每日进攻海盗次数
+  optional int32 pirateTaskStatus = 8;    // 海盗任务状态
+  optional int32 periodicAttackBossCnt = 9; // 周期内攻击boss次数
+  extend FunctionClientBase {
+    optional IntelBrokerFunction ext = 23;
+  }
+}
+
+// 情报数据
+message IntelData {
+  optional int32 configId = 1;          // 任务配置id
+  optional int32 status = 2;            // 任务状态
+  optional int32 pos = 3;               // 大世界坐标
+  optional int32 remainTime = 4;        // 情报失效剩余时间
+  optional int32 uniqueId = 5;          // 情报任务唯一id
+}
+
+// ================================协议定义--协议号范围[7301-7400]================================
+// 战役类情报任务
+message DoIntelCombatRq {
+  required int32 uniqueId = 1;
+  repeated int32 attackHeroId = 2;              // 进攻的英雄id列表
+    extend Base {
+        optional DoIntelCombatRq ext = 7301;
+    }
+}
+
+message DoIntelCombatRs {
+    optional IntelData data = 1;
+    optional RecordPb record = 2;           // 战报
+    optional bool isWin = 3;                // 是否胜利
+    optional ChangeInfo info = 4;           // 战役奖励
+    extend Base {
+        optional DoIntelCombatRs ext = 7302;
+    }
+}
+
+// 发起世界情报任务请求 (营救任务/世界boss/世界叛军任务)
+message DoWorldIntelRq {
+  required int32 uniqueId = 1;
+  optional int32 formationId = 2;     // 编队id
+  extend Base {
+    optional DoWorldIntelRq ext = 7303;
+  }
+}
+
+message DoWorldIntelRs {
+  optional IntelData data = 1;
+  extend Base {
+    optional DoWorldIntelRs ext = 7304;
+  }
+}
+
+// 领取情报奖励请求
+message ReceiveIntelAwardRq {
+  optional int32 uniqueId = 1;          // 任务id, 不传代表一键领取
+  extend Base {
+    optional ReceiveIntelAwardRq ext = 7305;
+  }
+}
+
+message ReceiveIntelAwardRs {
+  repeated IntelData data = 1;          // 领取完奖励的情报数据
+  extend Base {
+    optional ReceiveIntelAwardRs ext = 7306;
+  }
+}
+
+// 接受当前海盗情报任务
+message AcceptIntelTaskRq {
+  extend Base {
+    optional AcceptIntelTaskRq ext = 7307;
+  }
+}
+
+message AcceptIntelTaskRs {
+  extend Base {
+    optional AcceptIntelTaskRs ext = 7308;
+  }
+}
+
+// 完成海盗任务请求
+message CompletePirateTaskRq {
+  optional bool win = 1;
+  optional int32 pirateLevel = 2;
+  optional int32 mapId = 3;
+  extend Base {
+    optional CompletePirateTaskRq ext = 7309;
+  }
+}
+
+message CompletePirateTaskRs {
+  extend Base {
+    optional CompletePirateTaskRs ext = 7310;
+  }
+}
+
+// 领取海盗任务奖励请求
+message ReceivePirateTaskRewardRq {
+  optional int32 advertisementId = 1;
+  optional int32 pirateLevel = 2;
+  optional int32 mapId = 3;
+  optional int32 type = 4;
+  extend Base {
+    optional ReceivePirateTaskRewardRq ext = 7311;
+  }
+}
+
+message ReceivePirateTaskRewardRs {
+  optional int32 pirateLevel = 1;                 // 当前通关的海盗等级
+  optional int32 type = 2;
+  extend Base {
+    optional ReceivePirateTaskRewardRs ext = 7312;
+  }
+}
+
+// 完成营救情报任务
+message CompleteRescueTaskRq {
+  required int32 uniqueId = 1;
+  extend Base {
+    optional CompleteRescueTaskRq ext = 7313;
+  }
+}
+
+message CompleteRescueTaskRs {
+  optional IntelData data = 1;                    // 修改完成状态的营救情报任务数据
+  extend Base {
+    optional CompleteRescueTaskRs ext = 7314;
+  }
+}

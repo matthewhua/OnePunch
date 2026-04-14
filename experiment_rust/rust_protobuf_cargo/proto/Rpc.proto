@@ -1,0 +1,23 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+import "Serialize.proto";
+import "Game.proto";
+import "Hero.proto";
+import "Simulate.proto";
+import "Bag.proto";
+import "Technology.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+option java_outer_classname = "RpcPb";
+message RpcMsg{
+    required int32 cmd = 1;
+    optional int32 code = 2;//错误码. 与游戏内定义的错误码保持一致
+    required int32 serverId = 3;
+    required int64 lordId = 4;
+    repeated int64 param = 5;//扩展字段
+    optional string msg = 6;//错误信息
+    extensions 10001 to 40000;
+}

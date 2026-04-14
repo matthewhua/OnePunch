@@ -1,0 +1,45 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================常量定义================================
+
+// ================================模块定义================================
+// function 23 领主装备数据
+option java_outer_classname = "LordEquipPb";
+message LordEquipDataFunction {
+  repeated LordEquipData lordEquip = 1; // 领主装备数据
+  extend FunctionClientBase {
+    optional LordEquipDataFunction ext = 34;
+  }
+}
+
+// ================================结构定义================================
+// 领主装备结构
+message LordEquipData {
+  optional int32 type = 1;  // 类型(部位)
+  optional int32 level = 2; // 等级
+}
+
+// ================================协议定义================================
+// 协议号范围[9321-9390]
+// 领主装备激活与强化
+message LordEquipLevelUpRq {
+  required int32 type = 1; // 类型(部位)
+  extend Base {
+    optional LordEquipLevelUpRq ext = 9321;
+  }
+}
+
+message LordEquipLevelUpRs {
+  optional LordEquipData lordEquip = 1; // 领主装备
+  extend Base {
+    optional LordEquipLevelUpRs ext = 9322;
+  }
+}
+
+// ================================推送定义================================
+// 协议号范围[9391-9400]

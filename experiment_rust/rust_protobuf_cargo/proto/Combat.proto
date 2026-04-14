@@ -1,0 +1,129 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+import "Battle.proto";
+import "IntelBroker.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================模块定义================================
+// function 7 副本战斗数据
+option java_outer_classname = "CombatPb";
+message CombatDataFunction {
+  optional CampaignData campaignData = 1; // 战役数据
+  extend FunctionClientBase {
+    optional CombatDataFunction ext = 17;
+  }
+}
+
+// ================================结构定义================================
+// 战役数据结构
+message CampaignData {
+  optional int32 lastCombatId = 1;           // 当前已通关的最高关卡id(方便扩展, 记录当前未通关的最高关卡id有个问题就是打到最后一关, 之后又扩展的处理)
+  repeated int32 recordFormation = 2;        // 记录的最后一次编队
+  optional int32 lastReceiveTime = 3;        // 上次领取挂机奖励时间点(秒)
+  optional int32 lastCalculateTime = 4;      // 上次计算奖励时间点(秒)(服务端保存, 不传客户端)
+  repeated AwardPb waitingReceiveReward = 5; // 待领取的奖励(服务端保存, 不传客户端)
+  optional int32 fixedRewardCount = 6;       // 固定奖励掉落次数记录(服务端保存, 不传客户端)
+}
+
+// ================================协议定义================================
+// 协议号范围[4501-4700]
+// 发起战役战斗
+message CampaignBattleRq {
+  required int32 combatId = 1;      // 关卡id
+  repeated int32 heroFormation = 2; // 上阵英雄id
+  extend Base {
+    optional CampaignBattleRq ext = 4501;
+  }
+}
+
+message CampaignBattleRs {
+  required bool win = 1;                  // 是否胜利
+  optional ChangeInfo info = 2;           // 获得奖励
+  optional CampaignData campaignData = 3; // 战役数据
+  optional RecordPb record = 4;           // 战报
+  extend Base {
+    optional CampaignBattleRs ext = 4502;
+  }
+}
+
+// 获取挂机奖励信息
+message GetAfkRewardInfoRq {
+  extend Base {
+    optional GetAfkRewardInfoRq ext = 4503;
+  }
+}
+
+message GetAfkRewardInfoRs {
+  repeated AwardPb afkReward = 1; // 挂机奖励
+  extend Base {
+    optional GetAfkRewardInfoRs ext = 4504;
+  }
+}
+
+// 领取挂机奖励
+message ReceiveAfkRewardRq {
+  extend Base {
+    optional ReceiveAfkRewardRq ext = 4505;
+  }
+}
+
+message ReceiveAfkRewardRs {
+  optional ChangeInfo info = 1;   // 获得奖励
+  optional int32 receiveTime = 2; // 领取挂机奖励时间点(秒)
+  extend Base {
+    optional ReceiveAfkRewardRs ext = 4506;
+  }
+}
+
+
+// 客户端战报上传
+message BattleReportRq {
+  optional int32 PKBattleType = 1;
+  optional bool win = 2;                    // 是否胜利
+  optional RandomVerifyResultPb result = 3; // 随机相关结果
+  optional BattleReport record = 4;         // 客户端生成的战报（来自Battle.proto）
+  optional bool isSkip = 5;                 // 是否跳过(是跳过的话就不用发战报
+  extend Base {
+      optional BattleReportRq ext = 4507;
+  }
+}
+
+message BattleReportRs {
+  optional int32 PKBattleType = 1;
+  optional bool win = 2; // 经过服务器验算后的是否胜利
+  optional ChangeInfo info = 3;           // 获得奖励
+  optional CampaignData campaignData = 4; // 战役数据
+  optional IntelData intelData = 5;        // 情报数据
+  optional int32 combatId = 6;                  // 关卡id
+  extend Base {
+    optional BattleReportRs ext = 4508;
+  }
+}
+
+message BattleStartRq {
+  optional int32 PKBattleType = 1;  // 战斗类型
+  required int32 combatId = 2;      // 关卡id
+  repeated int32 heroFormation = 3; // 上阵英雄id
+  extend Base {
+    optional BattleStartRq ext = 4509;
+  }
+}
+
+message BattleStartRs {
+  optional int32 PKBattleType = 1;  // 战斗类型
+  optional RandomVerifySeedPb randomSeed = 2;  // 随机验证种子
+  optional string keyId = 3;                   // 战报唯一Id
+  repeated TwoInt heroIndex = 4;               // 英雄对应ID
+  optional int32 combatId = 5;                 // 关卡id
+  optional bool canSkip = 6;                   // 是否可跳过
+  extend Base {
+    optional BattleStartRs ext = 4510;
+  }
+}
+
+
+
+// ================================推送定义================================
+// 协议号范围[4701-4800]

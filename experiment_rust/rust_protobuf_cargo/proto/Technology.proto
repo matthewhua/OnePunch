@@ -1,0 +1,95 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================模块定义================================
+// function 5 科技数据
+option java_outer_classname = "TechnologyPb";
+message TechnologyDataFunction {
+  repeated TechnologyNode node = 1;           // 科技节点列表(已研究过的)
+  repeated TechnologyResearchQueue queue = 2; // 正在研究的队列
+  extend FunctionClientBase {
+    optional TechnologyDataFunction ext = 15;
+  }
+}
+
+// ================================结构定义================================
+// 科技节点
+message TechnologyNode {
+  optional int32 technologyId = 1; // 科技id
+  optional int32 level = 2;        // 科技等级
+  optional int32 stage = 3;        // 科技所处阶段
+}
+
+// 科技研究队列
+message TechnologyResearchQueue {
+  optional int32 technologyId = 1;  // 科技id
+  optional int32 researchLevel = 2; // 正在研究的等级
+  optional int64 completeTime = 3;  // 研究完成时间点(秒)
+  optional int32 researchStage = 4; // 正在研究的阶段
+  optional int32 helpId = 5;       // 帮助信息的唯一ID ( 服务端用 )
+  optional int32 helpNum = 6;      // 帮助次数 ( 服务端用 )
+}
+
+// ================================协议定义================================
+// 科技研究
+message TechnologyResearchRq {
+  required int32 technologyId = 1; // 科技id
+  required int32 stage = 2;        // 科技阶段
+  required int32 type = 3;         // 研究类型(1: 普通研究; 2: 立即完成)
+  extend Base {
+    optional TechnologyResearchRq ext = 4201;
+  }
+}
+
+message TechnologyResearchRs {
+  extend Base {
+    optional TechnologyResearchRs ext = 4202;
+  }
+}
+
+// 研究加速
+message TechnologySpeedUpRq {
+  required int32 technologyId = 1; // 科技id
+  required int32 stage = 2;        // 科技阶段
+  required int32 type = 3;         // 加速类型(1: 道具加速, 该类型需要传下面两个参数; 2: 立即完成; 3: 道具一键加速)
+  optional int32 propId = 4;       // 加速道具id
+  optional int32 useNumber = 5;    // 加速道具使用数量
+  extend Base {
+    optional TechnologySpeedUpRq ext = 4203;
+  }
+}
+
+message TechnologySpeedUpRs {
+  extend Base {
+    optional TechnologySpeedUpRs ext = 4204;
+  }
+}
+
+// 取消研究
+message TechnologyCancelRq {
+  required int32 technologyId = 1; // 科技id
+  required int32 stage = 2;        // 科技阶段
+  extend Base {
+    optional TechnologyCancelRq ext = 4205;
+  }
+}
+
+message TechnologyCancelRs {
+  extend Base {
+    optional TechnologyCancelRs ext = 4206;
+  }
+}
+
+// [推送] 科技研究完成
+// 用在不在科技界面的时候, 但是其他模块要用到科技的效果, 服务端会先检测是否有完成的研究, 有研究完成的就会发这个推送
+message SyncTechQueueStatusRs {
+  repeated TechnologyResearchQueue queue = 1;
+  repeated TechnologyNode newTech = 2;        // 研究队列完成后的新科技数据
+  optional int32 status = 3;                  // 队列状态: 1-普通研究(开始); 2-立即完成; 3-取消; 4-普通研究(完成); 5-加速
+  extend Base {
+    optional SyncTechQueueStatusRs ext = 4208;
+  }
+}

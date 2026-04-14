@@ -1,0 +1,18 @@
+[package]
+name = "imperial_sim_protoc_rust_experiment"
+version = "1.3.14"
+edition = "2021"
+description = "Experimental Rust protobuf package generated from imperial_sim_protoc"
+license = "UNLICENSED"
+build = "build.rs"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+protobuf = "3.7.2"
+
+[build-dependencies]
+protobuf-codegen = "3.7.2"
+protoc-bin-vendored = "3.2.0"

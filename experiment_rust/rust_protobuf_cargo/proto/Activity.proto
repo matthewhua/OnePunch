@@ -1,0 +1,875 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+import "Shop.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// 活动的功能信息
+option java_outer_classname = "ActivityPb";
+message ActivityFunction {
+  repeated ActivityDataPb activity = 1;
+  optional ActivityPersistentData heroHallShops = 2; // 英雄殿堂商店数据（跨季保留）
+  extend FunctionClientBase {
+    optional ActivityFunction ext = 25;
+  }
+}
+
+
+// 活动需要额外永久存储的数据
+message ActivityPersistentData {
+  repeated ShopInfo heroHallHeroShop = 1;   // 英雄殿堂商店数据
+}
+
+// 活动基本信息
+message ActivityDataPb {
+  required int32 activityId = 1;            // 活动ID
+  optional int64 preDisplayBegin = 2;       // 预显示开始时间
+  optional int64 beginTime = 3;             // 活动开启时间
+  optional int64 endTime = 4;               // 活动结束时间, -1表永久
+  optional int64 displayEndTime = 5;        // 展示期关闭时间
+  optional int32 openTimes = 6;             // 已经开启的轮次
+  optional int32 activityDayNum = 7;        // 活动第几天
+  repeated ActivityFormPb form = 8;         // 活动具体形式内容
+  optional bool notFinishActCloseLogic = 9; // 是否已完成活动结束的逻辑处理
+  optional int32 stage = 10;                // 活动所处阶段, 参照ActivityStage定义
+}
+
+// 活动阶段定义
+enum ActivityStage {
+  FOREVER_CLOSE = 0; // 永久关闭
+  PRE_DISPLAY = 1;   // 预显示
+  OPEN = 2;          // 正在开放
+  END_DISPLAY = 3;   // 结束展示期
+  ROUND_OVER = 4;    // 暂时不处于开放的轮次中
+}
+
+// 活动玩法基类信息
+message ActivityFormPb {
+  optional int32 activityId = 1;            // 所属活动id
+  optional int32 formId = 2;                // 玩法id
+  optional int32 formType = 3;              // 玩法类型
+  optional int64 formEndTime = 4;           // 活动玩法的结束时间, 没有单独配置的, 则不会传此参数
+  optional bool forbidOperate = 5;          // 是否禁止操作
+  optional bool notFinishFormEndLogic = 6;  // 是否已完成玩法结束的逻辑处理
+  optional int64 formBeginTime = 7;         // 活动玩法的开始时间, 没有单独配置的, 则不会传此参数
+  extensions 10 to 100;
+}
+
+// 玩法 - 签到
+message ActivityFormSignPb {
+  repeated IntLong signInfo = 1;    // v1-第几天, v2-签到状态(0-不可签, 2-可领奖, 3-已领奖)
+  optional bool paid = 2;           // 是否已支付
+  extend ActivityFormPb {
+    optional ActivityFormSignPb ext = 11;
+  }
+}
+
+// 玩法 - 常规礼包
+message ActivityFormGiftpackPb {
+  repeated GiftpackPb giftpack = 1;           // 礼包信息
+  extend ActivityFormPb {
+    optional ActivityFormGiftpackPb ext = 12;
+  }
+}
+
+// 玩法 - 自选礼包
+message ActivityFormOptPackPb {
+  repeated GiftpackPb giftpack = 1;
+  extend ActivityFormPb {
+    optional ActivityFormOptPackPb ext = 13;
+  }
+}
+
+// 玩法 - 兑换商店
+message ActivityFormShopPb {
+  optional ShopInfo shop = 1;
+  extend ActivityFormPb {
+    optional ActivityFormShopPb ext = 14;
+  }
+}
+
+// 活动任务
+message ActivityTaskPb {
+  optional int32 dayNum = 1;
+  optional int32 doubleRewardState = 2; // 双倍奖励状态(见 DoubleRewardState 定义)
+  extend BaseMission {
+    optional ActivityTaskPb ext = 24;
+  }
+}
+
+// 双倍奖励状态定义
+enum DoubleRewardState {
+  DR_STATE_NONE = 0;            // 无双倍奖励
+  DR_STATE_NOT_RECEIVED = 1;    // 未领取
+  DR_STATE_SINGLE_RECEIVED = 2; // 已领取单倍奖励
+  DR_STATE_DOUBLE_RECEIVED = 3; // 已领取双倍奖励
+}
+
+// 玩法 - 做任务
+message ActivityFormTaskPb {
+  repeated BaseMission task = 1;
+  extend ActivityFormPb {
+    optional ActivityFormTaskPb ext = 15;
+  }
+}
+
+// 玩法 - 转盘
+message ActivityFormDrawTurntablePb {
+  optional int32 totalDrawTimes = 1;    // 累计抽奖次数
+  optional int32 dailyDrawTimes = 2;    // 每日抽奖次数
+  extend ActivityFormPb {
+    optional ActivityFormDrawTurntablePb ext = 16;
+  }
+}
+
+// 玩法 - 充值奖励
+message ActivityFormRechargeAwardPb {
+  repeated DailyRecharge recharge = 1;     // 每日充值信息
+  extend ActivityFormPb {
+    optional ActivityFormRechargeAwardPb ext = 17;
+  }
+}
+
+// 玩法 - 积分奖励
+message ActivityFormScoreAwardPb {
+  optional int32 totalScore = 1;                // 当前积分
+  repeated int32 normalRewardScoreGoal = 2;     // 已领取普通奖励的积分档位
+  repeated int32 advanceRewardScoreGoal = 3;    // 已领取高级奖励的积分档位
+  extend ActivityFormPb {
+    optional ActivityFormScoreAwardPb ext = 18;
+  }
+}
+
+// 玩法 - 排行榜
+message ActivityFormRankPb {
+  repeated int32 receivedAwardKey = 1;  // 已领取的奖励档位
+  optional int32 highestRank = 2;       // 达到过的最高排名
+  extend ActivityFormPb {
+    optional ActivityFormRankPb ext = 19;
+  }
+}
+
+// 玩法 - 战令
+message ActivityFormBattlepassPb {
+  optional bool paid = 1;
+  optional int32 exp = 2;
+  optional int32 lv = 3;
+  repeated int32 freeRewardLv = 4;
+  repeated int32 paidRewardLv = 5;
+  optional AwardPb choosPayAward = 6;
+  extend ActivityFormPb {
+    optional ActivityFormBattlepassPb ext = 20;
+  }
+}
+
+// 玩法 - 问卷调查
+message ActivityFormQuestionnairePb {
+  optional int32 rewardState = 1; // 奖励状态(0:未完成, 1:已完成未领取, 2:已领取)[预留参数, 目前实现未用到]
+  optional string webLink = 2;    // 问卷调查网页链接(服务端不存, 从配置里取出来传给客户端)
+  extend ActivityFormPb {
+    optional ActivityFormQuestionnairePb ext = 21;
+  }
+}
+
+// 玩法 - 任务组
+message ActivityFormTaskGroupPb {
+  repeated ActivityTaskGroupPb taskGroupData = 1; // 任务组数据
+  optional int32 curGroupId = 2;                  // 当前所处的任务组id
+  extend ActivityFormPb {
+    optional ActivityFormTaskGroupPb ext = 22;
+  }
+}
+
+// 任务组结构
+message ActivityTaskGroupPb {
+  optional int32 groupId = 1;       // 任务组id(关联s_activity_task_group表的keyId)
+  optional int32 status = 2;        // 任务组状态(参照MissionStatus定义)
+  repeated int32 subTaskStatus = 3; // 子任务状态标识(服务器用)
+}
+
+// 玩法 - 最强领主
+message SupremeLordInfo {
+  optional int32 stage = 1;                   // 当前阶段
+  optional int32 score = 2;                   // 当前积分
+  repeated int32 claimedKey = 3;               // 已领取的奖励档位
+  optional int32 rank = 4;                     // 结算时的排名
+}
+
+// 个人信息最强领主
+message ActivityFormSupremeLordPb {
+   repeated SupremeLordInfo lordInfo = 1; // 最强领主阶段信息
+   optional int32 totalScore = 2;       // 总积分
+   optional int32 totalRank = 3;        // 总排名
+   optional int32 nowStage = 4;        // 当前阶段
+   extend ActivityFormPb {
+    optional ActivityFormSupremeLordPb ext = 23;
+  }
+}
+
+// 公共信息最强领主
+message ActivityFormSupremeLordCommonPb {
+   repeated SupremeLordRankItem rank = 1; // 排行榜信息
+   optional int32 stage = 2;             // 当前阶段
+   extend ActivityFormPb {
+    optional ActivityFormSupremeLordCommonPb ext = 24;
+  }
+}
+
+// 玩法 - 航行
+message ActivityFormVoyagePb {
+  repeated VoyageIsland islandData = 1; // 岛屿数据
+  extend ActivityFormPb {
+    optional ActivityFormVoyagePb ext = 25;
+  }
+}
+
+// 岛屿数据结构
+message VoyageIsland {
+  required int32 islandId = 1;            // 岛屿id
+  optional int32 unlockTime = 2;          // 解锁时间点(秒)
+  optional int32 explorationProgress = 3; // 探索进度(万分比)
+  repeated int32 receivedRewardId = 4;    // 已经领取了的奖励id
+  repeated int32 criticalSequence = 5;    // 探索暴击倍率序列(服务器用)
+  optional bool isInit = 6;               // 是否初始化(服务器用)
+}
+
+// 玩法 - 大富翁 个人数据
+message ActivityFormMonopolyPb {
+  optional int32 myPos = 1;                   // 我的位置
+  repeated MonopolyCellPb cell = 2;           // 地图格子列表(目前只有道具格子的数据, 其他类型格子都是静态数据)
+  optional int32 chestPos = 3;                // 神秘宝箱所在位置
+  optional bool free = 4;                     // 是否有免费机会
+  optional int32 totalExpUpValue = 5;         // 总共下次道具格经验额外增加(不传给客户端)
+  repeated AwardGroupPb cellRewardRecord = 6; // 格子奖励记录(不传给客户端, 客户端通过分页请求)
+  repeated AwardPb lastCellReward = 7;        // 最近格子奖励
+  optional AwardGroupPb lastChestReward = 8;  // 最近神秘宝箱奖励
+  extend ActivityFormPb {
+    optional ActivityFormMonopolyPb ext = 26;
+  }
+}
+
+// 玩法 - 大富翁 公共数据
+message ActivityFormMonopolyCommonPb {
+  repeated AwardGroupPb chestRewardRecord = 1; // 神秘宝箱奖励记录(不传给客户端, 客户端通过分页请求)
+  extend ActivityFormPb {
+    optional ActivityFormMonopolyCommonPb ext = 27;
+  }
+}
+
+// 大富翁格子类型定义
+enum MonopolyCellType {
+  MONOPOLY_CELL_START = 1;    // 起点格子
+  MONOPOLY_CELL_ITEM = 2;     // 道具格子
+  MONOPOLY_CELL_TREASURE = 3; // 宝藏格子
+  MONOPOLY_CELL_EVENT = 4;    // 事件格子
+}
+
+// 大富翁事件类型定义
+enum MonopolyEventType {
+  MONOPOLY_EVENT_REWARD = 1;   // 获得奖励
+  MONOPOLY_EVENT_FORWARD = 2;  // 前进
+  MONOPOLY_EVENT_BACKWARD = 3; // 后退
+  MONOPOLY_EVENT_EXP_UP = 4;   // 下次道具格经验额外增加
+}
+
+// 大富翁格子数据
+message MonopolyCellPb {
+  optional int32 id = 1;    // id
+  optional int32 level = 2; // 等级
+  optional int32 exp = 3;   // 经验
+}
+
+// 大富翁骰子类型定义
+enum MonopolyDiceType {
+  MONOPOLY_DICE_RANDOM = 1; // 随机骰子
+  MONOPOLY_DICE_SELECT = 2; // 精准骰子
+}
+
+// 大富翁奖励详情类型定义
+enum MonopolyRewardDetailsType {
+  MONOPOLY_REWARD_DETAILS_CELL = 1;  // 格子奖励
+  MONOPOLY_REWARD_DETAILS_CHEST = 2; // 神秘宝箱奖励
+}
+
+// 大富翁动作类型定义
+enum MonopolyActionType {
+  MONOPOLY_ACTION_REWARD = 1; // 获得奖励
+  MONOPOLY_ACTION_MOVE = 2;   // 移动
+  MONOPOLY_ACTION_EXP_UP = 3; // 下次道具格经验额外增加
+}
+
+// 大富翁动作数据
+message MonopolyActionPb {
+  optional int32 stepNumber = 1;         // 骰子指示的步数(负数表示后退)
+  optional int32 type = 2;               // 类型(见 MonopolyActionType 定义)
+  optional int32 param = 3;              // 根据类型传不同参数(1: 不传, 2: 移动步数 3: 经验额外增加数值)
+  repeated AwardGroupPb cellReward = 4;  // 格子所获得的奖励(如果是踩到起点, 这里会传多个)
+  repeated MonopolyCellPb cell = 5;      // 格子数据变更(如果是踩到起点, 这里会传多个)
+  repeated AwardPb chestReward = 6;      // 神秘宝箱所获得的奖励
+  optional int32 chestNewPos = 7;        // 神秘宝箱新的位置
+  optional int32 myPos = 8;              // 我的位置
+}
+
+// 大富翁动作数据组
+message MonopolyActionGroupPb {
+  optional int32 diceNumber = 1;        // 骰子点数
+  repeated MonopolyActionPb action = 2; // 动作数据
+}
+
+
+// =========== 银行活动 ===================
+message ActivityFormBankPb {
+   optional int32 lastSaveTime = 1;     // 上次存储时间
+   optional int32 lastSaveDiamond = 2;  // 上次存储的钻石数
+   optional int32 bankId = 3;           // 存款银行Id
+   optional int32 outComeDiamond = 4;   // 提现钻石数
+   extend ActivityFormPb {
+    optional ActivityFormBankPb ext = 28;
+  }
+}
+
+// 英雄殿堂 - 公共表单数据
+message ActivityFormHeroHallCommonPb {
+  repeated int32 allShopIds = 1;      // 所有历史商店ID（永久保留）
+  optional int32 currentShopId = 2;   // 当前商店ID
+  extend ActivityFormPb {
+    optional ActivityFormHeroHallCommonPb ext = 29;  // 确保field number唯一
+  }
+}
+
+// 英雄殿堂 - 个人表单数据
+message ActivityFormHeroHallPb {
+  repeated ShopInfo shopList = 1;     // 玩家可用的商店列表
+  optional int32 currentShopId = 2;   // 当前商店ID
+  extend ActivityFormPb {
+    optional ActivityFormHeroHallPb ext = 30;  // 确保field number唯一
+  }
+}
+
+
+// ============ 社群入口跳转活动 ========================
+message ActivityFormCommunityJumpPb {
+    optional int32 facebookClicked = 1;     // Facebook 是否已点击 (0-未点击, 1-已点击)
+    optional int32 discordClicked = 2;      // Discord 是否已点击 (0-未点击, 1-已点击)
+    optional int32 rewardReceived = 3;      // 奖励是否已领取 (0-未领取, 1-已领取，只能领一次)
+
+    extend ActivityFormPb {
+        optional ActivityFormCommunityJumpPb ext = 31;  // 扩展编号，请根据实际情况调整
+    }
+}
+
+
+// =======================8001 - 10000 活动相关的协议接口=======================
+// 获取所有活动
+message GetActivityFuncDataRq {
+  extend Base
+  {
+    optional GetActivityFuncDataRq ext = 8001;
+  }
+}
+
+message GetActivityFuncDataRs {
+  required ActivityFunction activityFunc = 1;
+  extend Base
+  {
+    optional GetActivityFuncDataRs ext = 8002;
+  }
+}
+
+// 同步活动状态（新开活动、活动stage变化时走此推送）
+message SynActivityStatusRs {
+  repeated ActivityDataPb openActivity = 1;   // 新开或状态变化的活动数据
+  repeated int32 closeActivityId = 2;         // 要关闭的活动
+  extend Base {
+    optional SynActivityStatusRs ext = 8004;
+  }
+}
+
+// 通用的推送活动玩法数据更新(除任务只推送有变化的, 其余玩法是form的全量数据推送)
+message SynActivityFormStatusRs {
+  repeated ActivityFormPb form = 1;
+  extend Base
+  {
+    optional SynActivityFormStatusRs ext = 8006;
+  }
+}
+
+// 活动签到
+message ActivitySignRq {
+  required int32 activityId = 1;
+  required int32 formId = 2;
+  optional int32 dayNum = 3;
+  extend Base
+  {
+    optional ActivitySignRq ext = 8007;
+  }
+}
+
+message ActivitySignRs {
+  extend Base
+  {
+    optional ActivitySignRs ext = 8008;
+  }
+}
+
+// 领取任务奖励
+message ActivityGainTaskAwardRq {
+  required int32 activityId = 1;
+  required int32 formId = 2;
+  optional int32 taskDay = 3;     // 任务
+  optional int32 taskId = 4;      // 要领取的任务id
+  extend Base
+  {
+    optional ActivityGainTaskAwardRq ext = 8009;
+  }
+}
+
+message ActivityGainTaskAwardRs {
+  extend Base
+  {
+    optional ActivityGainTaskAwardRs ext = 8010;
+  }
+}
+
+// 领取活动充值奖励
+message ActivityGainRechargeAwardRq {
+  required int32 activityId = 1;
+  required int32 formId = 2;
+  repeated int32 dayNum = 3;
+  extend Base
+  {
+    optional ActivityGainRechargeAwardRq ext = 8011;
+  }
+}
+
+message ActivityGainRechargeAwardRs {
+  extend Base
+  {
+    optional ActivityGainRechargeAwardRs ext = 8012;
+  }
+}
+
+// 领取积分奖励
+message ActivityGainScoreAwardRq {
+  required int32 activityId = 1;
+  required int32 formId = 2;
+  optional int32 scoreGoal = 3; // 要领取的积分档位
+  optional bool advance = 4;    // 是否领取高级奖励
+  extend Base
+  {
+    optional ActivityGainScoreAwardRq ext = 8013;
+  }
+}
+
+message ActivityGainScoreAwardRs {
+  extend Base
+  {
+    optional ActivityGainScoreAwardRs ext = 8014;
+  }
+}
+
+// 领取战令等级奖励
+message ActivityBattlepassGainLvAwardRq {
+  required int32 activityId = 1;
+  required int32 formId = 2;
+  optional int32 lv = 3;
+  optional bool free = 4;
+  extend Base
+  {
+    optional ActivityBattlepassGainLvAwardRq ext = 8015;
+  }
+}
+
+message ActivityBattlepassGainLvAwardRs {
+  extend Base
+  {
+    optional ActivityBattlepassGainLvAwardRs ext = 8016;
+  }
+}
+
+// 购买战令等级
+message ActivityBattlepassBuyLvRq {
+  required int32 activityId = 1;
+  required int32 formId = 2;
+  optional int32 addLv = 3;
+  extend Base
+  {
+    optional ActivityBattlepassBuyLvRq ext = 8017;
+  }
+}
+
+message ActivityBattlePassBuyLvRs {
+  extend Base
+  {
+    optional ActivityBattlePassBuyLvRs ext = 8018;
+  }
+}
+
+// 选择战令付费奖励
+message ActivityBattlepassChoosePayAwardRq {
+  required int32 activityId = 1;
+  required int32 formId = 2;
+  optional AwardPb chooseAward = 3;
+  extend Base
+  {
+    optional ActivityBattlepassChoosePayAwardRq ext = 8019;
+  }
+}
+
+message ActivityBattlepassChoosePayAwardRs {
+  extend Base
+  {
+    optional ActivityBattlepassChoosePayAwardRs ext = 8020;
+  }
+}
+
+// 商店购买
+message ActivityShopBuyRq {
+  required int32 activityId = 1; // 活动id
+  required int32 formId = 2;     // 玩法id
+  required int32 shopId = 3;     // 商店id
+  required int32 slot = 4;       // 商品槽位
+  required int32 buyCount = 5;   // 购买数量
+  extend Base {
+    optional ActivityShopBuyRq ext = 8021;
+  }
+}
+
+message ActivityShopBuyRs {
+  optional int32 activityId = 1;  // 活动id
+  optional int32 formId = 2;      // 玩法id
+  optional int32 shopId = 3;      // 商店id
+  optional ShopItemInfo item = 4; // 商品信息
+  extend Base {
+    optional ActivityShopBuyRs ext = 8022;
+  }
+}
+
+// 商店刷新
+message ActivityShopRefreshRq {
+  required int32 activityId = 1; // 活动id
+  required int32 formId = 2;     // 玩法id
+  required int32 shopId = 3;     // 商店id
+  extend Base {
+    optional ActivityShopRefreshRq ext = 8023;
+  }
+}
+
+message ActivityShopRefreshRs {
+  optional int32 activityId = 1; // 活动id
+  optional int32 formId = 2;     // 玩法id
+  optional ShopInfo shop = 3;    // 商店信息
+  extend Base {
+    optional ActivityShopRefreshRs ext = 8024;
+  }
+}
+
+// 问卷调查填写完毕[目前实现是客户端告诉服务端问卷填写完毕]
+message ActivityQuestionnaireFinishRq {
+  required int32 activityId = 1; // 活动id
+  required int32 formId = 2;     // 玩法id
+  extend Base {
+    optional ActivityQuestionnaireFinishRq ext = 8029;
+  }
+}
+
+message ActivityQuestionnaireFinishRs {
+  extend Base {
+    optional ActivityQuestionnaireFinishRs ext = 8030;
+  }
+}
+
+// 领取任务组奖励
+message ActivityGainTaskGroupAwardRq {
+  required int32 activityId = 1;  // 活动id
+  required int32 formId = 2;      // 玩法id
+  optional int32 taskGroupId = 3; // 要领取的任务组id
+  extend Base {
+    optional ActivityGainTaskGroupAwardRq ext = 8031;
+  }
+}
+
+message ActivityGainTaskGroupAwardRs {
+  extend Base {
+    optional ActivityGainTaskGroupAwardRs ext = 8032;
+  }
+}
+
+// 最强领主玩法
+message SupremeLordInfoRq {
+  optional int32 activityId = 1;
+  optional int32 stage = 2;
+  extend Base {
+    optional SupremeLordInfoRq ext = 8033;
+  }
+}
+
+message SupremeLordInfoRs {
+  optional SupremeLordInfo info = 1;
+  optional int32 activityId = 2;
+  extend Base {
+    optional SupremeLordInfoRs ext = 8034;
+  }
+}
+
+// 领取最强领主积分奖励
+message SupremeLordClaimAwardRq {
+  optional int32 index = 1; // 要领取奖励的档位
+  optional int32 activityId = 2; // 活动ID
+  extend Base {
+    optional SupremeLordClaimAwardRq ext = 8035;
+  }
+}
+
+message SupremeLordClaimAwardRs {
+  optional SupremeLordInfo lordInfo = 1; // 最强领主信息 (领取后信息)
+  optional int32 activityId = 2; // 活动ID
+  extend Base {
+    optional SupremeLordClaimAwardRs ext = 8036;
+  }
+}
+
+// 查询最强领主排行榜
+message SupremeLordRankRq {
+  optional int32 stage = 1; // 要查询的阶段, 不传则查当前阶段（总榜阶段为999）
+  optional int32 activityId = 2; // 活动ID
+  extend Base {
+    optional SupremeLordRankRq ext = 8037;
+  }
+}
+
+message SupremeLordRankRs {
+  optional SupremeLordRankItem rank = 1; // 排行榜信息
+  optional int32 activityId = 2; // 活动ID
+  extend Base {
+    optional SupremeLordRankRs ext = 8038;
+  }
+}
+
+// 转盘抽奖
+message ActivityDoTurntableRq {
+  required int32 activityId = 1;       // 活动id
+  required int32 formId = 2;           // 玩法id
+  optional int32 consumeTypeIndex = 3; // 抽奖类型的索引(s_activity_form_turntable配置里consume_type字段中的索引)
+  extend Base
+  {
+    optional ActivityDoTurntableRq ext = 8039;
+  }
+}
+
+message ActivityDoTurntableRs {
+  optional int32 activityId = 1; // 活动id
+  optional int32 formId = 2;     // 玩法id
+  repeated AwardPb award = 3;    // 抽中的奖励
+  extend Base
+  {
+    optional ActivityDoTurntableRs ext = 8040;
+  }
+}
+
+// 航行探索
+message ActivityVoyageExploreRq {
+  required int32 activityId = 1; // 活动id
+  required int32 formId = 2;     // 玩法id
+  required int32 islandId = 3;   // 岛屿id
+  extend Base {
+    optional ActivityVoyageExploreRq ext = 8041;
+  }
+}
+
+message ActivityVoyageExploreRs {
+  optional int32 activityId = 1;          // 活动id
+  optional int32 formId = 2;              // 玩法id
+  optional int32 islandId = 3;            // 岛屿id
+  optional int32 explorationProgress = 4; // 探索进度(万分比)
+  optional int32 explorationCritical = 5; // 探索暴击倍率(默认为1倍)
+  extend Base {
+    optional ActivityVoyageExploreRs ext = 8042;
+  }
+}
+
+// 领取航行探索奖励
+message ActivityVoyageGainRewardRq {
+  required int32 activityId = 1; // 活动id
+  required int32 formId = 2;     // 玩法id
+  required int32 islandId = 3;   // 岛屿id
+  required int32 rewardId = 4;   // 奖励id
+  extend Base {
+    optional ActivityVoyageGainRewardRq ext = 8043;
+  }
+}
+
+message ActivityVoyageGainRewardRs {
+  optional int32 activityId = 1;      // 活动id
+  optional int32 formId = 2;          // 玩法id
+  optional int32 islandId = 3;        // 岛屿id
+  optional int32 rewardId = 4;        // 奖励id
+  optional ChangeInfo changeInfo = 5; // 奖励信息
+  extend Base {
+    optional ActivityVoyageGainRewardRs ext = 8044;
+  }
+}
+
+// 情报月卡战令-领取奖励
+message ActivityFormIntelGainLvRewardRq {
+  required int32 activityId = 1;
+  required int32 formId = 2;
+  optional int32 lv = 3;
+  optional bool free = 4;  // 是否领取免费
+  optional bool isAll = 5; //是否领取该档位所有
+  extend Base
+  {
+    optional ActivityFormIntelGainLvRewardRq ext = 8045;
+  }
+}
+
+message ActivityFormIntelGainLvRewardRs {
+  extend Base
+  {
+    optional ActivityFormIntelGainLvRewardRs ext = 8046;
+  }
+}
+
+// 大富翁扔骰子
+message ActivityMonopolyThrowDiceRq {
+  required int32 activityId = 1; // 活动id
+  required int32 formId = 2;     // 玩法id
+  required int32 type = 3;       // 类型(见 MonopolyDiceType 定义)
+  required int32 param = 4;      // 根据类型传不同参数(1: 随机骰子传次数, 2: 精准骰子传点数)
+  extend Base {
+    optional ActivityMonopolyThrowDiceRq ext = 8047;
+  }
+}
+
+message ActivityMonopolyThrowDiceRs {
+  optional int32 activityId = 1;                  // 活动id
+  optional int32 formId = 2;                      // 玩法id
+  optional int32 type = 3;                        // 类型
+  optional int32 param = 4;                       // 根据类型传不同参数
+  repeated MonopolyActionGroupPb actionGroup = 5; // 动作数据组
+  extend Base {
+    optional ActivityMonopolyThrowDiceRs ext = 8048;
+  }
+}
+
+// 获取大富翁奖励详情
+message ActivityMonopolyGetRewardDetailsRq {
+  required int32 activityId = 1; // 活动id
+  required int32 formId = 2;     // 玩法id
+  required int32 type = 3;       // 类型(见 MonopolyRewardDetailsType 定义)
+  required int32 page = 4;       // 第几页, 从1开始, 每页默认20个
+  extend Base {
+    optional ActivityMonopolyGetRewardDetailsRq ext = 8049;
+  }
+}
+
+message ActivityMonopolyGetRewardDetailsRs {
+  optional int32 activityId = 1;        // 活动id
+  optional int32 formId = 2;            // 玩法id
+  optional int32 type = 3;              // 类型
+  optional int32 page = 4;              // 第几页
+  repeated AwardGroupPb awardGroup = 5; // 详情信息列表
+  optional int32 totalPage = 6;         // 详情总页数
+  extend Base {
+    optional ActivityMonopolyGetRewardDetailsRs ext = 8050;
+  }
+}
+
+// ======= 银行相关 8961-8970
+
+// 存储砖石请求
+message SaveDiamondRq {
+  optional int32 activityId = 1;    // 活动ID
+  optional int32 diamondCount = 2;  // 要存储的砖石数量
+  optional int32 bankId = 3;        // 银行ID
+  extend Base {
+    optional SaveDiamondRq ext = 8961;
+  }
+}
+
+// 存储砖石响应
+message SaveDiamondRs {
+  optional int32 activityId = 1;  // 活动ID
+  optional int32 savedDiamond = 2;  // 实际存储的砖石数量
+  optional int32 totalDeposit = 3;  // 当前总存款
+  extend Base {
+    optional SaveDiamondRs ext = 8962;
+  }
+}
+
+// 取出砖石请求
+message WithdrawDiamondRq {
+  optional int32 activityId = 1;    // 活动ID
+  optional int32 bankId = 2;        // 要取出的砖石银行Id
+  extend Base {
+    optional WithdrawDiamondRq ext = 8963;
+  }
+}
+
+// 取出砖石响应
+message WithdrawDiamondRs {
+  optional int32 activityId = 1;        // 活动ID
+  optional int32 withdrawnDiamond = 2;  // 实际取出的砖石数量
+  extend Base {
+    optional WithdrawDiamondRs ext = 8964;
+  }
+}
+
+// 取消存砖石请求
+message CancelSaveDiamondRq {
+  optional int32 activityId = 1;    // 活动ID
+  optional int32 bankId = 2;        // 银行ID
+  extend Base {
+    optional CancelSaveDiamondRq ext = 8965;
+  }
+}
+
+// 取消存砖石响应
+message CancelSaveDiamondRs {
+  optional int32 returnedDiamond = 1;  // 返还的钻石（本金）
+  extend Base {
+    optional CancelSaveDiamondRs ext = 8966;
+  }
+}
+
+
+// ======= 社群入口跳转活动 8971-8974
+
+// 点击社群跳转（Facebook / Discord）请求
+// 玩家点击任意跳转入口后上报，服务端判定完成条件并解锁奖励
+message ActivityCommunityJumpClickRq {
+  required int32 activityId = 1;  // 活动ID
+  required int32 formId = 2;      // 玩法ID
+  required int32 jumpType = 3;    // 跳转类型 (1-Facebook, 2-Discord)
+  extend Base {
+    optional ActivityCommunityJumpClickRq ext = 8071;
+  }
+}
+
+// 点击社群跳转（Facebook / Discord）返回
+message ActivityCommunityJumpClickRs {
+  optional ActivityFormCommunityJumpPb communityJump = 1;  // 活动信息
+  extend Base {
+    optional ActivityCommunityJumpClickRs ext = 8072;
+  }
+}
+
+// 社群跳转领取奖励请求
+// 玩家点击过任意跳转入口后，可以手动领取奖励
+message ActivityCommunityJumpClaimRewardRq {
+  required int32 activityId = 1;  // 活动ID
+  required int32 formId = 2;      // 玩法ID
+  extend Base {
+    optional ActivityCommunityJumpClaimRewardRq ext = 8073;
+  }
+}
+
+// 社群跳转领取奖励返回
+message ActivityCommunityJumpClaimRewardRs {
+  optional ActivityFormCommunityJumpPb communityJump = 1;  // 更新后的活动信息
+  extend Base {
+    optional ActivityCommunityJumpClaimRewardRs ext = 8074;
+  }
+}

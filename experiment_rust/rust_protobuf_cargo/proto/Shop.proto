@@ -1,0 +1,109 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================常量定义================================
+// 商店类型
+enum ShopType {
+  SHOP_TYPE_WANDER = 1;     // 游荡商店(单个商品购买完后, 不会显示售罄, 会从池子里刷新商品出来)
+  SHOP_TYPE_MYSTERIOUS = 2; // 神秘商店(刷新后会从池子里刷新指定数量的商品)
+  SHOP_TYPE_FIXED = 3;      // 固定商店(根据配置显示商品)
+}
+
+// 商店显示类型
+enum ShopShowType {
+  SHOP_SHOW_TYPE_NORMAL = 1;   // 常规商店
+  SHOP_SHOW_TYPE_CAMP = 2;     // 阵营商店
+  SHOP_SHOW_TYPE_TALENT = 3;   // 天赋商店
+  SHOP_SHOW_TYPE_ACTIVITY = 4; // 神秘商店
+}
+
+// ================================模块定义================================
+// function 19 商店数据
+option java_outer_classname = "ShopPb";
+message ShopDataFunction {
+  repeated ShopInfo shop = 1; // 商店信息
+  extend FunctionClientBase {
+    optional ShopDataFunction ext = 30;
+  }
+}
+
+// ================================结构定义================================
+// 商店结构
+message ShopInfo {
+  optional int32 shopId = 1;         // 商店id
+  optional int32 shopEndTime = 2;    // 商店结束时间点(秒)
+  optional int32 refreshTime = 3;    // 系统刷新时间点(秒)
+  optional int32 refreshedCount = 4; // 已刷新次数
+  repeated ShopItemInfo item = 5;    // 商品信息
+}
+
+// 商店商品结构
+message ShopItemInfo {
+  optional int32 slot = 1;             // 槽位(从1开始)
+  optional int32 itemCfgId = 2;        // 商品配置id(见s_shop_prop表)
+  optional int32 purchasedCount = 3;   // 已购买过的数量
+  optional int32 purchasedCountEx = 4; // 从上次整个商店刷新后已购买过的数量(不传给客户端)
+}
+
+// ================================协议定义================================
+// 协议号范围[7651-7700]
+// 商店购买
+message ShopBuyRq {
+  required int32 shopId = 1;    // 商店id
+  required int32 slot = 2;      // 商品槽位
+  required int32 buyCount = 3;  // 购买数量
+  extend Base {
+    optional ShopBuyRq ext = 7651;
+  }
+}
+
+message ShopBuyRs {
+  optional int32 shopId = 1;      // 商店id
+  optional ShopItemInfo item = 2; // 商品信息
+  extend Base {
+    optional ShopBuyRs ext = 7652;
+  }
+}
+
+// 商店刷新
+message ShopRefreshRq {
+  required int32 shopId = 1;    // 商店id
+  extend Base {
+    optional ShopRefreshRq ext = 7653;
+  }
+}
+
+message ShopRefreshRs {
+  optional ShopInfo shop = 1; // 商店信息
+  extend Base {
+    optional ShopRefreshRs ext = 7654;
+  }
+}
+
+// 购买并使用
+message ShopBuyAndUseRq {
+  required int32 shopId = 1;    // 商店id
+  required int32 slot = 2;      // 商品槽位
+  required int32 buyCount = 3;  // 购买数量
+  optional int32 show = 4;      // 是否显示使用(-1默认不显示 , 0之后的显示)
+  repeated int32 extParam = 5;  // 额外参数(根据道具类型决定, 比如自选箱传索引, 迁城传区域或者坐标)
+  extend Base {
+    optional ShopBuyAndUseRq ext = 7655;
+  }
+}
+
+message ShopBuyAndUseRs {
+  optional int32 shopId = 1;          // 商店id
+  optional ShopItemInfo item = 2;     // 商品信息
+  optional int32 prodId = 3;          // 道具id
+  optional int32 useCount = 4;        // 使用数量
+  optional ChangeInfo changeInfo = 5; // 获得奖励
+  extend Base {
+    optional ShopBuyAndUseRs ext = 7656;
+  }
+}
+
+// ================================推送定义================================

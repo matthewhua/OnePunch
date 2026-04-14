@@ -1,0 +1,606 @@
+syntax = "proto2";
+
+import "Base.proto";
+import "Common.proto";
+import "Serialize.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+//玩家登陆
+option java_outer_classname = "HttpPb";
+message DoLoginRq {
+  required string sid = 1; // 废弃
+  required string baseVersion = 2;
+  required string version = 3;
+  required string deviceNo = 4;
+  required string plat = 5;
+  repeated string param = 6; // 额外参数，代替sid
+  extend Base {
+    optional DoLoginRq ext = 103;
+  }
+}
+
+message DoLoginRs {
+  optional int64 keyId = 1;
+  optional string token = 2;
+  optional int32 active = 3;
+  repeated int32 recent = 4;
+  repeated ServerInfo sis = 5;//服务区信息
+  optional int32 guidance = 6;// 引导类型: 1 帝国引导, 2 原始人引导
+  optional int32 userType = 7;// 0 普通用户  1 GS
+  extend Base
+  {
+    optional DoLoginRs ext = 104;
+  }
+}
+
+//玩家登录验证
+message VerifyRq {
+  required int64 keyId = 1;
+  required int32 serverId = 2;
+  required string token = 3;
+  required string curVersion = 4;
+  required string deviceNo = 5;
+  required int64 channelId = 6;
+  optional string currentPlatName = 7; //当前登录渠道名称
+  optional int64 ip = 8;              // 登录ip
+  extend Base
+  {
+    optional VerifyRq ext = 105;
+  }
+}
+
+message VerifyRs {
+  optional int64 keyId = 1;
+  optional string platId = 2;
+  optional int32 platNo = 3;
+  optional int32 childNo = 4;
+  optional string curVersion = 5;
+  optional string deviceNo = 6;
+  optional int32 serverId = 7;
+  required int64 channelId = 8;
+  optional string publisher = 9;
+  optional int32 currentPlatNo = 10; //当前登录的渠道号，u_server_plat_define里的plat_no
+  optional int32 firstRole = 11; // 是否是该账号下第一个角色 0：不是  1:是
+  extend Base {
+    optional VerifyRs ext = 106;
+  }
+}
+
+//使用激活码,激活账号
+message DoActiveRq {
+  required int64 keyId = 1;
+  required string activeCode = 2;
+  extend Base
+  {
+    optional DoActiveRq ext = 109;
+  }
+}
+
+message DoActiveRs {
+  optional int32 state = 1;
+  extend Base
+  {
+    optional DoActiveRs ext = 110;
+  }
+}
+
+// 使用礼包兑换码
+message UseGiftCodeRq {
+  required string code = 1;
+  required int32 serverId = 2;
+  required int64 lordId = 3;
+  optional int32 platNo = 4;
+  extend Base
+  {
+    optional UseGiftCodeRq ext = 111;
+  }
+}
+
+message UseGiftCodeRs {
+  optional string award = 1;
+  optional int32 serverId = 2;
+  optional int64 lordId = 3;
+  optional int32 state = 4;
+  extend Base
+  {
+    optional UseGiftCodeRs ext = 112;
+  }
+}
+
+//玩家发起支付申请（游戏服发送到支付服）
+message PayApplyRq {
+  required int32 serverId = 1;  //服务器id
+  required int64 roleId = 2;
+  required int32 amount = 3;    //金额RMB
+  required int32 payType = 4;  //充值类型对应 s_pay的id
+  required string platName = 5;  //渠道名称
+  optional int64 accountKey = 6;
+  optional float usd = 7;      // 海外平台使用美元(如果有美元字段则显示美元金额, 否则显示price)
+  required string serialId = 8;
+  extend Base
+  {
+    optional PayApplyRq ext = 113;
+  }
+}
+
+message PayApplyRs {
+  required string serialId = 1; //内部订单序列号
+  required int64 roleId = 2;
+  required int32 payType = 3;  //充值类型对应 s_pay的id
+  required string platName = 4;  //渠道名称
+  extend Base
+  {
+    optional PayApplyRs ext = 114;
+  }
+}
+
+//订单支付成功（支付服务器发送到游戏服）
+message PayBackRq {
+  required int32 platNo = 1;
+  required string platId = 2;
+  required string orderId = 3;
+  required string serialId = 4;
+  required int32 serverId = 5;
+  required int64 roleId = 6;
+  required int32 amount = 7;
+  optional int32 packId = 8;
+  required int32 payType = 9;
+  optional float usd = 10;
+  optional int32 childPlatNo = 11;
+  extend Base
+  {
+    optional PayBackRq ext = 115;
+  }
+}
+
+message PayBackRs {
+  extend Base
+  {
+    optional PayBackRs ext = 116;
+  }
+}
+
+//支付订单发货确认（游戏服发送到支付服）
+message PayConfirmRq {
+  required int32 platNo = 1;
+  required string orderId = 2;//此处设置的serialId(cpOrder)
+  required int32 addGold = 3;
+  required int64 accountKey = 4;
+  extend Base
+  {
+    optional PayConfirmRq ext = 117;
+  }
+}
+
+message PayConfirmRs {
+  extend Base
+  {
+    optional PayConfirmRs ext = 118;
+  }
+}
+
+//发送后台邮件
+message SendToMailRq {
+  optional int32 type = 1;        //类型：1 玩家，2 全服，3 军团（阵营）
+  optional string channelNo = 2;      //0.所有渠道 ；其它渠道   渠道1|渠道2
+  optional int32 online = 3;        //是否需要在线
+  optional string to = 4;          //给谁 all，online，昵称|昵称
+  optional string sendName = 5;      //发送者昵称
+  optional int32 moldId = 6;        //模板ID
+  optional string title = 7;        //标题
+  optional string contont = 8;      //内容
+  optional string award = 9;        //奖励
+  optional string marking = 10;      //消息标识
+  optional int32 alv = 11;        //起始等级
+  optional int32 blv = 12;        //结束等级
+  optional int32 avip = 13;        //vip等级
+  optional int32 bvip = 14;        //vip等级
+  optional string partys = 15;        //给哪些军团发，  军团名|军团名
+  optional string childNo = 16;           //子渠道
+  optional int32 camp = 17;               //0 全阵营；其它阵营 1|2|3
+  extend Base
+  {
+    optional SendToMailRq ext = 119;
+  }
+}
+
+message SendToMailRs {
+  optional string marking = 1;      //消息标识
+  repeated int32 code = 2;        //结果
+  extend Base
+  {
+    optional SendToMailRs ext = 120;
+  }
+}
+
+//封号操作
+message ForbiddenRq {
+  optional string marking = 1;      //消息标识
+  optional int32 forbiddenId = 2;      //禁 1
+  optional string nick = 3;        //玩家昵称
+  optional int64 lordId = 4;        //玩家ID
+  optional int64 time = 5;          //时间
+  extend Base
+  {
+    optional ForbiddenRq ext = 121;
+  }
+}
+
+message ForbiddenRs {
+  extend Base
+  {
+    optional ForbiddenRs ext = 122;
+  }
+}
+
+//公告、跑马灯
+message NoticeRq {
+  optional string marking = 1; //消息标识
+  optional string content = 2; //公告内容
+  optional int32 camp = 3; //阵营
+  optional int32 chatId = 4; //配置id
+  optional string beginTime = 5; //跑马灯开始时间
+  optional int32 seconds = 6; //跑马灯间隔
+  optional int32 count = 7; //跑马灯次数
+  optional string channelNo = 8; //发送的渠道 0全体 其他 渠道1|渠道2
+  extend Base {
+    optional NoticeRq ext = 123;
+  }
+}
+
+message NoticeRs {
+  extend Base
+  {
+    optional NoticeRs ext = 124;
+  }
+}
+
+//GM命令
+message GmRq {
+  optional int32 type = 1;        //类型：1 玩家，2 全服，3 军团（阵营）
+  optional string channelNo = 2;      //0.所有渠道 ；其它渠道   渠道1|渠道2
+  optional int32 online = 3;        //是否需要在线
+  optional string msg = 4;        //命令符号
+  extend Base
+  {
+    optional GmRq ext = 125;
+  }
+}
+
+message GmRs {
+  extend Base
+  {
+    optional GmRs ext = 126;
+  }
+}
+
+//重新加载配置表
+message ReloadParamRq {
+  required string marking = 1;    //消息标识
+  required int32 type = 2;      // 1 只重加载s_system表中的数据，2 重加载所有配置表的数据
+  extend Base
+  {
+    optional ReloadParamRq ext = 127;
+  }
+}
+
+message ReloadParamRs {
+  extend Base
+  {
+    optional ReloadParamRs ext = 128;
+  }
+}
+
+/**
+ * 账号服角色信息同步
+ * 角色登录和退出游戏，发送角色数据给账号服 (游戏服->账号服)
+ */
+message SendAccountRoleRq {
+  repeated AccountRoleInfo ars = 1; //账号角色信息集合
+  extend Base {
+    optional SendAccountRoleRq ext = 131;
+  }
+}
+
+message SendAccountRoleRs {
+  extend Base {
+    optional SendAccountRoleRs ext = 132;
+  }
+}
+
+/**
+ * 获取服务区列表信息
+ */
+message ServerInfoRq {
+  required int32 serverId = 1; //服务区列表开始的SID
+  required int64 accountKey = 2;//账号KEY
+  required string plat = 3;   // 渠道名称
+  extend Base {
+    optional ServerInfoRq ext = 133;
+  }
+}
+
+message ServerInfoRs {
+  required ServerInfo sis = 1;//服务区列表信息
+  extend Base {
+    optional ServerInfoRs ext = 134;
+  }
+}
+
+/**
+ * 获取服务区列表信息
+ */
+message ServerListRq {
+  required int64 accountKey = 1;//账号KEY
+  required string plat = 2;   // 渠道名称
+  optional string appId = 3;  // appId
+  extend Base {
+    optional ServerListRq ext = 135;
+  }
+}
+
+message ServerListRs {
+  repeated ServerInfo sis = 1;//服务区列表信息
+  repeated ServerControl sc = 2;//区服控制
+  extend Base {
+    optional ServerListRs ext = 136;
+  }
+}
+
+// 分享活动, 调用SDK接口获取数据
+message ShareRewardRq {
+  required int64 lordId = 1;
+  required int64 keyId = 2;
+  required int32 platNo = 3;
+  required int32 awardId = 4;
+  extend Base {
+    optional ShareRewardRq ext = 137;
+  }
+}
+
+message ShareRewardRs {
+  required int64 lordId = 1;
+  required int32 keyId = 2;   // awardId
+  optional string result = 3; // 返回的json是SDK返回的
+  extend Base {
+    optional ShareRewardRs ext = 138;
+  }
+}
+
+// 检查礼包是否处于可购买状态
+message CheckGiftRq {
+  required int64 lordId = 1;
+  required int32 payId = 2;
+  extend Base {
+    optional CheckGiftRq ext = 139;
+  }
+}
+
+message CheckGiftRs {
+  optional string result = 1; // 返回的json是SDK返回的
+  extend Base {
+    optional CheckGiftRs ext = 140;
+  }
+}
+
+
+// 获取玩家基本信息的请求 (账号服->游戏服)
+message GetLordBaseRq {
+  optional string marking = 1;	//消息标识
+  optional int64 lordId = 2;		//玩家ID
+  optional int32 type = 3;		//1.背包道具 2.装备 3.将领 4.建筑等级 5.超级武器 6.科技, 7.json格式， 8.兵书
+  repeated string param = 4;		// json格式的参数
+  extend Base
+  {
+    optional GetLordBaseRq ext = 1017;
+  }
+}
+
+message GetLordBaseRs {
+  extend Base
+  {
+    optional GetLordBaseRs ext = 1018;
+  }
+}
+
+// 获取玩家基本信息的回调 (游戏服->账号服)
+message BackLordBaseRq {
+  optional string marking = 1;		//消息标识
+  optional int32 code = 2;			//结果 200成功
+  optional int32 type = 3;			//1.背包道具 2.装备 3.将领 4.建筑等级 5.超级武器 6.科技 ,7.json格式， 8 兵书
+  // 玩家数据结构
+  extend Base
+  {
+    optional BackLordBaseRq ext = 1019;
+  }
+}
+
+message BackLordBaseRs {
+  extend Base
+  {
+    optional BackLordBaseRs ext = 1020;
+  }
+}
+
+//执行GM指令，想干啥干啥
+message DoSomeHttpRq {
+  required string str = 1;
+  required int64 roleId = 2;
+  extend Base
+  {
+    optional DoSomeHttpRq ext = 1021;
+  }
+}
+
+message DoSomeHttpRs {
+  optional bool success = 1;
+  extend Base
+  {
+    optional DoSomeHttpRs ext = 1022;
+  }
+}
+
+
+// 修改vip
+message ModVipRq {
+  optional string marking = 1;    //消息标识
+  optional int64 lordId = 2;      //结果 200成功
+  optional int32 type = 3;      //类型
+  optional int32 value = 4;      //值
+  extend Base
+  {
+    optional ModVipRq ext = 1025;
+  }
+}
+
+message ModVipRs {
+  extend Base
+  {
+    optional ModVipRs ext = 1026;
+  }
+}
+
+
+// 修改玩家信息
+message ModLordRq {
+  optional string marking = 1;    //消息标识
+  optional int64 lordId = 2;      //玩家ID
+  optional int32 type = 3;      //1.个性签名
+  optional string keyId = 4;      //索引
+  optional string value = 5;      //修改的值
+  optional string value2 = 6;      //修改值二
+
+  extend Base
+  {
+    optional ModLordRq ext = 1033;
+  }
+}
+
+message ModLordRs {
+  extend Base
+  {
+    optional ModLordRs ext = 1034;
+  }
+}
+
+// 修改玩家道具
+message ModPropRq {
+  optional string marking = 1;    //消息标识
+  optional int64 lordId = 2;      //玩家ID
+  optional int32 type = 3;      //1.加道具   -1.减道具
+  optional string props = 4;      //道具
+
+  extend Base
+  {
+    optional ModPropRq ext = 1065;
+  }
+}
+
+message ModPropRs {
+  extend Base
+  {
+    optional ModPropRs ext = 1066;
+  }
+}
+
+// 修改名字
+message ModNameRq {
+  optional string marking = 1;    //消息标识
+  optional int64 lordId = 2;      //玩家ID
+  optional string name = 3;      //名字
+
+  extend Base
+  {
+    optional ModNameRq ext = 1067;
+  }
+}
+
+message ModNameRs {
+  extend Base
+  {
+    optional ModNameRs ext = 1068;
+  }
+}
+
+// 修改服务器开服时间 (账号服->游戏服)
+message ModifyServerInfoRq {
+  optional int32 openTime = 1;    // 开服时间
+  optional string serverName = 2; // 开服名称
+  optional string sign = 3;        // 只做转发
+  optional bool unlockRobot = 4;   // 开放AI机器人
+  extend Base {
+    optional ModifyServerInfoRq ext = 1079;
+  }
+}
+
+// 修改服务器开服时间 (游戏服->账号服)
+message BackModifyServerInfoRq {
+  optional string sign = 1;    // 只做转发
+  optional int32 code = 2;    // 错误码
+  optional string msg = 3;    // 错误信息
+  extend Base {
+    optional BackModifyServerInfoRq ext = 1081;
+  }
+}
+
+message BackModifyServerInfoRs {
+  extend Base {
+    optional BackModifyServerInfoRs ext = 1082;
+  }
+}
+
+
+// 拉取账号服版本公告
+message GetVersionShowRq {
+  required int32 serverId = 1;
+  extend Base
+  {
+    optional GetVersionShowRq ext = 1085;
+  }
+}
+
+message GetVersionShowRs {
+  extend Base {
+    optional GetVersionShowRs ext = 1086;
+  }
+}
+
+// 同步游戏版本公告 (账号服->游戏服)
+message SyncVersionShowRs {
+  optional int32 op = 1;  // 1. 查询 2.增加 3.修改 4.删除
+  repeated int32 idList = 2;
+  repeated VersionShowData data = 3;
+  extend Base {
+    optional SyncVersionShowRs ext = 1087;
+  }
+}
+
+// 获取getCode数据的请求 (账号服->游戏服)
+message ApiGetCodeRq {
+  optional string marking = 1;
+  repeated int32 code = 2;
+  extend Base {
+    optional ApiGetCodeRq ext = 1095;
+  }
+}
+
+//获取getSome数据的回调 (游戏服->账号服)
+message BackGetSomeRq {
+  optional string marking = 1;
+  optional int32 code = 2;    // 状态码
+  optional string msg = 3;    // 信息
+  extend Base {
+    optional BackGetSomeRq ext = 1097;
+  }
+}
+
+message BackGetSomeRs {
+  extend Base {
+    optional BackGetSomeRs ext = 1098;
+  }
+}
+
+
+
+

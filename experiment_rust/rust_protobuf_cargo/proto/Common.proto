@@ -1,0 +1,717 @@
+syntax = "proto2";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+option java_outer_classname = "CommonPb";
+message TwoInt {
+  required int32 v1 = 1;
+  required int32 v2 = 2;
+}
+
+message StrInt {
+  required string v1 = 1;
+  required int32 v2 = 2;
+}
+
+message TwoStr {
+  required string v1 = 1;
+  required string v2 = 2;
+}
+
+message IntLong {
+  required int32 v1 = 1;
+  required int64 v2 = 2;
+}
+
+message IntDouble {
+  required int32 v1 = 1;
+  required double v2 = 2;
+}
+
+message IntListInt {
+  required int32 v1 = 1;
+  repeated int32 v2 = 2;
+}
+
+message LongInt {
+  required int64 v1 = 1;
+  required int32 v2 = 2;
+}
+
+message IntDoubles {
+  repeated IntDouble ls = 1;
+}
+
+message IntMap {
+  required int32 key = 1;
+  repeated TwoInt map = 2;
+}
+
+message StrLong {
+  required string v1 = 1;
+  required int64 v2 = 2;
+}
+
+message ThreeInt {
+  required int32 v1 = 1;
+  required int32 v2 = 2;
+  required int32 v3 = 3;
+}
+
+message IntList {
+  repeated int32 ls = 1;
+}
+
+message LongBool {
+  required int64 v1 = 1;
+  required bool v2 = 2;
+}
+
+message TwoLong {
+  required int64 v1 = 1;
+  required int64 v2 = 2;
+}
+
+// 区服信息
+message ServerInfo{
+  required int32 serverId = 1;//服务区ID
+  required string serverName = 2;//服务区名称
+  required int32 serverStatus = 3;//服务区状态
+  repeated ServerConnectInfo sc = 4;//服务配置信息
+  optional AccountRoleInfo ainfo = 5;//区服对应的角色信息
+  optional ServerMaintenance sm = 6;// 服务器维护信息
+  optional int32 serverMode = 7;// 0小服、1老服和合服 2:回流服
+  optional int32 mergeMode = 8;// 合服模式 0:旧合服规则 1:新合服规则, 支持变更阵营
+  optional int32 serverRegion = 9; // 所属大区
+}
+
+message ServerConnectInfo{
+  optional int32 sid = 1;//目的服务区
+  optional string sname = 2;//目的服务区名称
+  repeated int32 camp = 3;//阵营IP
+  required string ip = 4;//服务区IP
+  required string httpurl = 5;//HTTP地址
+  optional int32 netType = 6;//1:网关代理(gateway), 2:游戏直连(direct), nil:游戏直连
+}
+
+//账号角色信息
+message AccountRoleInfo {
+  optional int64 accountKey = 1;  // 账号key
+  optional int64 roleId = 2;  // 角色id
+  optional int64 serverId = 3;    // 服务器id
+  optional int32 level = 4;   // 等级
+  optional string roleName = 5;   // 角色名称
+  optional int32 camp = 6; //角色阵营信息
+  optional int64 dateRoleCreate = 7; //角色创建日期
+  optional int64 fight = 8;   // 战斗力
+  optional int32 vip = 9; // VIP等级
+  optional int32 commandLv = 10;  // 主城等级
+  optional int32 originalCamp = 11;  // 原始阵营
+  optional int64 dateRoleUpdate = 12; //角色更新日期[登入或登出]
+}
+
+// 服务器维护信息
+message ServerMaintenance {
+  optional string msg = 1; // 维护信息
+  optional int32 endTime = 2; // 维护结束时间
+  optional int32 serverTime = 3; // 服务器时间
+}
+
+// 区服控制
+message ServerControl {
+  repeated string plat = 1;    // 渠道名称
+  optional int32 allowMin = 2;
+  optional int32 allowMax = 3;
+  repeated int32 allow = 4;
+  optional string ext = 5;    // 扩展
+}
+
+// 阵营类型定义
+enum CampType{
+  Camp_LJ = 1;//帝国阵营
+  Camp_MJ = 2;//联军阵营
+  Camp_DG = 3;//盟军阵营
+}
+
+// 服务区开放状态
+enum ServerOpenStatus{
+  ServerHot = 1;
+  ServerNew = 2;
+  ServerStop = 3;
+}
+
+// buff来源类型
+enum BuffSourceType {
+  BUFF_SOURCE_TYPE_VIP = 1;          // vip
+  BUFF_SOURCE_TYPE_TECHNOLOGY = 2;   // 科技
+  BUFF_SOURCE_TYPE_ARTIFACT = 3;     // 神器
+  BUFF_SOURCE_TYPE_HERO = 4;         // 英雄
+  BUFF_SOURCE_TYPE_AD = 5;           // 广告
+  BUFF_SOURCE_TYPE_PROP = 6;         // 道具
+  BUFF_SOURCE_TYPE_CITY = 7;         // 城市
+  BUFF_SOURCE_TYPE_TALENT = 8;       // 天赋
+  BUFF_SOURCE_TYPE_TALENT_TITLE = 9; // 天赋称号
+  BUFF_SOURCE_TYPE_RIOT = 10;        // 暴动
+  BUFF_SOURCE_TYPE_ADVANCED = 11;    // 高级工种
+}
+
+// 断线状态码定义
+enum DisconnectCodeDefine {
+  SERVER_EXCEPTION = 1;           // 服务器异常, 未知错误
+  SERVER_SHUTDOWN = 2;            // 服务器维护
+  CONNECT_VIOLATION = 3;          // 连接违规, 如没有走正常的登录流程, 未进行登录校验就直接发送其它数据包体
+  CONNECT_OVERLOAD_SERVER = 4;    // 服务器连接数达到上限
+  CONNECT_OVERLOAD_CLIENT = 5;    // 客户端连接数达到上限, 单角色仅允许建立单个连接
+  CONNECT_IDLE_TIMEOUT = 6;       // 连接超时, 超过心跳时间未发送数据
+}
+
+// 排行榜类型定义
+enum RankTypeDefine {
+  FIGHT = 1;    // 战力排行榜
+  CAMPAIGN = 2; // 战役排行榜
+  CAMP_CONSTRUCT = 3; // 建造排行榜
+  CAMP_CITY_WAR = 4; // 城战排行榜
+  CAMP_COUNTRY_WAR = 5; // 国战排行榜
+  REBEL_CAMP_SCORE_RANK = 6; // 叛军来袭阵营积分排行榜
+  REBEL_PERSONAL_SCORE_RANK = 7; // 叛军来袭个人积分排行榜
+}
+
+// 缓存状态定义
+enum CacheStatusDefine {
+  NOT_EXIST = 0; // 不存在
+  NOT_MODIFIED = 1; // 未修改
+}
+
+// 排名信息
+message RankItem {
+  optional int32 rank = 1;          // 排名
+  optional int64 rankValue = 2;     // 排名数值
+  optional int64 updateTime = 3;    // 更新的时间
+  optional int64 roleId = 4;        // 玩家id
+  optional string nick = 5;         // 昵称
+  optional int32 portrait = 6;      // 头像
+  optional int32 portraitFrame = 7; // 头像框
+  optional int32 title = 8;         // 称号
+  optional int32 camp = 9;          // 阵营
+}
+
+// 排行榜集合
+message RankCollect {
+  optional int32 type = 1;        // 关联Common.RankTypeDefine
+  repeated RankItem rankItem = 2; // 排行榜信息列表
+}
+
+// 延迟排行榜集合
+message DelayCollect {
+  optional int64 rankId = 1;      // 榜单唯一id
+  repeated RankItem rankItem = 2; // 排行榜信息列表
+  optional int32 expiredTime = 3; // 过期时间
+}
+
+// 本地排行榜数据
+message LocalRankData {
+  repeated RankCollect rankCollect = 1; // 排行榜总集合
+  repeated DelayCollect delayCollect = 2; // 延迟排行榜总集合
+  optional int64 uniqueId = 3; // 唯一id
+}
+
+// 版本公告数据
+message VersionShowData {
+  optional int32 id = 1;       // 公告id
+  optional int32 type = 2;     // 定位按钮(页签类型)
+  optional int32 tab = 3;      // 定位按钮下子项(公告图片)
+  optional int32 display = 4;  // 是否显示[0:不显示, 1:显示](不传客户端)
+  optional string title = 5;   // 标题
+  optional string content = 6; // 内容
+  optional int64 time = 7;     // 时间戳
+}
+
+// 道具
+message PropPb {
+  required int32 propId = 1;  // 道具编号
+  required int64 count = 2;   // 数量
+  optional int32 useCnt = 3;  // 已使用的次数
+  optional int32 useTime = 4; // 最后一次使用时间
+}
+
+// 奖励
+message AwardPb {
+  required int32 type = 1;     // 类型
+  required int32 id = 2;       // 编号
+  required int64 count = 3;    // 数量
+  optional int32 keyId = 4;    // 奖励唯一编号
+  repeated int32 extParam = 5; // 扩展参数
+  optional int32 fromCode = 6; // 奖励来源
+  optional bool safe = 7;      // 是否是受保护资源
+}
+
+// 奖励组
+message AwardGroupPb {
+  repeated AwardPb award = 1;   // 奖励列表
+  optional int32 groupId = 2;   // 奖励组id(可以放任何能标识组与组区别的整数)
+  optional string groupKey = 3; // 奖励键(可以放任何能标识组与组区别的字符串)
+}
+
+// 建筑库存改变
+message BuildResChange {
+  optional int32 buildId = 1;   // 建筑id
+  optional int64 safeNum = 2;   // 建筑保护资源数量
+  optional int64 unsafeNum = 3; // 建筑非保护资源数量
+}
+
+// 玩家资源改变
+message ChangeInfo {
+  repeated BuildResChange buildRes = 1;  // 建筑资源改变
+  repeated AwardPb award = 2;            // 变化后的保护奖励信息(数量传的是当前数量)
+  repeated AwardPb unsafeAward = 3;      // 变化后的非保护奖励信息(数量传的是当前数量)
+  repeated AwardPb showAward = 4;        // 前端展示的奖励信息(增量数据)
+  optional int32 show = 5;               // 是否显示使用(-1默认不显示 , 0之后的显示)
+}
+
+// 招募数据结构
+message RecruitData {
+  required int32 recruitType = 1;           // 招募id
+  optional int32 usedFreeCount = 2;       // 已抽取免费次数
+  optional int32 nextFreeTime = 3;        // 下一次免费抽取时间点(秒)(免费次数用完后传-1)
+  optional int32 totalSchedule = 4;       // 累积抽取进度值(只有配置表里needProgress字段有值的类型才会传这个字段, 比如3类型招募宝箱)
+  optional int32 todayRecruitedCount = 5; // 今日已招募次数(超过表里配置的上限则要显示无法抽取)
+}
+
+// 编队数据
+message Formation {
+  required int32 id = 1;     // 编队id(从1开始)
+  required int32 state = 2;  // 编队状态(0: 空闲中, 1: 出征中)
+  repeated int32 heroId = 3; // 包含英雄id
+  optional bool systemDispatch = 4; // 是否系统派遣 [服务器使用, 标识编队出征是否由系统自动派出]
+}
+
+// 城池竞选玩家信息
+message CampaignRole {
+  required string nick = 1;
+  required int32 ranks = 2;    // 军衔
+  optional int64 role_id = 3;    // 玩家id
+}
+
+// 编队状态
+enum FormationStateDefine {
+  IDLE = 0; // 空闲中
+  EXPEDITION = 1; // 出征中(具体出征状态可以后面扩展)
+}
+
+message CampBattleFighter {
+  optional int64 roleId = 1;
+  optional string name = 2;
+  optional int32 pos = 3;//玩家自己城所在位置
+  optional bool isAttacker = 4;//true攻击方 false 防守方
+  optional int32 camp = 5;//阵营
+  optional int32 portrait = 6;//头像
+  optional int32 portraitFrame = 7;//头像框
+}
+
+message CampAssemblyBattleFighter {
+  optional int64 roleId = 1;
+  optional string name = 2;
+  optional int32 portrait = 3;//头像
+  optional int32 portraitFrame = 4;//头像框
+  optional int64 fight = 5;//玩家战力
+  optional int32 camp = 6;
+}
+
+// --------------------------------BaseSummary------------------------------------------------------------
+
+// 概要信息
+message BaseSummary {
+  required int32 pos = 1;           // 实体位置
+  required int32 entityType = 2;    // 实例类型, 对应WorldEntityTypeDefine定义
+  optional int32 camp = 3;          // 实体阵营
+  extensions 10 to 20;
+}
+
+// npc概要
+message NpcSummary {
+  required int32 configId = 1;      // 实体配置id
+  optional int32 type = 2;//参考 WorldEntityTypeDefine
+  extensions 21 to max;
+  extend BaseSummary {
+    optional NpcSummary npc = 10;
+  }
+}
+
+// 资源田概要
+message MineSummary {
+  optional int64 roleId = 1;
+  optional string nick = 2;
+  optional int32 portrait = 3;      // 头像
+  optional int32 portraitFrame = 4; // 头像框
+  optional int32 mineConfigId = 5;//资源田配置id
+  extend NpcSummary {
+    optional MineSummary mine = 21;
+  }
+}
+
+// --------------------------------PlayerSummary------------------------------------------------------------
+// 玩家概要
+message PlayerSummary {
+  required int32 level = 1;         // 篝火等级
+  required string nick = 2;         // 昵称
+  required int64 roleId = 3;        // 玩家id
+  optional int32 portrait = 4;      // 头像
+  optional int32 portraitFrame = 5; // 头像框
+  extend BaseSummary {
+    optional PlayerSummary player = 11;
+  }
+}
+
+// --------------------------------HeroSummary------------------------------------------------------------
+// 英雄概要信息
+message HeroSummary {
+  required int32 heroId = 1;              // 英雄配置id
+  optional int32 level = 2;               // 等级
+  optional int32 tier = 3;                // 阶级
+  optional int32 armType = 4;             // 兵种类型
+  optional int32 armLv = 5;               // 兵种等级
+  optional int32 hp = 6;                  // 英雄血量
+}
+
+// --------------------------------ObserverActionDefine------------------------------------------------------------
+// 观察者行为定义
+enum ObserverActionDefine {
+  FIGHT_LIST = 1;           // 战斗列表
+  FIGHT_INFO = 2;           // 战斗详情
+  GARRISON_TROOP_LIST = 3;  // 驻防部队列表 [预留]
+}
+
+//******************************************function功能模块**********************************************************
+enum FunctionTypeDefine {
+  // 基础功能数据
+  LORD_FUNCTION = 0;
+  // 模拟经营功能数据
+  SIM_FUNCTION = 1;
+  // 将领功能数据
+  HERO_FUNCTION = 2;
+  // 背包功能数据
+  BAG_FUNCTION = 3;
+  // 科技功能数据
+  TECHNOLOGY_FUNCTION = 4;
+  // 任务功能数据
+  MISSION_FUNC = 5;
+  // 副本战斗功能数据
+  COMBAT_FUNC = 6;
+  // 装备功能数据
+  EQUIP_FUNC = 7;
+  // 世界数据
+  WORLD_FUNC = 8;
+  // 充值数据
+  PAY_FUNC = 9;
+  // 邮件功能数据
+  MAIL_FUNC = 10;
+  // 外观功能数据
+  GUISE_FUNC = 11;
+  // 情报商会功能数据
+  INTEL_BROKER_FUNC = 12;
+  // vip数据
+  VIP_FUNC = 13;
+  // 运营活动功能数据
+  ACTIVITY_FUNC = 14;
+  // 阵营数据
+  CAMP_FUNC = 15;
+  // 城墙数据
+  WALL_FUNC = 16;
+  // 玩法数据
+  GAMEPLAY_FUNC = 17;
+  // 聊天数据
+  CHAT_FUNC = 18;
+  // 商店数据
+  SHOP_FUNC = 19;
+  // 领主天赋数据
+  LORD_TALENT_FUNC = 20;
+  // 竞技场数据
+  ARENA_FUNC = 21;
+  // 皮肤数据
+  SKIN_FUNC = 22;
+  // 领主装备数据
+  LORD_EQUIP_FUNC = 23;
+  // 社交功能
+  SOCIAL_FUNC = 24;
+}
+
+// 玩家系统设置定义
+enum PlayerSystemSetting {
+  DISPLAY_VIP = 1;      // 是否对其它玩家展示vip等级, 0: 不展示, 1: 展示
+}
+
+message FunctionClientBase {
+  optional int32 type = 1;            // 功能id
+  extensions 10 to 128;
+}
+
+// 玩家基础信息
+message LordDataFunction {
+  optional string nickName = 1;           // 昵称
+  optional int32 portrait = 2;            // 头像(弃用, 清数据时需要将该字段删除)
+  optional int64 diamond = 3;             // 钻石
+  optional int64 battleFight = 4;         // 冒险战力
+  optional int32 guideIndex = 5;          // 新手引导进度index
+  optional int32 title = 6;               // 称号(弃用, 清数据时需要将该字段删除)
+  optional int32 portraitFrame = 7;       // 头像框(弃用, 清数据时需要将该字段删除)
+  optional RoleStatus roleStatus = 8;     // 玩家的一些状态
+  optional int32 serverOpenTime = 9;      // 服务器开服时间
+  optional int32 roleCreateTime = 10;     // 玩家创角时间, 时间戳(秒)
+  optional int32 offTime = 11;            // 离线时长
+  optional int64 meat = 12;               // 肉余量
+  optional int32 fame = 13;               // 声望值
+  optional int64 gold = 14;               // 金币
+  optional int32 searchSurvivorTime = 15; // 搜索幸存者结束时间
+  optional int32 stamina = 16;            // 体力
+  optional int32 killEnemyCount = 17;     // 杀敌(占位, 目前为0)
+  optional int32 unionId = 18;            // 联盟id(占位, 目前为0)
+  optional int32 totalLogin = 19;         // 累计登录多少天
+  optional int32 currentStreak = 20;      // 连续登录次天数
+  optional int32 vipLevel = 21;           // vip等级
+  optional int32 vipExp = 22;             // vip经验
+  repeated TwoInt setting = 23;           // 玩家系统设置, 参照PlayerSystemSetting定义
+  extend FunctionClientBase {
+    optional LordDataFunction ext = 11;
+  }
+}
+
+// 记录玩家的一些状态, 例如：首次免费改名是否使用;
+message RoleStatus {
+  repeated TwoInt status = 1;
+}
+
+//******************************************玩家信息定义**********************************************************
+
+// 注意！！！
+// 所有低实时敏感的玩家信息都需要使用当前结构, 如果实时性要求高的话, 需要在模块中自己维护
+// 玩家基础信息(客户端使用, 依赖于客户端TTL过期时间, 过期后需要重新请求)
+message PlayerSnapshot {
+  required int64 roleId = 1;              // 玩家id
+  optional int32 cacheStatus = 2;         // 缓存状态, 对应CacheStatusDefine定义
+  optional int32 version = 3;             // 版本号
+  optional string nick = 4;               // 昵称
+  optional int32 portrait = 5;            // 头像
+  optional int32 avatarFrame = 6;         // 头像框
+  optional int32 title = 7;               // 称号
+  optional int32 camp = 8;                // 阵营
+  optional int32 fireLv = 9;              // 篝火等级
+  optional int32 vip = 10;                // vip等级
+  optional int32 job = 11;                // 官职
+  optional int32 area = 12;               // 区域
+  optional int64 fight = 13;              // 战力
+  repeated LordEquipSnapshot equip = 14;  // 领主装备
+  optional bool isOnline = 15;            // 是否在线
+}
+
+// 领主装备快照
+message LordEquipSnapshot {
+  optional int32 type = 1;          // 领主装备类型(部位)
+  optional int32 level = 2;         // 领主装备等级
+}
+
+//******************************************任务定义**********************************************************
+
+
+// 玩家状态定义(1-100000客户端用, 100001+服务器自己用, 不会传给客户端)
+enum RoleStatusTypeDefine {
+  FIRST_RENAME_FREE_IS_USED = 1;            // 首次改名免费是否使用过(是为1, 否为0)
+  TEMP_AVOID_AD_EXPIRATION_TIME = 2;        // 临时免广告功能到期时间
+  AUTO_SEARCH_SURVIVOR = 3;                 // 自动搜寻幸存者开关状态(0:关闭, 1:开启)
+  ALL_STAMINA_RESTORE_TIME = 4;             // 全部体力恢复完成时间点(秒)
+  AUTO_ASSIGN_SURVIVOR = 5;                 // 自动分配幸存者开关(0:关闭, 1:开启)
+  FIGHT_BUILD = 1001;                       // 实力系统-建筑模块提供
+  FIGHT_ARMY = 1002;                        // 实力系统-部队模块提供
+  FIGHT_TECHNOLOGY = 1003;                  // 实力系统-科技模块提供
+  FIGHT_HERO = 1004;                        // 实力系统-英雄模块提供
+  FIGHT_EQUIP = 1005;                       // 实力系统-装备模块提供
+  FIGHT_TALENT = 1006;                      // 实力系统-领主天赋模块提供
+  FIGHT_LORD_EQUIP = 1007;                  // 实力系统-领主装备模块提供
+  FIGHT_VIP = 1008;                         // 实力系统-vip模块提供
+  LAST_SETTLE_STAMINA_TIME = 100001;        // 上次结算体力时间点(秒)
+  RESOURCE_ACQUISITIONS_COUNT = 100002;     // 资源采集次数
+  HOSPITAL_TEMP_SAVE_INJURED_ARMY = 100003; // 医院暂存伤兵
+}
+
+// 任务功能数据
+message MissionDataFunction {
+  optional ChapterMission currChapterMission = 1;   // 当前章节任务任务
+  repeated BaseMission openMission = 2;             // 创角即存在的任务 [服务器使用]
+  repeated int32 passedMission = 3;                 // 已经通过的任务id [服务器使用]
+  optional DailyMission dailyMission = 4;           // 每日活跃度任务
+  repeated BaseMission growMainMission = 5;         // 成长主线任务
+  repeated BaseMission growSpurMission = 6;         // 成长支线任务
+  repeated TimeLimitMissionPb timeLimitMission = 7; // 限时任务
+  extend FunctionClientBase {
+    optional MissionDataFunction ext = 16;
+  }
+}
+
+// 基础任务数据
+message BaseMission {
+  optional int32 missionDefine = 1;     // 任务类型
+  optional int32 configId = 2;          // 任务配置id
+  optional int64 curSchedule = 3;       // 当前任务进度
+  optional int32 status = 4;            // 任务状态 参照MissionStatus定义
+  extensions 16 to 100;                 // 子类任务包含字段
+}
+
+// 章节任务数据
+message ChapterMission {
+  required int32 configId = 1;        // 章节配置id
+  repeated BaseMission mission = 2;   // 章节内任务
+  optional int32 status = 3;          // 章节状态 参照MissionStatus定义
+}
+
+// 日常活跃度任务数据
+message DailyMission {
+  required int32 configId = 1;      // 任务配置id
+  optional int32 currentValue = 2;  // 当前活跃度值
+  repeated int32 hasReceived = 3;   // 已经领取的ID
+  repeated BaseMission mission = 4; // 每日任务列表
+}
+
+// 限时任务数据
+message TimeLimitMissionPb {
+  required int32 configId = 1;       // 限时任务配置id
+  repeated BaseMission mission = 2;  // 限时任务列表
+  optional bool timeLimitFinish = 3; // 是否在限时内完成
+  optional int32 endTime = 4;        // 限时结束时间
+  optional int32 status = 5;         // 限时任务状态 参照MissionStatus定义
+}
+
+// 任务状态定义
+enum MissionStatus {
+  UNDONE = 0;                 // 未完成(无状态)
+  AVAILABLE_RECEIVE = 1;      // 可领取
+  RECEIVED = 2;               // 普通奖励已领取
+}
+
+// 任务类型
+enum MissionDefine {
+  MAIN_MISSION = 0;       // 章节任务
+  ACTIVITY_MISSION = 1;   // 活动任务
+  DAILY_MISSION = 2;      // 每日任务
+  GROW_MAIN_MISSION = 3;  // 主线成长任务
+  GROW_SPUR_MISSION = 4;  // 支线成长任务
+  CAMP_MISSION = 5;       // 阵营任务
+  TIME_LIMIT_MISSION = 6; // 限时任务
+}
+
+// 礼包
+message GiftpackPb {
+  optional int32 packType = 1;                // 对应s_gift_pack_group的type
+  optional int32 group = 2;                   // 对应s_gift_pack_group的group
+  optional int32 packId = 3;                  // 对应s_gift_pack的id
+  optional int64 refreshTime = 4;             // 客户端：下一次刷新的时间戳； 服务器：最近一次刷新时间
+  optional int32 buyCnt = 5;                  // 已经购买次数
+  repeated TwoInt choosePackAward = 6;        // 自选礼包，服务器记录的奖励所用，v1-对应s_pack的id, v2-对应s_pack的content的奖励索引
+  optional int32 refreshTimes = 7;            // 刷新次数
+  optional int32 endTime = 8;                 // 结束时间
+}
+
+// 每日充值
+message DailyRecharge {
+  optional int32 dayNum = 1;          // 第几天, -1表所有天完成后对应的奖励
+  optional string rechargeCnt = 2;    // 当天累计充值金额
+  optional bool finish = 3;           // 当天是否完成充值目标
+  optional bool reward = 4;           // 是否已领奖
+  optional int64 finishTime = 5;      // 完成时间
+  optional int64 awardTime = 6;       // 领奖时间
+  optional int64 updateTime = 7;      // 更新时间
+}
+
+// 基础排行榜信息
+message BaseRankItem {
+  optional int32 rank = 1;
+  optional string roleId = 2;
+  optional string roleName = 3;
+  optional int64 rankValue = 4;
+  optional int32 originalServerId = 5;
+  optional int32 camp = 6;
+  optional string portrait = 7;     // 头像
+  optional int32 portraitFrame = 8; // 头像框
+  extensions 20 to 1000;
+}
+
+// 活动排行榜数据
+message ActivityRankItem {
+  repeated int64 rankValue = 1;
+  required int32 rankValueType = 2; // 对应s_activity_form_rank的rank_value_type
+  optional int32 activityId = 3;
+  optional int32 formId = 4;
+  extend BaseRankItem {
+    optional ActivityRankItem ext = 21;
+  }
+}
+
+// 最强领主排行榜信息
+message SupremeLordRankItem {
+  optional int32 stage = 1;            // 当前阶段
+  repeated RankItem RankItem = 2; // 排行榜信息
+  optional int32 myRank = 3;          // 我的排名
+  optional RankItem myInfo = 4;      // 我的信息
+}
+
+
+// [目前废弃]新手引导埋点：单条 extra，key 对应 GuideExtraKey（Target/Type/Res/DialogId），数值用 intVal 或 strVal
+message GuideTrackExtra {
+  optional int32 key = 1;
+  optional int64 intVal = 2;
+  optional string strVal = 3;
+}
+
+//******************************************广播事件**********************************************************
+
+// 广播类型定义
+enum BroadTypeDefine {
+  ALTER_EVENT = 1;    // 预警事件
+  MAP_EVENT = 2;      // 地图事件, 仅在地图中产生, 大多数广播根据AOI策略选定生效范围 [默认约定, 不在地图中收到地图事件可以直接抛弃]
+  CHAT_EVENT = 3;     // 聊天事件
+  SOCIAL_EVENT = 4;   // 社交事件
+  CHAT_ROOM_EVENT = 5;// 聊天室事件
+}
+
+// 广播行为定义
+enum BroadActionDefine {
+  INSERT_EVENT = 1;   // 新增
+  UPDATE_EVENT = 2;   // 更新
+  DELETE_EVENT = 3;   // 删除
+  SELECT_EVENT = 4;   // 查询
+  REPLACE_EVENT = 5;  // 替换, 即存在就更新, 不存在就新增 [预留]
+}
+
+// 广播级别定义 (无特殊情况, 具体的广播结构, 即BroadEvent下一层, 不能超过这三层结构) [结构定义参考Entity和Fight]
+enum BroadcastLevelDefine {
+  BROADCAST_LEVEL_BASIC = 1;      // 基础
+  BROADCAST_LEVEL_DETAILS = 2;    // 概要
+  BROADCAST_LEVEL_INFO = 3;       // 详情
+}
+
+// 广播事件
+message BroadEvent {
+  required int32 broadType = 1;   // 广播类型, 对应BroadTypeDefine枚举中定义的类型
+  required int32 broadAction = 2; // 广播行为, 对应BroadActionDefine枚举中定义的行为
+  extensions 51 to 100;
+}
+
+// 预警事件
+message AlterEvent {
+  required BaseAlter alter = 1;  // 预警数据
+  extend BroadEvent {
+    optional AlterEvent alterEvent = 51;
+  }
+}
+
+// 预警信息
+message BaseAlter {
+  required int32 id = 1;    // 预警id
+  required int32 type = 2;  // 预警类型
+  extensions 51 to 100;
+}
+
+// 被攻击预警
+message UnderAttackAlter {
+  extend BaseAlter {
+    optional UnderAttackAlter underAttack = 51;
+  }
+}
