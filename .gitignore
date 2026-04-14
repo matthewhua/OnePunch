@@ -1,35 +1,58 @@
 # ========== 操作系统与通用临时文件 ==========
-.DS_Store       # Mac 系统文件
-Thumbs.db       # Windows 系统文件
-*~              # 类Unix系统临时文件
-*.swp           # Vim 临时文件
-*.swo           # Vim 交换文件
-*.bak           # 备份文件
-*.tmp           # 临时文件
+# Mac 系统文件
+.DS_Store
+# Windows 系统文件
+Thumbs.db
+# 类Unix系统临时文件
+*~
+# Vim 临时文件
+*.swp
+*.swo
+# 备份与临时文件
+*.bak
+*.tmp
 
 # ========== IDE 配置文件 ==========
-**/.idea/         # IntelliJ IDEA 配置目录 (所有层级)
-!.idea/runConfigurations/  # 保留运行配置（可选）
-*.iml           # IntelliJ IDEA 项目文件
-*.iws           # IntelliJ IDEA 工作区文件
-.vscode/        # VS Code 配置目录
-*.vscode        # VS Code 单文件配置
-.gradle/        # Gradle 缓存目录（IDE 可能关联）
-*.project       # Eclipse 项目文件
-*.classpath     # Eclipse 类路径文件
-.settings/      # Eclipse 配置目录
-.fleet/         # Fleet IDE 配置
-.metals/        # Scala Metals 配置
-.bloop/         # Bloop 编译服务器
+# IntelliJ IDEA 配置目录 (所有层级)
+**/.idea/
+# 保留运行配置（可选）
+!.idea/runConfigurations/
+# IntelliJ IDEA 项目文件
+*.iml
+*.iws
+# VS Code 配置目录
+**/.vscode/
+# VS Code 单文件配置
+*.vscode
+# Gradle 缓存目录（IDE 可能关联）
+.gradle/
+# Eclipse 项目文件
+*.project
+*.classpath
+# Eclipse 配置目录
+.settings/
+# Fleet IDE 配置
+.fleet/
+# Scala Metals 配置
+.metals/
+# Bloop 编译服务器
+.bloop/
 
 # ========== 编译产物 & 缓存文件 ==========
-**/target/         # Rust/Scala 编译输出目录 (所有层级)
-classes/        # Java 编译输出目录
-*.class         # Java/Scala 编译生成的类文件
-*.cache         # 各类缓存文件
-*.log           # 日志文件（通用）
-logs/           # 日志目录（通用）
-out/            # 部分IDE的输出目录
+# 编译输出目录 (所有层级)
+**/target/
+**/build/
+**/out/
+**/bin/
+!**/src/bin/
+# Java/Scala 编译生成的类文件
+classes/
+*.class
+# 各类缓存与日志
+*.cache
+.cache/
+*.log
+logs/
 
 # ========== Java 特定 ==========
 *.jar
@@ -38,53 +61,76 @@ out/            # 部分IDE的输出目录
 *.javap
 *.jmap
 *.jstack
-*.snap          # Java 快照文件
+# Java 快照文件
+*.snap
 
 # ========== Scala 特定 ==========
 *.scala.html
 *.sbt
-.ivy2/          # Ivy 依赖缓存
+# Ivy 依赖缓存
+.ivy2/
 *.ivy
-project/target/ # Scala sbt 项目的编译目录
-build.sbt.lock  # sbt 锁文件
+# Scala sbt 项目的编译目录
+project/target/
+# sbt 锁文件
+build.sbt.lock
 
 # ========== Rust 特定 ==========
-*.rs.bk         # Rust 备份文件
-**/target/      # Rust 编译输出目录（所有子目录）
-Cargo.lock      # Rust 依赖锁文件（库项目应忽略，二进制项目应提交）
-*.rlib          # Rust 静态库
-*.dll           # Rust 动态库（Windows）
-*.so            # Rust 动态库（Linux）
-*.dylib         # Rust 动态库（Mac）
-**/*.rs.bk      # Rust 备份文件（所有子目录）
-.rustc_info.json  # Rust 编译器信息
-CACHEDIR.TAG    # Rust target 缓存标记
+# Rust 备份文件
+*.rs.bk
+**/*.rs.bk
+# Rust 依赖锁文件 (在多项目仓库中通常建议忽略，除非是顶级二进制项目)
+Cargo.lock
+# Rust 编译产物
+*.rlib
+*.dll
+*.so
+*.dylib
+# Rust 编译器信息与缓存
+.rustc_info.json
+CACHEDIR.TAG
 
 # ========== Gradle 特定 ==========
-build/          # Gradle 构建输出目录（全局及模块内）
-!gradle/wrapper/gradle-wrapper.jar  # 保留 Gradle Wrapper 核心文件（建议提交）
-!**/src/main/**/build/  # 避免误删源码目录内的 build（若有特殊需求）
-!**/src/test/**/build/
-gradle.properties  # 全局 Gradle 配置（若含敏感信息可忽略，否则建议提交）
-local.properties   # 本地配置（如Android SDK路径，含本地信息需忽略）
-*.gradle          # Gradle 任务缓存文件（非脚本）
+# Gradle 运行时产生的目录
+.gradle/
+# Gradle 构建输出目录已经由 **/build/ 涵盖
+# 保留 Gradle Wrapper 核心文件
+!gradle/wrapper/gradle-wrapper.jar
+# 本地 Gradle 配置 (通常包含本地路径，不建议提交)
+local.properties
+# 允许提交 build.gradle 和 settings.gradle
+!build.gradle
+!settings.gradle
 
 # ========== Node.js 特定 ==========
-node_modules/    # 依赖包目录，禁止提交
-npm-debug.log*   # npm 调试日志
-yarn-debug.log*  # Yarn 调试日志
+# 依赖包目录
+**/node_modules/
+# npm/Yarn/pnpm 日志
+npm-debug.log*
+yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-# 注意：不要使用 *.lock 这样的通配符，会误删重要的锁文件
-dist/            # 构建输出目录（如前端打包文件）
-coverage/        # 测试覆盖率报告
-*.tsbuildinfo    # TypeScript 构建信息
-*.js.map         # JavaScript 源码映射文件
-*.d.ts           # 自动生成的类型定义文件（手动维护的可保留）
-*.cmd            # Node.js 命令行脚本（如 cross-env、nodemon 的 cmd 文件）
-*.ps1            # Node.js PowerShell 脚本
-*.bat            # Node.js Batch 脚本（若有）
+# 前端构建输出
+dist/
+# 测试覆盖率报告
+coverage/
+# TypeScript 构建信息
+*.tsbuildinfo
+# 源码映射与类型定义
+*.js.map
+*.d.ts
+# 脚本文件
+*.cmd
+*.ps1
+*.bat
+# Lock 文件 (说明：在多项目学习仓库中，忽略 lock 文件可以保持提交整洁；
+# 如果是正式生产项目，建议注释掉以下规则以保留 lock 文件)
+# Cargo.lock
+# yarn.lock
+# package-lock.json
+# pnpm-lock.yaml
+# bun.lock
 
 # ========== Maven 特定 ==========
 pom.xml.tag
@@ -114,8 +160,6 @@ pip-delete-this-directory.txt
 .dmypy.json
 dmypy.json
 *.egg-info/
-dist/
-build/
 *.egg
 
 # ========== Go 特定 ==========
@@ -129,7 +173,6 @@ vendor/
 # ========== C/C++ 特定 ==========
 *.o
 *.a
-*.out
 *.obj
 *.elf
 *.gch
@@ -142,13 +185,17 @@ vendor/
 *.exp
 *.lib
 
-# ========== 其他常见文件 ==========
+# ========== 其他常用规则 ==========
+# 缓存文件夹
+.crush/
+# 进程与种子
 *.pid
 *.seed
 *.pid.lock
+# 敏感环境变量文件
 .env
 .env.local
 .env.*.local
+# Git 冲突文件
 *.orig
 *.rej
-.cache/
