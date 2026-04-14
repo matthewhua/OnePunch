@@ -1,3 +1,0 @@
-websocket:
-  port: 9900 #端口
-  url: /msg #访问url
