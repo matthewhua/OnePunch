@@ -1,0 +1,132 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+/**
+ * 领主天赋系统协议
+ * 
+ * 扩展号占用范围：
+ * - FunctionClientBase.ext = 31
+ * - Base.ext = 9201 ~ 9300 (当前使用 9201-9212，预留至 9300)
+ * 
+ * 设计思路：
+ * 1. 天赋点激活制：玩家消耗天赋点激活天赋配置
+ * 2. 天赋有等级：同一天赋的不同等级通过nextId连接
+ * 3. 天赋分类型：发展/经济/战斗 3个线路
+ * 4. 天赋分阶段：同阶段的所有天赋都要升满，才能解锁下一阶段
+ * 5. 前置条件：通过needTalent字段配置前置天赋要求
+ * 6. 阶段奖励：基于激活的天赋数量发放奖励
+ */
+
+// ==================== 功能数据 ====================
+
+/**
+ * 领主天赋功能数据
+ */
+option java_outer_classname = "LordTalentPb";
+message LordTalentDataFunction {
+  optional bool systemUnlocked = 1;           // 天赋系统是否已解锁
+  repeated TwoInt talent_levels = 2;          // 已激活的天赋等级 <talentId, level> //客户端读
+  repeated int32 claimedStageRewards = 3;     // 已领取的阶段奖励ID列表（s_lord_talent_stage.stageId）
+  optional int32 currentStage = 4;            // 天赋阶段
+  optional int32 currentTalentGroup = 5;      // 当前选中的天赋组
+  optional int32 totalPoint = 6;              // 激活的总点数
+  repeated TalentGroupLevel db_talent_levels = 7; // 存在库里的天赋数据, 不对客户端发送
+
+  extend FunctionClientBase {
+    optional LordTalentDataFunction ext = 31;
+  }
+}
+
+// 天赋组等级
+message TalentGroupLevel {
+    optional int32 id = 1; //   天赋Id
+    optional int32 group = 2; // 天赋组Id
+    optional int32 level = 3; // 天赋组等级
+}
+
+// ==================== 请求/响应协议 ====================
+
+/**
+ * 获取领主天赋信息
+ */
+message GetLordTalentRq {
+  extend Base {
+    optional GetLordTalentRq ext = 9201;
+  }
+}
+
+message GetLordTalentRs {
+  optional bool systemUnlocked = 1;           // 天赋系统是否已解锁
+  repeated TwoInt talent_levels = 2;          // 已激活的天赋等级 <talentId, level>
+  repeated int32 claimedStageRewards = 3;     // 已领取的阶段奖励ID列表
+  optional int32 currentTalentGroup = 4;      // 当前选中的天赋组
+  optional int32 totalPoint = 5;              // 激活的总点数
+
+  extend Base {
+    optional GetLordTalentRs ext = 9202;
+  }
+}
+
+/**
+ * 激活天赋
+ */
+message ActivateTalentRq {
+  optional int32 configId = 1;        // 要激活的天赋配置ID（s_lord_talent.id）
+
+  extend Base {
+    optional ActivateTalentRq ext = 9203;
+  }
+}
+
+message ActivateTalentRs {
+  optional int32 configId = 1;                // 激活的配置ID
+  repeated TwoInt talent_levels = 2;          // 更新后的已激活天赋列表 <talentId, level>
+  optional int32 currentTalentGroup = 3;      // 当前选中的天赋组
+  optional int32 totalPoint = 4;              // 激活的总点数
+  extend Base {
+    optional ActivateTalentRs ext = 9204;
+  }
+}
+
+/**
+ * 领取阶段奖励
+ */
+message ClaimStageRewardRq {
+  optional int32 stageId = 1;         // 阶段ID
+
+  extend Base {
+    optional ClaimStageRewardRq ext = 9205;
+  }
+}
+
+message ClaimStageRewardRs {
+  optional int32 stageId = 1;             // 阶段ID
+  repeated AwardPb rewards = 2;           // 奖励内容
+  repeated int32 claimedStageRewards = 3; // 更新后的已领取阶段奖励列表
+
+  extend Base {
+    optional ClaimStageRewardRs ext = 9206;
+  }
+}
+
+// ==================== 推送协议 ====================
+
+/**
+ * 天赋数据变更推送
+ */
+message SyncTalentDataPushRs {
+  repeated TwoInt talent_levels = 1;          // 变更的天赋等级 <talentId, level>
+  repeated int32 claimedStageRewards = 2;     // 变更的已领取阶段奖励列表
+  optional int32 currentStage = 3;            // 当前达到的阶段ID
+  optional int32 currentTalentGroup = 4;      // 当前选中的天赋组
+  optional int32 totalPoint = 5;              // 激活的总点数
+
+  extend Base {
+    optional SyncTalentDataPushRs ext = 9211;
+  }
+}

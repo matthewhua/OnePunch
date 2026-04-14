@@ -1,0 +1,329 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+import "Cross.proto";
+import "Battle.proto";
+import "World.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ========================= 枚举定义 =========================
+
+// 竞技场赛季状态
+enum ArenaSeasonStatus {
+  SEASON_NORMAL = 0;      // 正常赛季中
+  SEASON_SETTLE = 1;      // 结算中（周日23:10-24:00）
+}
+
+// ========================= 玩家竞技场数据 =========================
+
+// 竞技场个人数据
+option java_outer_classname = "ArenaPb";
+message ArenaPlayerData {
+  optional int32 score = 1;                    // 当前积分
+  optional int32 rank = 2;                     // 当前排名（0表示未入榜）
+  optional int32 dailyFreeChallenges = 3;      // 今日剩余免费挑战次数
+  optional int32 purchasedChallenges = 4;      // 剩余挑战的购买挑战次数
+  optional int32 dailyBuyChallenges = 5;       // 今日已购买的挑战次数
+  optional int32 dailyFreeRefreshes = 6;       // 今日剩余免费刷新次数
+  optional int32 dailyPaidRefreshes = 7;       // 今日已付费刷新次数
+  optional int32 lastRefreshTime = 8;          // 上次刷新时间戳
+  optional int64 scoreReachTime = 9;           // 达到当前积分的时间戳
+  optional int32 totalWins = 10;               // 总胜场
+  optional int32 totalLosses = 11;             // 总负场
+  optional int32 highestRank = 12;             // 历史最高排名
+  optional int32 highestScore = 13;            // 历史最高积分
+  repeated int32 defenseFormation = 14;        // 防守阵容（英雄ID列表）
+  repeated ChallengeRecord challengeRecords = 15; // 挑战记录（最近50条）
+  repeated ArenaOpponent currentOpponents = 16;    // 当前可挑战对象（玩家列表）
+  optional bool isCompress = 17;                // 是否开启压缩
+  optional bytes compressedRecords = 18;        // 压缩后的挑战记录数据（当isCompress=true时使用）
+  optional int32 originalDataSize = 19;         // 压缩前的原始数据大小
+}
+
+// 挑战记录
+message ChallengeRecord {
+  optional fixed64 recordId = 1;                 // 记录ID
+  optional int32 timestamp = 2;                  // 战斗时间戳
+  optional bool isAttacker = 3;                  // 是否是进攻方
+  optional bool isWin = 4;                       // 是否胜利
+  optional bool isRead = 5;                      // 是否已读
+  optional bool isNpc = 6;                       // 对手是否是NPC
+  optional PlayerBaseInfo opponentInfo = 7;      // 对手基础信息
+  optional int32 opponentRank = 8;               // 对手排名（战斗时快照）
+  optional int32 opponentScore = 9;              // 对手积分（战斗时快照）
+  optional int32 scoreChange = 10;               // 积分变化（+/-）
+  optional int32 rankChange = 11;                // 排名变化（+/-）
+  repeated SerHeroSnapshot defenseFormation = 12; // 对手防守阵容
+  optional BattleReport reportData = 13;          // 战报数据（可选）
+  optional bool isChallenged = 14;                //是否已挑战(加入记录后,挑战只能有一次)
+}
+
+// ========================= 排行榜数据 =========================
+
+// 排行榜条目
+message ArenaRankEntry {
+  optional PlayerBaseInfo playerInfo = 1;      // 玩家基础信息（来自Cross.proto）
+  optional RankValue rankValue = 2;            // 排名信息（来自Cross.proto）
+}
+
+// ================================模块定义================================
+// 竞技场功能数据
+message ArenaDataFunction {
+  optional ArenaPlayerData playerData = 1;     // 玩家竞技场数据
+  optional int32 seasonStatus = 2;             // 赛季状态
+  extend FunctionClientBase {
+    optional ArenaDataFunction ext = 32;
+  }
+}
+
+// ========================= 客户端请求/响应 =========================
+
+// 进入竞技场请求
+message ArenaEnterRq {
+  extend Base {
+    optional ArenaEnterRq ext = 2801;
+  }
+}
+
+// 进入竞技场响应
+message ArenaEnterRs {
+  optional ArenaPlayerData playerData = 1;     // 玩家数据
+  optional int32 seasonStatus = 2;             // 赛季状态
+  extend Base {
+    optional ArenaEnterRs ext = 2802;
+  }
+}
+
+// 刷新挑战列表请求
+message ArenaRefreshOpponentsRq {
+  optional bool useDiamond = 1;                // 是否使用钻石刷新
+  extend Base {
+    optional ArenaRefreshOpponentsRq ext = 2803;
+  }
+}
+
+// 刷新挑战列表响应
+message ArenaRefreshOpponentsRs {
+  repeated ArenaOpponent opponents = 1;        // 可挑战对象列表
+  optional int32 dailyFreeRefreshes = 2;       // 今日剩余免费刷新次数
+  optional int32 dailyPaidRefreshes = 3;       // 今日剩余付费刷新次数
+  optional int32 diamondCost = 4;              // 钻石消耗（0表示免费）
+  extend Base {
+    optional ArenaRefreshOpponentsRs ext = 2804;
+  }
+}
+
+// 可挑战对象信息
+message ArenaOpponent {
+  optional PlayerBaseInfo playerInfo = 1;      // 玩家基础信息（来自Cross.proto）
+  optional RankValue rankValue = 2;            // 排名信息（来自Cross.proto）
+  repeated SerHeroSnapshot defenseFormation = 3; // 防守阵容（竞技场特有）
+  optional bool isNpc = 4;                     // 是否是NPC
+}
+
+// 开始竞技场挑战请求（第一步：获取随机种子）
+message ArenaStartChallengeRq {
+  optional int64 opponentId = 1;               // 对手ID
+  repeated int32 attackFormation = 2;          // 进攻阵容
+  optional fixed64 recordId = 3;                 // 挑战记录ID(当正常刷新对手为0, 挑战记录里面的填recordId)
+  extend Base {
+    optional ArenaStartChallengeRq ext = 2805;
+  }
+}
+
+// 开始竞技场挑战响应
+message ArenaStartChallengeRs {
+  optional int64 opponentId = 1;               // 对手ID
+  optional RandomVerifySeedPb randomSeed = 2;  // 随机验证种子
+  optional string keyId = 3;                   // 战报唯一Id
+  repeated TwoInt heroIndex = 4;               // 英雄对应ID
+  optional fixed64 recordId = 5;                 // 挑战记录ID (当正常刷新对手为0, 挑战记录里面的填recordId)
+  extend Base {
+    optional ArenaStartChallengeRs ext = 2806;
+  }
+}
+
+// 上传竞技场战报请求（第二步：上传战斗结果）
+message ArenaReportChallengeRq {
+  optional int64 opponentId = 1;               // 对手ID
+  optional bool win = 2;                       // 客户端计算的是否胜利
+  optional RandomVerifyResultPb result = 3;    // 随机相关结果
+  optional BattleReport record = 4;            // 客户端生成的战报（来自Battle.proto）
+  optional fixed64 recordId = 5;                 // 挑战记录ID (当正常刷新对手为0, 挑战记录里面的填recordId)
+  extend Base {
+    optional ArenaReportChallengeRq ext = 2807;
+  }
+}
+
+// 竞技场战斗结果变化
+message ArenaBattleChange {
+  optional int32 scoreChange = 1;              // 积分变化
+  optional int32 newScore = 2;                 // 新积分
+  optional int32 rankChange = 3;               // 排名变化
+  optional int32 newRank = 4;                  // 新排名
+}
+
+// 上传竞技场战报响应
+message ArenaReportChallengeRs {
+  optional bool isWin = 1;                     // 服务器验证后的是否胜利
+  optional ArenaBattleChange selfChange = 2;   // 自己的积分排名变化
+  optional ArenaBattleChange opponentChange = 3; // 对手的积分排名变化
+  optional bytes reportData = 4;               // 战报数据（可选，用于回放）
+  optional ChangeInfo info = 5;                 // 战斗奖励
+  optional int32 dailyFreeChallenges = 6;      // 今日剩余免费挑战次数
+  optional int32 purchasedChallenges = 7;      // 剩余购买的挑战次数
+  optional PlayerBaseInfo opponentInfo = 8;     // 对手信息
+  optional fixed64 recordId = 9;                 // 挑战记录ID (当正常刷新对手为0, 挑战记录里面的填recordId)
+  extend Base {
+    optional ArenaReportChallengeRs ext = 2808;
+  }
+}
+
+// 购买挑战次数请求
+message ArenaBuyChallengeRq {
+  optional int32 count = 1;                    // 购买次数
+  extend Base {
+    optional ArenaBuyChallengeRq ext = 2809;
+  }
+}
+
+// 购买挑战次数响应
+message ArenaBuyChallengeRs {
+  optional int32 diamondCost = 1;              // 钻石消耗
+  optional int32 dailyBuyChallenges = 2;       // 今日已购买次数
+  optional int32 dailyFreeChallenges = 3;      // 今日剩余免费挑战次数
+  optional int32 purchasedChallenges = 4;      // 剩余购买的挑战次数
+  extend Base {
+    optional ArenaBuyChallengeRs ext = 2810;
+  }
+}
+
+// 设置防守阵容请求
+message ArenaSetDefenseFormationRq {
+  repeated int32 heroIds = 1;                  // 英雄ID列表
+  extend Base {
+    optional ArenaSetDefenseFormationRq ext = 2811;
+  }
+}
+
+// 设置防守阵容响应
+message ArenaSetDefenseFormationRs {
+  optional bool success = 1;                   // 是否成功
+  extend Base {
+    optional ArenaSetDefenseFormationRs ext = 2812;
+  }
+}
+
+// 获取挑战记录请求
+message ArenaGetRecordsRq {
+  extend Base {
+    optional ArenaGetRecordsRq ext = 2813;
+  }
+}
+
+// 获取挑战记录响应
+message ArenaGetRecordsRs {
+  repeated ChallengeRecord records = 1;        // 挑战记录列表
+  optional int32 dailyFreeChallenges = 2;      // 今日剩余免费挑战次数
+  optional int32 purchasedChallenges = 3;      // 剩余购买的挑战次数
+  extend Base {
+    optional ArenaGetRecordsRs ext = 2814;
+  }
+}
+
+// 获取排行榜请求
+message ArenaGetRankListRq {
+  optional int32 offset = 1;                   // 偏移量
+  optional int32 limit = 2;                    // 数量限制
+  extend Base {
+    optional ArenaGetRankListRq ext = 2815;
+  }
+}
+
+// 获取排行榜响应
+message ArenaGetRankListRs {
+  repeated ArenaRankEntry rankList = 1;        // 排行榜列表
+  optional ArenaRankEntry selfRank = 2;        // 自己的排名信息
+  optional int32 totalPlayers = 3;             // 总玩家数
+  extend Base {
+    optional ArenaGetRankListRs ext = 2816;
+  }
+}
+
+// 查看玩家防守阵容请求
+message ArenaGetPlayerDefenseRq {
+  optional int64 playerId = 1;                 // 玩家ID
+  extend Base {
+    optional ArenaGetPlayerDefenseRq ext = 2817;
+  }
+}
+
+// 查看玩家防守阵容响应
+message ArenaGetPlayerDefenseRs {
+  optional int64 playerId = 1;                 // 玩家ID
+  repeated  SerHeroSnapshot heroIds = 2;                  // 英雄ID列表
+  extend Base {
+    optional ArenaGetPlayerDefenseRs ext = 2818;
+  }
+}
+
+// ========================= 服务端推送 =========================
+
+// 被挑战推送
+message SyncArenaChallengedRs {
+  optional ChallengeRecord record = 1;         // 挑战记录
+  optional int32 newScore = 2;                 // 新积分
+  optional int32 newRank = 3;                  // 新排名
+  repeated ArenaOpponent currentOpponents = 4; // 当前可挑战对象（玩家列表）, 当失败了才会有值
+  extend Base {
+    optional SyncArenaChallengedRs ext = 2819;
+  }
+}
+
+// 推送竞技场胜利之后的推送数据
+message SyncArenaAfterWinRs {
+  repeated ArenaOpponent currentOpponents = 1;    // 当前可挑战对象（玩家列表）
+  repeated ArenaRankEntry rankList = 2;           // 排行榜列表
+  optional ArenaRankEntry selfRank = 3;           // 自己的排名信息
+  optional bool isRankChanged = 4;                // 排名是否改变
+  extend Base {
+    optional SyncArenaAfterWinRs ext = 2820;
+  }
+}
+
+// 推送对手信息
+message SyncOpponentInfoRs {
+  repeated ArenaOpponent opponents = 1;
+  extend Base {
+    optional SyncOpponentInfoRs ext = 2821;
+  }
+}
+
+// 同步刷新对手防守阵容请求（不消耗刷新次数，仅更新对手最新防守阵容）
+message ArenaSyncRefreshOpponentsRq {
+  extend Base {
+    optional ArenaSyncRefreshOpponentsRq ext = 2823;
+  }
+}
+
+// 同步刷新对手防守阵容响应
+message ArenaSyncRefreshOpponentsRs {
+  repeated ArenaOpponent opponents = 1;        // 更新后的可挑战对象列表
+  extend Base {
+    optional ArenaSyncRefreshOpponentsRs ext = 2824;
+  }
+}
+
+
+// ============= 存库数据 ====================
+
+// 排行榜结算快照（用于发奖）
+// 注意：实时排行榜持久化请使用 Cross.proto 中的 ArenaRankList
+message RankSnapShotDb {
+  repeated ArenaRankItem rankList = 1;  // 使用 Cross.proto 的 ArenaRankItem
+  optional int32 serverId = 2;   // 本服榜：表示服务器ID；跨服榜：保留字段（可不使用）
+  optional int32 groupId = 3;    // 跨服榜：表示分组ID；本服榜：不使用
+}

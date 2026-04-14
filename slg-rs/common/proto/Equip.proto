@@ -1,0 +1,146 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+import "Hero.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================模块定义================================
+// function 8 装备数据
+option java_outer_classname = "EquipPb";
+message EquipDataFunction {
+  repeated Equip equip = 1;	// 装备列表
+  extend FunctionClientBase {
+    optional EquipDataFunction ext = 18;
+  }
+}
+
+// ================================结构定义================================
+// 装备
+message Equip {
+  required int32 equipId = 1;                 // 装备唯一id
+  required int32 equipConfigId = 2;           // 装备配置id
+  optional int32 wearHeroId = 3;              // 穿戴英雄id(未穿戴为0)
+  optional int32 level = 4;                   // 强化等级
+  optional int32 exp = 5;                     // 强化经验
+  optional int32 forgingLevel = 6;            // 专精等级
+  optional int32 fight = 7;                   // 装备战斗力
+  optional int32 levelResetCDTime = 8;        // 强化等级重置冷却完成时间点(秒)
+  optional int32 forgingLevelResetCDTime = 9; // 专精等级重置冷却完成时间点(秒)
+  repeated TwoInt attr = 10;                  // 属性(v1: 属性类型, v2: 数值)
+}
+
+// ================================协议定义================================
+// 协议号范围[4801-5000]
+// 装备穿戴
+message EquipWearRq {
+  required int32 heroId = 1; // 英雄id
+  optional int32 equipId = 2; // 装备唯一id(不传就是一键穿戴)
+  extend Base {
+    optional EquipWearRq ext = 4801;
+  }
+}
+
+message EquipWearRs {
+  repeated Hero hero = 1; // 英雄信息
+  repeated Equip equip = 2; // 装备信息
+  extend Base {
+    optional EquipWearRs ext = 4802;
+  }
+}
+
+// 装备脱下
+message EquipUnfixRq {
+  required int32 heroId = 1; // 英雄id
+  optional int32 equipId = 2; // 装备唯一id(不传就是一键脱下)
+  extend Base {
+    optional EquipUnfixRq ext = 4803;
+  }
+}
+
+message EquipUnfixRs {
+  repeated Hero hero = 1; // 英雄信息
+  repeated Equip equip = 2; // 装备信息
+  extend Base {
+    optional EquipUnfixRs ext = 4804;
+  }
+}
+
+// 装备强化
+message EquipStrengthenRq {
+  required int32 equipId = 1; // 装备唯一id
+  repeated int32 eatEquipId = 2; // 吃掉的装备的唯一id
+  repeated AwardPb eatProp = 3; // 吃掉的道具信息
+  extend Base {
+    optional EquipStrengthenRq ext = 4805;
+  }
+}
+
+message EquipStrengthenRs {
+  optional Equip equip = 1; // 装备信息
+  repeated int32 eatEquipId = 2; // 吃掉的装备的唯一id
+  extend Base {
+    optional EquipStrengthenRs ext = 4806;
+  }
+}
+
+// 装备专精锻造
+message EquipForgingRq {
+  required int32 equipId = 1; // 装备唯一id
+  extend Base {
+    optional EquipForgingRq ext = 4807;
+  }
+}
+
+message EquipForgingRs {
+  optional Equip equip = 1; // 装备信息
+  extend Base {
+    optional EquipForgingRs ext = 4808;
+  }
+}
+
+// 装备等级重置
+message EquipLevelResetRq {
+  required int32 resetType = 1; // 重置类型(1: 强化等级, 2: 专精等级)
+  required int32 equipId = 2;   // 装备唯一id
+  extend Base {
+    optional EquipLevelResetRq ext = 4809;
+  }
+}
+
+message EquipLevelResetRs {
+  optional int32 resetType = 1;       // 重置类型(1: 强化等级, 2: 专精等级)
+  optional Equip equip = 2;           // 装备信息
+  optional ChangeInfo changeInfo = 3; // 返还资源
+  extend Base {
+    optional EquipLevelResetRs ext = 4810;
+  }
+}
+
+// 购买清除[装备等级重置]的冷却时间
+message BuyClearEquipLevelResetCDTimeRq {
+  required int32 resetType = 1; // 重置类型(1: 强化等级, 2: 专精等级)
+  required int32 equipId = 2;   // 装备唯一id
+  extend Base {
+    optional BuyClearEquipLevelResetCDTimeRq ext = 4811;
+  }
+}
+
+message BuyClearEquipLevelResetCDTimeRs {
+  optional int32 resetType = 1; // 重置类型(1: 强化等级, 2: 专精等级)
+  optional int32 equipId = 2;   // 装备唯一id
+  extend Base {
+    optional BuyClearEquipLevelResetCDTimeRs ext = 4812;
+  }
+}
+
+// ================================推送定义================================
+// 协议号范围[5001-5100]
+// [推送]获得装备
+message SyncEquipAddRs {
+  repeated Equip equip = 1; // 装备信息
+  extend Base {
+    optional SyncEquipAddRs ext = 5001;
+  }
+}

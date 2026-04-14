@@ -1,0 +1,462 @@
+syntax = "proto2";
+package slg;
+
+import "Common.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+//*************************************************常量定义*************************************************
+
+// 战斗类型定义
+enum BattleTypeDefine {
+  FIGHT_TYPE_COMBAT = 1;                // 副本战斗
+  FIGHT_TYPE_BANDIT = 2;                // 流寇战斗
+  FIGHT_TYPE_MINE = 3;                  // 争夺资源点战斗
+  FIGHT_TYPE_PLAY = 4;                  // 单人进攻玩家
+  FIGHT_TYPE_ASSEMBLY_PLAYER = 5;       // 集结玩家
+  FIGHT_TYPE_ASSEMBLY_CITY = 6;         // 集结城池
+  FIGHT_TYPE_REBEL_ATK_PLAYER = 7;      // 叛军营地进攻玩家
+  FIGHT_TYPE_ASSEMBLY_HUNTING_TRAP = 8; // 集结狩猎陷阱
+  FIGHT_TYPE_MULTI_PLAYER_BANDIT = 9;   // 多人流寇战斗
+  FIGHT_TYPE_PIRATE_FLEET = 10;         // 海盗舰队战斗
+  FIGHT_TYPE_ARENA = 11;                // 竞技场战斗
+  FIGHT_TYPE_REBEL_ATK_CITY = 12;       // 叛军营地进攻城池
+}
+
+// 战斗阶段定义
+enum BattleStageDefine {
+  PREPARATION_STAGE = 1;          // 准备阶段
+  ROUNDS = 2;                     // 回合数
+  SETTLEMENT_LOSS = 3;            // 结算损兵
+  REGROUP = 4;                    // 重整旗鼓
+  ENDING = 5;                     // 胜败结算
+}
+
+// 动作类型定义
+enum ActionTypeDefine {
+  SKILL_ATTACK = 1;               // 技能攻击
+  ORDINARY_ATTACK = 2;            // 普攻
+}
+
+// 角色类型定义
+enum ActorsDefine {
+  ATTACKER = 1;                   // 进攻方
+  DEFENDER = 2;                   // 防守方
+}
+
+// 战斗单位类型定义
+enum BattleUnitDefine {
+  ROLE_TYPE_PLAYER = 1;           // 玩家
+  ROLE_TYPE_NPC = 2;              // NPC
+}
+
+// npc类型定义
+enum NpcTypeDefine {
+  NPC_TYPE_COMBAT = 1;              // 副本npc
+  NPC_TYPE_BANDIT = 2;              // 流寇npc
+  NPC_TYPE_CITY = 3;                // 城池npc守军
+  NPC_TYPE_REBELS = 4;              // 叛军npc
+  NPC_TYPE_HUNTING_TRAP_BOSS = 5;   // 狩猎行动boss
+  NPC_TYPE_MULTI_PLAYER_BANDIT = 6; // 多人流寇npc
+}
+
+
+// 玩家对战战斗类型
+enum BattlePKType {
+  COMBAT_TYPE = 1;           // 普通战役战斗
+  INTEL_COMBAT_TYPE = 2;     // 情报战役战斗
+}
+
+option java_outer_classname = "BattlePb";
+message BattleSitePb {
+  required string ownerId = 1;        // 玩家归属id/npcId
+  required int32 heroId = 2;          // 武将id
+  required int32 uniqueId = 3;        // 战斗单位唯一id (全场唯一)
+}
+
+message DataInt {
+  required int32 v1 = 1;
+  required int32 v2 = 2;
+}
+
+message Data3Int {
+  required int32 v1 = 1;
+  required int32 v2 = 2;
+  required int32 v3 = 3;
+}
+
+message RoundAction {
+  required int32 atkUniqueId = 1;                 // 行动方
+  repeated BaseEffectAction effectAction = 2;     // 效果
+  optional BaseAction skill = 3;                  // 释放技能
+  optional OrdinaryAttackAction attack = 4;       // 普攻
+}
+
+//*************************************************动作封装*************************************************
+
+// 基础动作
+message BaseAction {
+  required int32 type = 1;                        // 动作类型   对应 ActionTypeDefine 中定义类型
+  optional int32 atkUniqueId = 2;                 // 行动方
+  optional int32 order = 3;                       // 动作顺序   -1 result之前  0 是当前  1 是result后
+  extensions 10 to 20;
+}
+
+// 技能动作
+message SkillAction {
+  required int32 skillId = 1;                     // 技能id
+  repeated BaseEffectAction effectAction = 2;     // 效果动作
+  repeated ActionResult result = 3;               // 动作结算
+  extend BaseAction {
+    optional SkillAction action = 10;
+  }
+}
+
+// 普攻动作
+message OrdinaryAttackAction {
+  repeated BaseEffectAction effectAction = 1;     // 效果动作
+  repeated ActionResult result = 2;               // 动作结算
+  extend BaseAction {
+    optional OrdinaryAttackAction action = 11;
+  }
+}
+
+// 行动结果
+message ActionResult {
+  optional int32 atkUniqueId = 1;          // 行动方
+  optional int32 defUniqueId = 2;          // 防守方
+  optional int32 lost = 3;                // 损失的兵力
+  optional int32 remainArms = 4;          // 剩余的兵力
+  optional int32 skillId = 5;             // 技能id
+  optional int32 effectLogicId = 6;       // 效果导致的伤害
+  optional bool isCritical = 7;           // 是否暴击
+}
+
+
+//*************************************************效果封装*************************************************
+// 基础效果
+message BaseEffectAction {
+  optional int32 effectLogicId = 1;           // 效果逻辑id
+  required int32 atkUniqueId = 2;             // 行动方
+  optional int32 timing = 3;                  // 触发时机
+  required int32 actionType = 4;              // 作用还是消失   0是消失, 1是作用, 2添加
+  optional int32 effectSource = 5;            // 效果来源方
+  optional bool onStageSkill = 6;             // 是否是登场技能
+  optional int32 skillId = 7;                 // 效果来源技能id
+  optional int32 order = 8;                   // 动作顺序   -1 result之前  0 是当前  1 是result后
+  optional int32 effectUniqueId = 9;          // 效果的唯一id
+  optional int32 effectId = 10;               // 效果表配置id
+  extensions 100 to 888;
+}
+
+// 属性变化效果结构 (3, 4效果逻辑id)
+message CommonEffectAction {
+  repeated Data3Int data = 1;          // 数值 (dataInt v1：值类型(1: 万分比 2: 固定值)  v2: 值  v3: 值类型 (1. 配置值  2. 增加值  3. 结果值))
+  extend BaseEffectAction {
+    optional CommonEffectAction effect = 101;
+  }
+}
+
+// 效果嵌套动作结构
+message MultiEffectAction {
+  repeated BaseAction action = 1;          // 效果嵌套动作
+  extend BaseEffectAction {
+    optional MultiEffectAction effect = 102;
+  }
+}
+
+// buff的施加或消失
+message BuffChangeAction {
+  optional int32 buffConfigId = 1;        // buff配置id
+  extend BaseEffectAction {
+    optional BuffChangeAction effect = 103;
+  }
+}
+
+//*************************************************战斗阶段封装*************************************************
+message HeroArmsInfo {
+  required int32 uniqueId = 1;                // 行动方
+  optional int32 v1 = 2;                      // 参数1
+  optional int32 v2 = 3;                      // 参数2
+  optional int32 v3 = 4;                      // 参数3
+}
+
+message BaseBattleStage {
+  required int32 stage = 1;           // 战斗阶段  BattleStageDefine 定义
+  extensions 20 to 30;
+}
+
+// 准备阶段
+message BattlePreparationStage {
+  repeated HeroArmsInfo totalArms = 1;     // 武将出战 总带兵量   v1 带兵量
+  repeated HeroArmsInfo arrangeArms = 2;   // 排兵布阵           v1 兵排数  v2 数量
+  repeated BaseAction skill = 3;           // 登场技能
+  extend BaseBattleStage {
+    optional BattlePreparationStage round = 21;
+  }
+}
+
+// 回合阶段
+message BattleRoundStage {
+  repeated RoundAction action = 1;                // 回合内动作
+  required int32 roundNum = 2;                    // 回合数
+  extend BaseBattleStage {
+    optional BattleRoundStage round = 22;
+  }
+}
+
+// 结算损兵阶段
+message BattleSettlementLossStage {
+  repeated HeroArmsInfo lost = 1;          // 结算信息  v1 兵排数 v2 回合损兵  v3 当前兵排剩余兵力
+  extend BaseBattleStage {
+    optional BattleSettlementLossStage round = 23;
+  }
+}
+
+// 重振旗鼓阶段
+message BattleRegroupStage {
+  repeated HeroArmsInfo backToBattle = 1;          // 重振旗鼓阶段  v1 兵排数  v2 本兵排兵力
+  extend BaseBattleStage {
+    optional BattleRegroupStage round = 24;
+  }
+}
+
+// 结束阶段
+message BattleEndStage {
+  optional DataInt remainArms = 1;            // 剩余兵力
+  optional bool isWin = 2;                    // 是否胜利
+  extend BaseBattleStage {
+    optional BattleEndStage round = 25;
+  }
+}
+
+
+//*************************************************战斗回合封装*************************************************
+message RecordPb {
+  required string keyId = 1;                      // 战报唯一id
+  repeated BothBattleEntityPb bothForce = 2;      // 进攻, 防守方
+  repeated BattleSiteInfoPb info = 3;             // 战斗场次动画信息
+  repeated HpDataPb hpData = 4;                   // 双方战斗血量变化pb
+}
+
+message BattleSiteInfoPb {
+  optional BattleSitePb atk = 1;                  // 进攻方
+  optional BattleSitePb def = 2;                  // 防守方
+  optional int32 session = 3;                     // 当前战斗场次
+  optional int32 restraint = 4;                   // 克制关系  1: 攻克防  0: 不克 -1: 防克攻
+}
+
+message HpDataPb {
+  optional int32 atkDamage = 1;                   // 进攻方伤害
+  optional int32 defDamage = 2;                   // 防守方伤害
+  optional int32 atkRemainHpBefore = 3;           // 进攻方战斗前剩余血量
+  optional int32 defRemainHpBefore = 4;           // 防守方战斗前剩余血量
+  optional int32 atkMaxHp = 5;                    // 进攻方战斗开始时实际带兵量
+  optional int32 defMaxHp = 6;                    // 防守方战斗开始时实际带兵量
+}
+
+message BothBattleEntityPb {
+  repeated BattleEntityPb atk = 1;    // 进攻方
+  repeated BattleEntityPb def = 2;    // 防守方
+  repeated BaseBattleStage stage = 3; // 战斗阶段
+}
+
+message BattleEntityPb {
+  required int32 entityType = 1;      // 类型 1 玩家,2 流寇NPC(s_npc)
+  required string ownerId = 2;        // 玩家归属id/npcId
+  required int32 heroId = 3;          // 武将id
+  required int32 uniqueId = 4;        // 战斗单位唯一id (全场唯一)
+  repeated ActionDetails details = 5; // 详情
+}
+
+// 技能或普攻详情
+message ActionDetails {
+  required int32 actionType = 1;    // ActionTypeDefine定义
+  optional int32 lv = 2;            // 等级
+  required int32 killed = 3;        // 杀敌数
+  required int32 actionCnt = 4;     // 发动次数
+  optional int32 skillId = 5;       // 技能id.
+}
+
+//*************************************************战斗报告封装*************************************************
+
+// 战报报告
+message ReportPb {
+  required bool win = 1;                  // 战斗结果
+  required BattleFighterPb atkFighter = 2;// 进攻方
+  required BattleFighterPb defFighter = 3;// 防守方
+}
+
+// 战斗者信息
+message BattleFighterPb {
+  optional int32 pos = 1;                 // 战斗坐标
+  optional BattleHpChangePb hpChange = 2; // 战斗血量变化
+  optional BattleDamageStatisticsPb damageStatistics = 3; // 战斗伤害统计
+  extensions 51 to 100;
+}
+
+// 战斗血量变化
+message BattleHpChangePb {
+  optional int64 beforeHp = 1;      // 战斗前血量
+  optional int64 afterHp = 2;       // 战斗后血量
+  optional int64 minorInjury = 3;   // 轻伤数量
+  optional int64 seriousInjury = 4; // 重伤数量
+  optional int64 death = 5;         // 死亡数量
+}
+
+// 战斗伤害统计
+message BattleDamageStatisticsPb {
+  optional int64 damage = 1;              // 总伤害值
+  optional int32 killed = 2;              // 总杀敌数
+  repeated BattleUnitDamagePb unitStat = 3;   // 战斗单位伤害统计
+}
+
+// 战斗单位伤害
+message BattleUnitDamagePb {
+  required int32 uniqueId = 1;           // 战斗单位唯一id (全场唯一)
+  required int32 damage = 2;             // 伤害值
+  required int32 killed = 3;             // 杀敌数
+}
+
+// 战斗报告玩家单位信息
+message BattlePlayerFighterPb {
+  required int64 roleId = 1;              // 玩家id
+  required string nick = 2;               // 玩家昵称
+  required int32 camp = 3;                // 阵营
+  optional int32 portrait = 4;            // 头像
+  repeated BattleHeroUnitPb hero = 5;     // 英雄信息
+  optional int32 avatarFrame = 6;         // 头像框
+  extend BattleFighterPb {
+    optional BattlePlayerFighterPb player = 51;
+  }
+}
+
+// 战斗报告英雄单位信息
+message BattleHeroUnitPb {
+  required int32 heroId = 1;              // 英雄配置id
+  optional int32 level = 2;               // 等级
+  optional int32 tier = 3;                // 阶级
+  optional int32 armType = 4;             // 兵种类型
+  optional int32 armLv = 5;               // 兵种等级
+  repeated BattleEquipPb equip = 6;       // 穿戴装备信息
+  repeated TwoInt skill = 7;              // 大世界战斗相关技能, v1: s_battle_skill的skillGroupId, v2: s_battle_skill的level
+  optional int32 armyCount = 8;           // 带兵数量
+  optional TwoInt exclusiveEquip = 9;     // 专属装备, v1: 装备配置id, v2: 等级
+}
+
+// 战斗报告装备信息
+message BattleEquipPb {
+  required int32 equipId = 1;             // 装备配置id
+  optional int32 level = 2;               // 强化等级
+  optional int32 forgingLevel = 3;        // 专精等级
+}
+
+// 战斗报告NPC信息
+message BattleNpcFighterPb {
+  required int32 npcType = 1;             // npc类型, 对应NpcTypeDefine的定义
+  required int32 npcGroupId = 2;          // 不同类型 NPC 对应的标识，如 banditId、cityId、副本 id、采集点守军 id 等
+  optional int32 camp = 3;                // 阵营
+  repeated BattleNpcUnitPb unit = 4;      // npc单位信息
+  extend BattleFighterPb {
+    optional BattleNpcFighterPb npc = 52;
+  }
+}
+
+// 战斗报告npc单位信息 [预留, 暂无使用]
+message BattleNpcUnitPb {
+  required int32 npcId = 1;     // s_npc_attr表的npcId，对应单个npc
+}
+
+//*************************************************战后记录信息*************************************************
+// 单人击败信息
+message SoloDefeatInfo {
+  required BaseSummary playerSummary = 1; // 玩家概要信息
+  repeated HeroSummary heroSummary = 2;   // 英雄概要信息
+}
+
+// 多人击败信息
+message TeamDefeatInfo {
+  required SoloDefeatInfo initiator = 1;        // 发起者信息
+  repeated SoloDefeatInfo participant = 2;      // 参与者信息
+}
+
+// 城池击败信息
+message CityTeamDefeatInfo {
+  required int32 cityId = 1;   // 城池id
+  required TeamDefeatInfo teamDefeatInfo = 2; // 首杀信息
+}
+
+//*************************************************随机验证协议*************************************************
+
+// 随机验证种子信息（服务器 -> 客户端）
+message RandomVerifySeedPb {
+  required int32 seed1 = 1;              // 第一个随机种子
+  required int32 seed2 = 2;              // 第二个随机种子
+  required int32 seed3 = 3;              // 第三个随机种子
+  required int32 seed4 = 4;              // 第四个随机种子
+  required int32 sequenceLength = 5;     // 随机序列长度
+  optional int32 timestamp = 6;          // 时间戳（用于超时检查）
+}
+
+// 随机验证结果（客户端 -> 服务器）
+message RandomVerifyResultPb {
+  required double verifyValue = 1;        // 客户端计算的验证值
+  optional int32 sequenceLength = 2;     // 序列长度（用于校验）
+  optional int32 clientTimestamp = 3;    // 客户端时间戳 （用于超时检查）
+}
+
+//*************************************************RPC战斗消息定义*************************************************
+
+// 简易战斗结果 (用于doFight RPC返回)
+message SimpleFightResultRpcPb {
+  required bool win = 1;                  // 是否胜利
+  optional int32 rewardExp = 2;          // 奖励经验
+  optional int32 rewardGold = 3;          // 奖励金币
+  optional int32 rewardItem = 4;          // 奖励物品
+}
+
+
+//*************************************************战斗积分*************************************************
+
+// 战斗积分
+message BattleScorePb {
+  required int64 roleId = 1;        // 玩家id
+  required int32 score = 2;         // 战斗积分
+  optional int64 damage = 3;        // 伤害值 (杀敌数量)
+  optional int64 loss = 4;          // 损失值 (死亡数量)
+  optional string nick = 5;         // 昵称
+  optional int32 portrait = 6;      // 头像
+  optional int32 portraitFrame = 7; // 头像框
+  optional int32 title = 8;         // 称号
+  optional int32 camp = 9;          // 阵营
+}
+
+//*************************************************客户端战报上传*************************************************
+
+// 战斗行动类型
+enum BattleActionType {
+  ACTION_ATTACK = 1;        // 普攻
+  ACTION_SKILL = 2;         // 选取目标，释放技能
+  ACTION_EXECUTE_SKILL = 3; // 技能效果
+  ACTION_BUFF_TRIGGER = 4;  // buff触发概率
+  ACTION_BUFF_BEGIN = 5;    // buff开始
+  ACTION_BUFF_END = 6;      // buff结束
+}
+
+// 战斗报告（客户端上传用）
+message BattleReport {
+  required string keyId = 1;                  // 战报唯一ID
+  repeated BattleReportAction actions = 2;    // 战斗行动列表
+}
+
+// 战斗报告行动
+message BattleReportAction {
+  optional int32 actionType = 1;      // 操作类型（BattleActionType）
+  optional int32 atkHeroId = 2;       // 攻击者id
+  repeated int32 destHeroIds = 3;     // 受到群体伤害者id
+  optional int32 skillId = 4;         // 技能id
+  optional int32 buffId = 5;          // buffId（造成技能伤害时对敌方的Buff）
+  repeated TwoInt effect = 6;         // 效果
+  optional TwoInt randomIndex = 7;    // random次数上下限
+  optional int32 timeOffset = 8;      // 游戏内相较于开始时的偏移时间
+}

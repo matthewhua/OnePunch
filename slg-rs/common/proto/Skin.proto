@@ -1,0 +1,85 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================模块定义================================
+// function 22 外观皮肤数据
+option java_outer_classname = "SkinPb";
+message SkinDataFunction {
+  repeated SkinInfo skinList = 1;         // 皮肤列表
+  repeated SkinUnlockInfo unlockList = 2;  // 解锁列表
+  extend FunctionClientBase {
+    optional SkinDataFunction ext = 33;
+  }
+}
+
+// ================================结构定义================================
+// 皮肤信息
+message SkinInfo {
+  optional int32 skinId = 1;  // 皮肤id
+  optional int32 star = 2;      // 星级
+  optional int32 isUse = 3;     // 0 未使用 1 使用
+  optional int32 overTime = 4;  // 过期时间（时间戳，秒）
+  optional int32 type = 5;      // 类型
+  optional int32 obtainTime = 6;  // 获取时间（时间戳，秒）
+}
+
+// 皮肤解锁信息
+message SkinUnlockInfo {
+  optional int32 skinId = 1;    // 皮肤id
+  optional int32 unlockTime = 2;  // 解锁时间（时间戳，秒）
+}
+
+// ================================协议定义================================
+// 协议号范围[7801-8050]
+
+// 使用皮肤
+message UseSkinRq {
+  required int32 skinId = 1;    // 皮肤id
+  extend Base {
+    optional UseSkinRq ext = 7801;
+  }
+}
+
+message UseSkinRs {
+  optional int32 skinId = 1;    // 皮肤id
+  extend Base {
+    optional UseSkinRs ext = 7802;
+  }
+}
+
+// 卸下皮肤
+message TakeOffSkinRq {
+  required int32 skinId = 1;    // 皮肤id
+  extend Base {
+    optional TakeOffSkinRq ext = 7803;
+  }
+}
+
+message TakeOffSkinRs {
+  optional int32 skinId = 1;    // 皮肤id
+  extend Base {
+    optional TakeOffSkinRs ext = 7804;
+  }
+}
+
+// ================================推送定义================================
+// 协议号范围[7841-7850]
+// [推送] 同步皮肤数据改变
+message SyncSkinDataChangeRs {
+  repeated SkinInfo skinList = 1;  // 变更的皮肤列表
+  extend Base {
+    optional SyncSkinDataChangeRs ext = 7841;
+  }
+}
+
+
+message SyncSkinUnlockChangeRs {
+  repeated SkinUnlockInfo unlockList = 1;  // 解锁列表
+  extend Base {
+    optional SyncSkinUnlockChangeRs ext = 7842;
+  }
+}

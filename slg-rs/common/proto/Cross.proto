@@ -1,0 +1,52 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ========================= 跨服公共数据定义 =========================
+
+// 玩家基础信息（跨服通用）
+option java_outer_classname = "CrossPb";
+message PlayerBaseInfo {
+    optional int64 playerId = 1;                 // 玩家ID
+    optional string playerName = 2;              // 玩家名称
+    optional int32 camp = 3;                     // 阵营
+    optional int32 portrait = 4;                 // 头像ID
+    optional int32 portraitFrame = 5;            // 头像框ID
+    optional int32 serverId = 6;                 // 服务器ID
+    optional int32 power = 7;                    // 战力
+}
+
+// 排行榜排名信息
+message RankValue {
+    optional int32 rank = 1;                     // 排名
+    optional int32 score = 2;                    // 积分/分数
+    optional int64 scoreReachTime = 3;           // 达到该分数的时间戳
+}
+
+// ========================= 跨服排行榜通用定义 =========================
+
+// 通用排行榜条目基础
+message CrossRankItem {
+    optional PlayerBaseInfo playerInfo = 1;      // 玩家基础信息
+    optional RankValue rankValue = 2;            // 排名信息
+}
+
+// ========================= 竞技场排行榜数据定义 =========================
+
+// 竞技场排行榜单个条目（用于持久化）
+message ArenaRankItem {
+    optional int64 playerId = 1;                 // 玩家ID
+    optional int32 serverId = 2;                 // 服务器ID
+    optional int32 score = 3;                    // 积分
+    optional int32 rank = 4;                     // 排名
+    optional int64 scoreReachTime = 5;           // 达到该积分的时间戳
+}
+
+// 竞技场排行榜列表（用于持久化整个排行榜）
+message ArenaRankList {
+    repeated ArenaRankItem items = 1;            // 排行榜条目列表
+}

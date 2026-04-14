@@ -1,0 +1,1598 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+import "Mail.proto";
+import "Battle.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// 世界实体的定义, 依次包含的关系 场景 scene -> 地图 map -> 分区 area -> 区块 block -> 坐标点 point
+// 举个栗子:
+// 本服场景 -> [原始地图] -> [1 - 25 分区] -> [1 - 2500 区块] -> [250000 坐标点]
+// 本服场景 -> [战火地图] -> [战火分区] -> [1 - 100 区块] -> [2500 坐标点]
+// 跨服场景 -> [战火地图] -> [战火分区] -> [1 - 100 区块] -> [2500 坐标点]
+// 注意：同级定义之间, 是完全隔离的, 如本服场景和跨服场景下的所有内容隔离; 同在本服场景下, 原始地图和战火地图是完全隔离。
+
+// ================================枚举定义================================
+
+// 场景类型定义 [暂未使用, 预留]
+enum SceneTypeDefine {
+  ORIGINAL_SCENE = 1; // 原始场景
+}
+
+// 场景地图类型定义
+enum SceneMapDefine {
+  ORIGINAL_MAP = 1; // 原始地图
+}
+
+// 地图分区类型定义, 目前是: 原始地图 [1 - 25]
+enum MapAreaDefine {
+  AREA_UNDEFINED = 0;  // 占位
+}
+
+// 开放条件的定义
+enum OpenConditionTypeDefine {
+  OPEN_FOREVER = 0; // 永久开放
+  OPEN_AT_FIXED_TIMES = 1; // 固定时间开放
+}
+
+// 查询类型定义, 由上至下, 结构越来越详细
+enum QueryEntityTypeDefine {
+  QUERY_MAP = 1; // 查询地图
+  QUERY_AREA = 2; // 查询分区
+  QUERY_BLOCK = 3; // 查询区块
+  QUERY_ENTITY = 4; // 查询实体
+}
+
+// 地图事件类型定义
+enum MapEventTypeDefine {
+  ENTITY_EVENT = 1;         // 实体事件
+  MARCH_EVENT = 2;          // 行军事件
+  BATTLE_EVENT = 3;         // 战斗事件
+  PLAYER_EVENT = 4;         // 玩家数据
+}
+
+// 地图信息类型定义
+enum MapInfoTypeDefine {
+  MAP_INFO_TYPE_UNDEFINED = 0; // 地图信息类型未定义
+}
+
+// 地图事件模块定义
+enum MapEventModularDefine {
+  PLAYER_CAMP_MODULAR = 1;  //玩家的选择阵营的界面
+}
+
+// 实体类型定义
+enum WorldEntityTypeDefine {
+  ENTITY_UNDEFINED = 0;   // 实体未定义
+  ENTITY_TYPE_PLAYER = 1; // 玩家
+  ENTITY_TYPE_BANDIT = 2; // 流寇
+  ENTITY_TYPE_MINE = 3;   // 矿点
+  ENTITY_TYPE_CITY = 4;   // 城池
+  ENTITY_TYPE_MULTIPLAYER_BANDIT = 5; // 多人流寇
+  ENTITY_TYPE_PIRATE_FLEET = 6; // 海盗舰队
+  ENTITY_TYPE_REBELS_NPC = 7;    // 叛军NPC
+  ENTITY_TYPE_DECORATION = 99; // 装饰物
+  ENTITY_TYPE_HUNTING_TRAP = 200; // 狩猎行动玩法 - 陷阱建筑
+}
+
+// 部队类型定义
+enum WorldTroopTypeDefine {
+  MARCH_TYPE_IDLE = 0;            // 空闲
+  MARCH_TYPE_ATK_BANDIT = 1;      // 打流寇
+  MARCH_TYPE_ATK_PLAYER = 2;      // 打玩家
+  MARCH_TYPE_MINE_COLLECT = 3;    // 矿点采集
+  MARCH_TYPE_ATK_CITY = 4;        // 打城池
+  MARCH_TYPE_INTEL_TASK = 5;      // 情报任务
+  MARCH_TYPE_GARRISON_PLAYER = 6; // 驻防玩家
+  MARCH_TYPE_SPONSOR_ASSEMBLY = 7;// 发起集结部队
+  MARCH_TYPE_JOIN_ASSEMBLY = 8;   // 加入集结部队
+  MARCH_TYPE_GARRISON_CITY = 9;   // 驻防城池
+  MARCH_TYPE_SPONSOR_ASSEMBLY_CITY = 10;//发起集结城池
+  MARCH_TYPE_NPC = 11;            // npc部队
+  MARCH_TYPE_SPONSOR_ASSEMBLY_HUNTING_TRAP = 12;//发起集结狩猎陷阱
+  MARCH_TYPE_MULTI_PLAYER_BANDIT = 13; // 多人流寇集结部队
+  MARCH_TYPE_PIRATE_FLEET = 14; // 海盗舰队集结部队
+  MARCH_TYPE_SCOUT = 15; // 侦察部队
+}
+
+// 部队状态定义
+enum WorldTroopStatusDefine {
+  MARCH_STATUS_IDLE = 0;        // 空闲
+  MARCH_STATUS_MARCH = 1;       // 行军
+  MARCH_STATUS_RETREAT = 2;     // 返回
+  MARCH_STATUS_ARRIVAL = 3;     // 到达
+  MARCH_STATUS_ASSEMBLY = 4;    // 集结中
+}
+
+// 战斗类型定义
+enum FightTypeDefine {
+  FIGHT_TYPE_PLAYER = 1;        // 打玩家
+  FIGHT_TYPE_CITY = 2;          // 打城池
+}
+
+// 战斗状态定义
+enum FightStatusDefine {
+  FIGHT_STATUS_IDLE = 0;        // 空闲
+  FIGHT_STATUS_FIGHT = 1;       // 战斗中
+  FIGHT_STATUS_ASSEMBLY = 2;    // 集结中
+}
+
+// 分区开放状态定义
+enum PartitionOpenStatusDefine {
+  AREA_STATUS_CLOSE = 0; // 关闭
+  AREA_STATUS_OPEN = 1; // 开放
+  AREA_STATUS_PASS = 2; // 已开通下一级分区
+}
+
+// 资源点类型定义
+enum MineTypeDefine {
+  MINE_TYPE_STONE = 1;      // 石头
+  MINE_TYPE_GRAIN = 2;      // 粮食
+  MINE_TYPE_WOOD_BOARD = 3; // 木板
+  MINE_TYPE_GOLD_INGOT = 4; // 金锭
+}
+
+// 实体事件类型定义
+enum EntityEventTypeDefine {
+  ENTITY_EVENT_NORMAL = 0;        // 普通实体事件（默认）
+  ENTITY_EVENT_MOVE_CITY = 1;     // 迁城事件
+}
+
+// 城池类型定义
+enum CityTypeDefine {
+  CITY_TYPE_BASTION = 1;      // 堡垒
+  CITY_TYPE_FORTRESS = 2;     // 要塞
+  CITY_TYPE_CAPITAL = 3;      // 首都
+  CITY_TYPE_METROPOLIS = 4;   // 都城
+  CITY_TYPE_FAMOUS = 5;       // 名城
+  CITY_TYPE_HOLY = 6;         // 圣城
+}
+
+// ================================结构定义================================
+
+
+// 基础的开放条件
+option java_outer_classname = "WorldPb";
+message BaseOpenCondition {
+  required int32 type = 1; // 开放条件, 对应OpenConditionTypeDefine中的定义
+  optional int32 status = 2; // 开放状态, 对应OpenConditionStatusDefine中的定义
+  extensions 20 to 30;
+}
+
+// 限时的开放条件
+message LimitTimeOpenCondition {
+  optional int32 preViewTime = 1; // 预显示的时间
+  optional int32 enterTime = 2; // 进入的时间
+  optional int32 startTime = 3; // 开启时间
+  optional int32 endTime = 4; // 结束时间
+  optional int32 endDisplayTime = 5; // 结束显示时间
+  optional int32 endEnterTime = 6; // 结束进入的时间
+  extend BaseOpenCondition {
+    optional LimitTimeOpenCondition condition = 20;
+  }
+}
+
+
+//  --------------------------------BaseMap------------------------------------------------------------
+
+
+// 基础玩家地图基础信息
+message BasePlayerMapData {
+  required int32 map = 1;                 // 地图id
+  required int64 roleId = 2;              // 玩家id
+  required int32 pos = 3;                 // 所在地图的坐标
+  optional int32 topLvBandit = 4;         // 击败最高级流寇
+  optional int32 protectTime = 5;         // 保护罩到期时间
+  extensions 100 to 200;
+}
+
+// 原始地图玩家数据
+message OriginalPlayerMapData {
+  optional int32 mpBanditSponsorRecvCount = 1; // 多人叛军-发起者特殊奖励领取次
+  optional int32 mpBanditJoinerRecvCount = 2; // 多人叛军-加入者特殊奖励领取次
+  repeated ScoutRecord sr = 3;              // 侦察记录
+  extend BasePlayerMapData {
+    optional OriginalPlayerMapData playerDefine = 100;
+  }
+}
+
+// 侦察记录
+message ScoutRecord {
+  required int64 roleId = 1;  // 侦察玩家id
+  optional int64 time = 2;    // 侦察时间
+  optional int32 mailKey = 3; // 侦察邮件
+}
+
+//  --------------------------------BaseMap------------------------------------------------------------
+
+// 基础的地图
+message BaseMap {
+  required int32 map = 1;                   // 地图, 对应OriginalSceneMapDefine或者CrossSceneMapDefine枚举中的地图类型
+  optional BaseOpenCondition condition = 2; // 开放条件
+  optional int32 generate = 3;              // 自增id [服务器序列化字段, 协议交互中不存在]
+  repeated int64 autoAssemblyQueue = 4;     // 自动集结队列 [服务器序列化字段, 协议交互中不存在]
+  extensions 100 to 200;
+}
+
+// 原始地图的详情
+message OriginalMapDetails {
+  repeated BasePartition partition = 1; // 分区数据
+  extend BaseMap {
+    optional OriginalMapDetails mapDefine = 100;
+  }
+}
+
+//  --------------------------------BasePartition------------------------------------------------------------
+
+// 基础的分区
+message BasePartition {
+  required int32 area = 1;                // 分区, 对应s_area表中的分区划分
+  required int32 status = 2;              // 状态, 对应MapAreaStatusDefine枚举中的状态
+  optional int32 centralCityCamp = 3;     // 中心城池的所属阵营
+  optional TeamDefeatInfo centralCityDefeatInfo = 4; // 中心城池的首杀信息
+  repeated TwoInt cityTypeToCityId = 5;   // 分区城池类型对应的首杀城池id的映射 [服务器序列化使用]
+  extensions 100 to 200;
+}
+
+//  --------------------------------BaseEntity------------------------------------------------------------
+
+// 基础的实体
+message BaseEntity {
+  required int32 pos = 1;                 // 在地图中的坐标
+  optional int32 entityType = 2;          // 实例类型, 对应WorldEntityTypeDefine定义
+  optional int32 keyId = 3;               // 势力id, 除了玩家以外, 其它势力类型id
+  optional int32 camp = 4;                // 所属阵营
+  optional int32 confId = 5;              // 势力配置id, 如叛军配置id, 飞艇配置id
+  optional int32 protectTime = 6;         // 保护罩到期时间
+  repeated int32 occupiedArea = 7;        // 占地面积, 一个实体占多个坐标的情况
+  optional bool isBattle = 8;             // 当前坐标有战斗
+  extensions 100 to 200;
+}
+
+// --------------------------------PlayerEntityBase_101------------------------------------------------------------
+
+// 玩家的实体(基础信息, 查询小地图使用)
+message PlayerEntityBase {
+  required int64 lordId = 1;                // 玩家id
+  required string name = 2;                 // 玩家昵称
+  extensions 100 to 200;
+  extend BaseEntity {
+    optional PlayerEntityBase playerDefine = 101;
+  }
+}
+
+// --------------------------------PlayerEntityDetails_101------------------------------------------------------------
+
+// 地图玩家实体详情信息(详细信息, 查询大地图使用、地图同步使用)
+message PlayerEntityDetails {
+  optional PlayerDressInfo dress = 1; // 地图玩家实体装扮数据 [后续可优化, 通过PlayerSnapshot获取]
+  optional int32 level = 2;           // 等级, 篝火等级
+  optional int32 fireTime = 3;        // 城墙失火结束时间, 小于当前服务器时间表示未失火
+  extensions 100 to 200;
+  extend PlayerEntityBase {
+    optional PlayerEntityDetails playerDetails = 101;
+  }
+}
+
+// 地图玩家实体装扮数据
+message PlayerDressInfo {
+  optional int32 castleSkin = 1; // 主城皮肤
+  optional int32 castleSkinStar = 2; // 主城皮肤星级
+  optional int32 namePlate = 3; // 名称铭牌
+  optional int32 titleId = 4; //称号id
+  optional int32 starSkinNum = 5; // 10星皮肤数量
+  optional int32 moveCitySkin = 6; // 迁城动画皮肤
+  optional int32 avatarFrame = 7; // 头像框
+}
+
+// --------------------------------PlayerEntityInfo_101------------------------------------------------------------
+
+// 地图玩家实体信息(点位信息, 查询点位信息使用)
+message PlayerEntityInfo {
+  optional int32 garrisonCount = 1;//玩家身上的援军数量
+  optional int64 totalFight = 2;//玩家战力
+  extend PlayerEntityDetails {
+    optional PlayerEntityInfo playerInfo = 101;
+  }
+}
+
+// --------------------------------BanditEntityBase_102------------------------------------------------------------
+// 地图叛军的实体(基础信息, 查询小地图使用)
+message BanditEntityBase {
+  optional int32 deadlineTime = 1; //消亡时间
+  extensions 51 to 100;
+  extend BaseEntity {
+    optional BanditEntityBase banditBase = 102;
+  }
+}
+
+// --------------------------------CityEntityBase------------------------------------------------------------
+// 地图城池的实体(基础信息, 查询小地图使用)
+message CityEntityBase {
+  repeated int32 atkCamp = 1; // 宣战阵营
+  extensions 51 to 100;
+  extend BaseEntity {
+    optional CityEntityBase cityDefine = 199;
+  }
+}
+
+// --------------------------------CityEntityDetails------------------------------------------------------------
+// 地图城池实体详情数据(详细信息, 查询大地图使用、地图同步使用)
+message CityEntityDetails {
+  optional CityProduceInfo produce = 1; // 生产相关
+  extensions 51 to 100;
+  extend CityEntityBase {
+    optional CityEntityDetails cityDetails = 51;
+  }
+}
+
+// 地图城池生产相关数据
+message CityProduceInfo {
+  optional int32 produced = 1; // 已生产完成个数
+  optional int32 finishTime = 2; // 本次生产完成时间
+}
+
+// --------------------------------CityEntityInfo------------------------------------------------------------
+// 地图城池实体信息数据(点位信息, 查询点位信息使用)
+message CityEntityInfo {
+  optional TeamDefeatInfo defeatInfo = 1;// 首杀团队信息
+  repeated TwoInt npcInfo = 2;// 守城npc信息 v1: npcId v2: 血量
+  optional int32 joinAward = 3;// 今日剩余可获得参与奖励次数
+  optional int32 campAward = 4;// 今日剩余可获得阵营奖励次数
+  optional int32 garrisonCount = 5;// 城池的援军数量
+  optional int32 resetTime = 6; // 重置时间[时间内, 未攻下城市, 则恢复兵力]
+  extend CityEntityDetails {
+    optional CityEntityInfo cityInfo = 51;
+  }
+}
+
+// --------------------------------MineEntityBase------------------------------------------------------------
+// 地图矿点的实体(基础信息, 查询小地图使用)
+message MineEntityBase {
+  extensions 51 to 100;
+  extend BaseEntity {
+    optional MineEntityBase mineDefine = 103;
+  }
+}
+
+// --------------------------------MineEntityDetails------------------------------------------------------------
+// 地图矿点的详情数据(详细信息, 查询大地图使用、地图同步使用)
+message MineEntityDetails {
+  optional int32 totalResource = 1;     // 剩余资源数量
+  optional int64 roleId = 2;            // 采集玩家id
+  optional string collectorName = 3;    // 采集玩家名称
+  extensions 51 to 100;
+  extend MineEntityBase {
+    optional MineEntityDetails mineDetails = 51;
+  }
+}
+
+// --------------------------------MineEntityInfo------------------------------------------------------------
+
+// 地图矿点的点位信息(点位信息, 查询点位信息使用)
+message MineEntityInfo {
+  optional int32 startTime = 1;         // 开始采集时间
+  optional int32 endTime = 2;           // 结束采集时间
+  optional int32 collectedResource = 3; // 已采集资源数量
+  optional int32 collectSpeed = 4;      // 采集速度(小时)
+  extend MineEntityDetails {
+    optional MineEntityInfo mineInfo = 51;
+  }
+}
+
+// --------------------------------huntingTrapEntityBase 104 ------------------------------------------------------------
+// 狩猎陷阱的实体(基础信息, 查询小地图使用)
+message HuntingTrapEntityBase {
+  extensions 51 to 100;
+  extend BaseEntity {
+    optional HuntingTrapEntityBase huntingTrapDefine = 104;
+  }
+}
+
+
+// --------------------------------MultiBanditEntityBase 105 ------------------------------------------------------------
+// 多人流寇的实体(基础信息, 查询小地图使用)
+message MultiBanditEntityBase {
+  optional int32 deadlineTime = 1; //消亡时间
+  extensions 51 to 100;
+  extend BaseEntity {
+    optional MultiBanditEntityBase multiBanditDefine = 105;
+  }
+}
+
+
+// --------------------------------PirateFleetEntityBase 106 ------------------------------------------------------------
+// 海盗舰队的实体(基础信息, 查询小地图使用)
+message PirateFleetEntityBase {
+  optional int32 deadlineTime = 1; //消亡时间
+  extensions 51 to 100;
+  extend BaseEntity {
+    optional PirateFleetEntityBase pirateFleetDefine = 106;
+  }
+}
+
+
+
+// --------------------------------BaseTroop------------------------------------------------------------
+
+// 基础的行军
+message BaseTroop {
+  required int32 key = 1;               // 唯一id
+  optional int32 type = 2;              // 行军类型, 对应WorldTroopTypeDefine定义
+  optional int32 origin = 3;            // 起点
+  optional int32 goal = 4;              // 终点
+  optional int32 status = 5;            // 行军状态
+  optional int64 startTime = 6;         // 开始时间
+  optional int64 endTime = 7;           // 结束时间
+  optional int32 camp = 8;              // 所属阵营
+  extensions 51 to 100;
+}
+
+
+// --------------------------------PlayerTroopBase------------------------------------------------------------
+
+// 玩家行军的基础
+message PlayerTroopBase {
+  required int64 belong = 1;          // 所属玩家
+  optional int32 formationId = 2;     // 编队id
+  required string nick = 3;           // 玩家名称
+  optional int32 marchDressSkinId = 4;// 行军皮肤
+  optional int32 fight = 5;           // 部队战力
+  repeated HeroSummary summary = 6;   // 将领概要信息
+  extensions 51 to 100;
+  extend BaseTroop {
+    optional PlayerTroopBase playerDefine = 51;
+  }
+}
+
+// --------------------------------CollectTroopDetails------------------------------------------------------------
+
+// 采集部队的基础
+message CollectTroopDetails {
+  optional int32 mineId = 1;        // 采集点id [派遣意图, 要前往什么采集点]
+  extend PlayerTroopBase {
+    optional CollectTroopDetails collectMarch = 51;
+  }
+}
+
+// --------------------------------PigeonTroopDetails------------------------------------------------------------
+
+// 信鸽部队的基础(预留)
+message PigeonTroopDetails {
+  extend PlayerTroopBase {
+    optional PigeonTroopDetails pigeonMarch = 52;
+  }
+}
+
+// --------------------------------IntelTaskTroopDetails------------------------------------------------------------
+
+// 情报任务部队
+message IntelTaskTroopDetails {
+  optional int32 taskType = 1;      // 行军目标任务类型
+  extend PlayerTroopBase {
+    optional IntelTaskTroopDetails intelTaskMarch = 53;
+  }
+}
+
+// --------------------------------SponsorAssemblyTroopDetails------------------------------------------------------------
+
+// 发起者集结部队概要
+message SponsorAssemblyTroopDetails {
+  extensions 11 to 20;
+  extend PlayerTroopBase {
+    optional SponsorAssemblyTroopDetails sponsorAssemblyMarch = 54;
+  }
+}
+
+// --------------------------------SponsorAssemblyTroopInfo------------------------------------------------------------
+
+// 发起者集结部队详情
+message SponsorAssemblyTroopInfo {
+  repeated BaseTroop joinTroops = 1; // 集结部队 (加入集结部队的basic层级结构)
+  extend SponsorAssemblyTroopDetails {
+    optional SponsorAssemblyTroopInfo sati = 11;
+  }
+}
+
+// --------------------------------JoinedAssemblyTroopDetails------------------------------------------------------------
+
+// 加入集结部队概要
+message JoinedAssemblyTroopDetails {
+  optional BaseTroop sponsorTroop = 1;  // 发起集结部队 [当前状态为MARCH_STATUS_ASSEMBLY的时候, 即加入集结部队到达集结点后, 所有数据读取发起集结] (发起集结部队的BaseTroop结构)
+  extensions 11 to 20;
+  extend PlayerTroopBase {
+    optional JoinedAssemblyTroopDetails assemblyMarch = 55;
+  }
+}
+
+
+// 侦察部队
+message ScoutTroopDetails {
+  extend PlayerTroopBase {
+    optional ScoutTroopDetails scoutMarch = 56;
+  }
+}
+
+
+
+// --------------------------------NpcTroopBase------------------------------------------------------------
+
+// npc行军部队
+message NpcTroopBase {
+  extensions 51 to 100;
+  extend BaseTroop {
+    optional NpcTroopBase npcDefine = 52;
+  }
+}
+
+// 焦点
+message FocusRecord {
+  required int32 map = 1; // 关注的地图
+  required int32 area = 2; // 关注的分区
+  repeated int32 block = 3; // 关注的区块
+
+}
+
+// 迷雾
+message BaseFog {
+  required int32 id = 1; // 迷雾唯一id
+  extensions 51 to 100;
+}
+
+
+// --------------------------------BaseFight------------------------------------------------------------
+
+// 战斗[战斗事件]
+message BaseFight {
+  required int32 key = 1;                 // 唯一id
+  optional int32 type = 2;                // 战斗类型, 对应BattleTypeDefine枚举中定义的类型
+  optional int32 pos = 3;                 // 目标位置 每个目标的信息还不一样 具体由子类返回目标信息 如果是攻打玩家 这个是玩家位置 如果是攻打玩家的资源点 这个是资源点位置
+  optional int32 battleStatus = 4;        // 战争状态, 对应FightStatusDefine枚举中定义的状态
+  optional int64 battleTime = 5;          // 每个状态的战斗时间
+  optional BaseSummary sponsor = 6;       // 发起者的概要信息
+  optional BaseSummary defender = 7;      // 防守者的概要信息
+  extensions 50 to 60;
+}
+
+// --------------------------------FightDetails------------------------------------------------------------
+
+// 战斗详情(战斗概要, 查询战斗列表使用) [根据关注战斗列表推送]
+message FightDetails {
+  extend BaseFight {
+    optional FightDetails fightDetails = 50;
+  }
+}
+
+// 玩家战斗详情(战斗详情, 查询具体战斗) [预留, 暂无使用]
+message PlayerFightInfo {
+
+}
+
+// 矿战战斗详情(战斗详情, 查询具体战斗) [预留, 暂无使用]
+message MineFightInfo {
+
+}
+
+// --------------------------------AssemblyFightDetails------------------------------------------------------------
+
+// 集结战斗详情(战斗概要, 查询战斗列表使用) [根据关注战斗列表推送]
+message AssemblyFightDetails {
+  optional AssembledSummery sponsorAs = 1;    // 发起方集结组成概要
+  optional AssembledSummery defenderAs = 2;   // 防守方集结组成概要
+  optional int64 startTime = 3;               // 集结开始时间/战斗开始时间
+  extensions 10 to 20;
+  extend BaseFight {
+    optional AssemblyFightDetails assemblyFightDetails = 51;
+  }
+}
+
+// 集结组成者概要
+message AssembledSummery {
+  required TwoInt curAndMax = 1;          // 集结部队当前数量和上限
+  repeated LongInt portrait = 2;          // 集结玩家对应的roleId和头像
+  optional int64 fight = 3;               // 集结总战力
+}
+
+
+// --------------------------------AssemblyFightInfo------------------------------------------------------------
+
+// 集结战斗详情(战斗详情, 查询战斗使用) [根据关注]
+message AssemblyFightInfo {
+  repeated BaseTroop attackTroops = 1;           // 参与进攻的部队
+  repeated BaseTroop defenderTroops = 2;         // 参与防守的部队
+  extend AssemblyFightDetails {
+    optional AssemblyFightInfo assemblyFightInfo = 10;
+  }
+}
+
+
+//******************************************地图事件**********************************************************
+
+// 地图基础事件
+message MapEvent {
+  required int32 eventType = 1; // 对应MapEventTypeDefine枚举中定义的类型
+  required int32 map = 2; // 对应的地图
+  repeated int32 modular = 3; // 对应的模块
+  extensions 51 to 100;
+  extend BroadEvent {
+    optional MapEvent mapEvent = 52;
+  }
+}
+
+// 实体事件
+message EntityEvent {
+  required BaseEntity entity = 1; // 事件影响的实体
+  optional int32 eventType = 2;   // 实体事件类型，对应EntityEventTypeDefine
+  extend MapEvent {
+    optional EntityEvent entityEvent = 51;
+  }
+}
+
+// 行军事件
+message TroopEvent {
+  required BaseTroop troop = 1; // 事件影响的部队
+  extend MapEvent {
+    optional TroopEvent marchEvent = 52;
+  }
+}
+
+// 战斗事件
+message FightEvent {
+  required BaseFight fight = 1; // 事件影响的战斗
+  extend MapEvent {
+    optional FightEvent fightEvent = 53;
+  }
+}
+
+// 玩家数据
+message PlayerEvent {
+  required BasePlayerMapData basePlayerMap = 1; // 事件玩家数据
+  extend MapEvent {
+    optional PlayerEvent playerEvent = 56;
+  }
+}
+
+
+// 基础排行信息
+message BaseRank {
+  required int32 map = 1;             // 地图, 对应OriginalSceneMapDefine或者CrossSceneMapDefine枚举中的地图类型
+  required int32 type = 2;            // 排行榜类型
+  repeated RankItem rankItem = 3;     // 排行榜信息
+  extensions 100 to 200;
+}
+
+
+// 基础战报信息
+message BaseReport {
+  required int32 time = 1;            // 时间
+  optional string nickname = 2;       // 领主名称
+  optional int32 portrait = 3;        // 领主头像头像
+  repeated string params = 4;         // 参数
+  optional int32 contentType = 5;     // 文本类型
+  optional int32  portraitFrame = 6;  //头像框
+  optional int32 camp = 7;            // 阵营
+  extensions 100 to 200;
+}
+
+
+
+//******************************************自动集结设置**********************************************************
+message AutoAssemblySetting {
+  optional int32 startTime = 1;                 // 开启时间或者最近加入自动集结的时间 [服务器使用]
+  optional int32 endTime = 2;                   // 自动集结结束时间, 小于等于当前时间或等于0, 表示集结结束或已关闭
+  optional int32 model = 3;                     // 自动集结模式, 0 未设置, 1 全兵加入[服务器计算上阵编队] 2 自定义上阵编队
+  optional int32 formation = 4;                 // 自定义加入集结的编队
+  optional int32 joinFormationCount = 5;        // 自动加入编队数量
+  repeated int32 joinAssemblyType = 6;          // 自动加入集结类型, 对应BattleTypeDefine枚举中的类型
+}
+
+// ================================序列化结构定义================================
+
+// 地图序列化结构
+message SerGlobalWorldMap {
+  required BaseMap baseMap = 1;           // 地图基础数据
+  repeated SerBaseEntity entities = 2;    // 地图实体序列化数据
+  repeated SerBaseTroop troops = 3;       // 地图部队序列化数据
+  repeated SerBaseFight fights = 4;       // 地图战斗序列化数据
+}
+
+// 地图实体序列化
+message SerBaseEntity {
+  required int32 pos = 1; // 在地图中的坐标
+  required int32 entityType = 2; // 实例类型, 对应WorldEntityTypeDefine定义
+  optional int32 keyId = 3; // 势力id, 除了玩家以外, 其它势力类型id
+  optional int32 camp = 4; //  所属阵营
+  optional int32 confId = 5; // 势力配置id, 如叛军配置id, 飞艇配置id
+  optional int32 protectTime = 6; // 保护罩到期时间
+  repeated int32 occupiedArea = 7; // 占地面积, 一个实体占多个坐标的情况
+  extensions 100 to 200;
+}
+
+// 地图玩家实体序列化
+message SerPlayerEntity {
+  required int64 roleId = 1; //  玩家id
+  extend SerBaseEntity {
+    optional SerPlayerEntity playerEntity = 101;
+  }
+}
+
+// 地图流寇实体序列化
+message SerBanditEntity {
+  optional int32 deadlineTime = 1;  // 执行时间
+  repeated SerFightUnit unit = 2;  // npc信息
+  extend SerBaseEntity {
+    optional SerBanditEntity banditEntity = 102;
+  }
+}
+
+// 地图矿点实体序列化
+message SerMineEntity {
+  optional int32 remainRes = 1; // 剩余资源数量
+  extend SerBaseEntity {
+    optional SerMineEntity mineEntity = 103;
+  }
+}
+
+//地图城池实体序列化
+message SerCityEntity {
+  optional int32 cityStatus = 1;              // 城池状态 CityStatusDefine [废弃]
+  optional int32 cityStatusEndTime = 2;       // 城池状态结束时间 [废弃]
+  optional int32 camp = 3;                    // 城池所属阵营
+  optional TeamDefeatInfo firstDefeatTeam = 4;// 城池的首杀信息
+  repeated int32 defenseTroops = 5;           // 城池的驻防部队
+  repeated LongInt joinAward = 6;             // 参与奖励领取次数
+  repeated LongInt campAward = 7;             // 阵营奖励获得次数
+  repeated SerFightUnit npcFight = 8;         // 城池的npc守军
+  optional int32 resetTime = 9;               // 城池重置时间
+  extend SerBaseEntity {
+    optional SerCityEntity cityEntity = 104;
+  }
+}
+
+
+// 地图流寇实体序列化
+message SerRebelsArmyEntity {
+  optional int32 deadlineTime = 1;  // 执行时间
+  repeated SerFightUnit unit = 2;  // npc信息
+  extend SerBaseEntity {
+    optional SerRebelsArmyEntity rebelsArmy = 105;
+  }
+}
+
+
+// 地图狩猎陷阱实体序列化
+message SerHuntingTrapEntity {
+  optional int32 deadlineTime = 1;  // 执行时间
+  extend SerBaseEntity {
+    optional SerHuntingTrapEntity huntingTrapEntity = 106;
+  }
+}
+
+// 地图多人流寇实体序列化
+message SerMultiplayerBanditEntity {
+  optional int32 deadlineTime = 1;  // 执行时间
+  extend SerBaseEntity {
+    optional SerMultiplayerBanditEntity multiplayerBanditEntity = 107;
+  }
+}
+
+// 地图海盗舰队实体序列化
+message SerPirateFleetEntity {
+  optional int32 deadlineTime = 1;  // 执行时间
+  optional int64 owner = 2;         // 拥有者玩家id
+  extend SerBaseEntity {
+    optional SerPirateFleetEntity pirateFleetEntity = 108;
+  }
+}
+
+// 地图部队序列化
+message SerBaseTroop {
+  required int32 key = 1;           // 行军唯一id
+  required int32 type = 2;          // 行军类型
+  required int32 origin = 3;        // 起点
+  required int32 goal = 4;          // 终点
+  optional int32 status = 5;        // 部队状态
+  optional int64 startTime = 6;     // 开始时间
+  optional int64 endTime = 7;       // 结束时间
+  optional int64 roleId = 8;        // 所属玩家
+  optional int32 movementSpeed = 9; // 移动速度
+  repeated TwoInt buff = 10;        // 部队拥有buff
+  extensions 100 to 200;
+}
+
+
+
+// 玩家部队序列化
+message SerPlayerTroop {
+  required int64 roleId = 1;          // 部队所属玩家id
+  required int32 formationId = 2;     // 编队id
+  repeated SerHeroSnapshot hero = 3;  // 部队派遣英雄快照
+  optional SerDispatchTroopConsume consume = 4;         // 部队派遣消耗, 用于异常返回时, 退还资源
+  extensions 21 to 30;
+  extend SerBaseTroop {
+    optional SerPlayerTroop playerTroop = 101;
+  }
+}
+
+// 采集部队序列化
+message SerCollectTroop {
+  required int32 collectMax = 1;      // 可采集数量
+  required int32 startCollectTime = 2;// 开始采集时间
+  optional CollectReportPb collectReport = 3;// 采集报告
+  optional int32 mineId = 4;          // 采集点配置id
+  extend SerPlayerTroop {
+    optional SerCollectTroop collectTroop = 21;
+  }
+}
+
+// 情报任务部队序列化
+message SerIntelTaskTroop {
+  required int32 taskUniqueId = 1;
+  required int32 configId = 2;
+  extend SerPlayerTroop {
+    optional SerIntelTaskTroop intelTroop = 22;
+  }
+}
+
+// 攻击玩家部队序列化
+message SerAttackPlayerTroop {
+  optional int64 targetRoleId = 1;//防守方玩家id
+  repeated AwardPb plunderAward = 2;//打城掠夺到的资源
+  extend SerPlayerTroop {
+    optional SerAttackPlayerTroop attackPlayerTroop = 23;
+  }
+}
+
+// 驻防玩家部队序列化
+message SerGarrisonPlayerTroop {
+  optional int64 targetRoleId = 1;//被驻防玩家id
+  extend SerPlayerTroop {
+    optional SerGarrisonPlayerTroop garrisonPlayerTroop = 24;
+  }
+}
+
+// 侦查部队序列化
+message SerScoutTroop {
+  optional int64 targetRoleId = 1; // 目标玩家id
+  optional int32 targetEntityType = 2; // 目标实体类型
+  extend SerPlayerTroop {
+    optional SerScoutTroop scoutTroop = 26;
+  }
+}
+
+// 集结部队序列化
+message SerAssemblyTroop {
+  optional int32 assemblyId = 1;
+  extensions 11 to 20;
+  extend SerPlayerTroop {
+    optional SerAssemblyTroop assemblyTroop = 25;
+  }
+}
+
+// npc部队序列化
+message SerNpcAtkTroop {
+  optional int64 entityId = 1;    // 防守方唯一id
+  optional int32 confId = 2;      // 防守方配置id
+  extend SerBaseTroop {
+    optional SerNpcAtkTroop  npcTroop = 102;
+  }
+}
+
+// 发起集结部队序列化 [预留]
+message SerSponsorAssemblyTroop {
+  extend SerAssemblyTroop {
+    optional SerSponsorAssemblyTroop sponsorAssemblyTroop = 11;
+  }
+}
+
+// 加入集结部队序列化 [预留]
+message SerJoinAssemblyTroop {
+  extend SerAssemblyTroop {
+    optional SerJoinAssemblyTroop joinAssemblyTroop = 12;
+  }
+}
+
+// 英雄快照序列化
+message SerHeroSnapshot {
+  optional int32 heroId = 1;                  // 英雄id
+  optional int32 armType = 2;                 // 兵种类型
+  optional int32 soldierLevel = 3;            // 兵种等级
+  optional int32 level = 4;                   // 等级
+  optional int32 tier = 5;                    // 阶级
+  optional int32 armyCount = 6;               // 带兵数量
+  repeated TwoInt attr = 7;                   // 属性
+  repeated TwoInt skill = 8;                  // 技能
+  repeated SerEquipSnapshot equip = 9;        // 装备快照
+  optional int32 line = 10;                   // 兵排数
+  repeated TwoInt buff = 11;                  // 英雄身上所带的buff
+  optional int32 minorInjury = 12;            // 轻伤数量
+  optional int32 seriousInjury = 13;          // 重伤数量
+}
+
+// 简要的显示 Hero 信息
+message LiteHeroSnapshot {
+  optional int32 heroId = 1;                  // 英雄id
+  optional int32 level = 2;                   // 等级
+  optional int32 tier = 3;                    // 阶级
+}
+
+// 英雄快照列表（用于存储多个英雄快照的二进制数据）
+message HeroSnapshotList {
+  repeated SerHeroSnapshot snapshots = 1;               // 英雄快照字节数组列表
+}
+
+// 装备快照序列化
+message SerEquipSnapshot {
+  required int32 equipId = 1;             // 装备配置id
+  optional int32 level = 2;               // 强化等级
+  optional int32 forgingLevel = 3;        // 专精等级
+}
+
+// 派遣部队消耗
+message SerDispatchTroopConsume {
+  repeated AwardPb consume = 1;       // 资源类消耗
+  optional int32 protectTime = 2;     // 保护罩扣除时间
+}
+
+// 地图战斗序列化
+message SerBaseFight {
+  required int32 key = 1; // 战斗唯一id
+  required int32 type = 2;  // 战斗类型
+  required int32 battlePos = 3; // 战斗发生的位置
+  optional int32 battleStatus = 4;// 战斗状态
+  required int64 battleTime = 5;  // 战斗时间
+  repeated SerFightUnit atkQueue = 6; // 进攻方战斗单位
+  repeated SerFightUnit defQueue = 7; // 防守方战斗单位
+  optional int32 sponsorPos = 8; // 发起者位置 发起者和防守者继承BaseEntity，只需要记录pos即可，不必再序列化一遍Entity信息
+  optional int32 defenderPos = 9; // 防守者位置
+  extensions 100 to 200;
+}
+
+
+// 地图战斗单位序列化
+message SerFightUnit {
+  optional int32 battleIndex = 1;
+  optional int32 npcConfigId = 2;
+  optional int32 remainHp = 3;
+  optional int32 maxHp = 4;
+  optional int32 armyType = 5;
+  optional int32 roleType = 6;
+  optional int32 platoon = 7;
+  repeated TwoInt attrMap = 8;
+  optional int32 uniqueId = 9;
+  repeated TwoInt skillMap = 10;
+  optional int32 armyLv = 11;
+}
+
+//集结战斗序列化
+message SerAssemblyFight {
+  optional int32 assemblyTroopMax = 1;    // 集结部队上限
+  optional int32 sponsorTroopKey = 2;     // 发起集结部队key
+  repeated int32 joinedTroopKey = 3;      // 加入集结部队key
+  optional int64 startTime = 4;           // 集结开始时间/战斗开始时间
+  extensions 100 to max;
+  extend SerBaseFight {
+    optional SerAssemblyFight assemblyFight = 101;
+  }
+}
+
+// 玩家集结战斗序列化
+message SerPlayerAssemblyFight {
+  extend SerAssemblyFight {
+    optional SerPlayerAssemblyFight playerAssemblyFight = 101;
+  }
+}
+
+// ================================协议定义================================
+
+// 获取所有地图信息
+message GetMapDetailsRq {
+  optional int32 mapId = 1; // 指定地图查询
+  extend Base {
+    optional GetMapDetailsRq ext = 50001;
+  }
+}
+
+message GetMapDetailsRs {
+  repeated BaseMap map = 1; // 默认只有BaseMap结构体的内容
+  extend Base {
+    optional GetMapDetailsRs ext = 50002;
+  }
+}
+
+// 进入地图地图, 接受地图推送
+message EnterWorldMapRq {
+  required int32 mapId = 1;      // 进入大世界时
+  extend Base {
+    optional EnterWorldMapRq ext = 50003;
+  }
+}
+
+message EnterWorldMapRs {
+  optional BasePlayerMapData playerData = 1; // 玩家地图信息
+  extend Base {
+    optional EnterWorldMapRs ext = 50004;
+  }
+}
+
+// 离开世界地图, 不再接受地图推送, 清除玩家的地图缓存
+message LeaveWorldMapRq {
+  extend Base {
+    optional LeaveWorldMapRq ext = 50005;
+  }
+}
+
+message LeaveWorldMapRs {
+  extend Base {
+    optional LeaveWorldMapRs ext = 50006;
+  }
+}
+
+// 获取地图内的分区详情
+message GetAreaDetailsRq {
+  required int32 map = 1; // 地图id
+  optional int32 area = 2; // 指定分区查询
+  extend Base {
+    optional GetAreaDetailsRq ext = 50007;
+  }
+}
+
+message GetAreaDetailsRs {
+  repeated BaseEntity entity = 1; // 在分区中的实体, 仅包含实体的基础信息[Base这一层]
+  extend Base {
+    optional GetAreaDetailsRs ext = 50008;
+  }
+}
+
+// 获取地图内的地块详情, 添加焦点
+message GetBlockDetailsRq {
+  required int32 map = 1; // 地图id
+  repeated int32 block = 2; // 获取数据的地块, 观察的地块区域
+  extend Base {
+    optional GetBlockDetailsRq ext = 50009;
+  }
+}
+
+message GetBlockDetailsRs {
+  repeated BaseEntity entity = 1; // 在分块中的实体, 服务器会过滤有变动的数据[Details这一层]
+  repeated int32 block = 2;       // 获取数据的地块, 观察的地块区域
+  // repeated BaseTroop troop = 3;   // 行军线划过地块的部队, 服务器会过滤有变动的部队[后期优化]
+  extend Base {
+    optional GetBlockDetailsRs ext = 50010;
+  }
+}
+
+// 获取地图内的点位详情
+message GetEntityInfoRq {
+  required int32 map = 1; // 地图id
+  required int32 pos = 2; // 坐标
+  extend Base {
+    optional GetEntityInfoRq ext = 50011;
+  }
+}
+
+message GetEntityInfoRs {
+  optional BaseEntity entity = 1; // 实体的详情数据[Info这一层]
+  extend Base {
+    optional GetEntityInfoRs ext = 50012;
+  }
+}
+
+// 移动位置
+message MovePositionRq {
+  required int32 map = 1;   // 地图id
+  required int32 type = 2;  // 1.随机迁城 2.定点迁城 3.区域内随机 [分区地图使用]
+  optional int32 pos = 3;   // 需要迁移的坐标, [类型3时候, 传入需要移动的分区]
+  extend Base {
+    optional MovePositionRq ext = 50013;
+  }
+}
+
+message MovePositionRs {
+  optional BasePlayerMapData playerData = 1; // 迁城后玩家地图信息
+  extend Base {
+    optional MovePositionRs ext = 50014;
+  }
+}
+
+// 获取地图的行军线(进入地图或分区的时候拉取一次) [后期优化]
+message GetTroopDetailsRq {
+  required int32 map = 1; // 地图id
+  required int32 area = 2;// 分区id
+  extend Base {
+    optional GetTroopDetailsRq ext = 50015;
+  }
+}
+
+message GetTroopDetailsRs {
+  repeated BaseTroop marchTroop = 1; // 分区中所有的行军线, 进入地图或分区的时候拉取一次, 后续的行军服务器会主动推送
+  extend Base {
+    optional GetTroopDetailsRs ext = 50016;
+  }
+}
+
+// 获取地图中的战斗详情
+message GetFightDetailsRq {
+  optional int32 fightId = 1; // 战斗id
+  optional int32 pos = 2; // 坐标
+  extend Base {
+    optional GetFightDetailsRq ext = 50017;
+  }
+}
+
+message GetFightDetailsRs {
+  repeated BaseFight fight = 1; // 战斗信息
+  extend Base {
+    optional GetFightDetailsRs ext = 50018;
+  }
+}
+
+
+// 调动部队, 指向性调动
+message DispatchTroopRq {
+  required int32 map = 1; // 地图id
+  required int32 pos = 2; // 进攻目标的坐标
+  required int32 formationId = 3; // 编队id
+  optional int32 type = 4; // 目标的实体类型, 对应WorldEntityTypeDefine中的定义 [用于判断行军意图, 如派出时是想去打流寇, 后流寇消失, 变成了资源点则直接返回]
+  extensions 20 to 100;
+  extend Base {
+    optional DispatchTroopRq ext = 50019;
+  }
+}
+
+// ================================调度部队动作扩展start================================
+// 发起集结动作
+message StartAssemblyAction {
+  required int32 assemblyType = 1;    // 集结类型, 对应s_system的id-1117配置数组索引
+  extend DispatchTroopRq {
+    optional StartAssemblyAction ext = 21;
+  }
+}
+// 加入集结动作
+message JoinAssemblyAction {
+  optional int32 assemblyId = 1;      // 集结id
+  extend DispatchTroopRq {
+    optional JoinAssemblyAction ext = 22;
+  }
+}
+// 驻防动作
+message GarrisonTroopAction {
+  extend DispatchTroopRq {
+    optional GarrisonTroopAction ext = 23;
+  }
+}
+// ================================调度部队动作扩展end================================
+
+message DispatchTroopRs {
+  extensions 20 to 100;
+  extend Base {
+    optional DispatchTroopRs ext = 50020;
+  }
+}
+
+// 地图同步事件[停用, 统一使用Game.proto中的SyncBrodEvent]
+message SyncMapEventRs {
+  repeated BroadEvent event = 1; //地图事件
+  extend Base {
+    optional SyncMapEventRs ext = 50022;
+  }
+}
+
+// 城池宣战
+message DeclareFightRq {
+  required int32 pos = 1;         // 要宣战的实体坐标
+  optional int32 fightType = 2;   // 战斗类型：见Battle.proto的BattleTypeDefine定义
+  extend Base {
+    optional DeclareFightRq ext = 50023;
+  }
+}
+
+message DeclareFightRs {
+  optional BaseFight fight = 1; // 战斗
+  extend Base {
+    optional DeclareFightRs ext = 50024;
+  }
+}
+
+// 加入战斗
+message JoinTheFightRq {
+  required int32 fightId = 1; // 战斗id
+  extend Base {
+    optional JoinTheFightRq ext = 50025;
+  }
+}
+
+message JoinTheFightRs {
+  optional BasePlayerMapData playerData = 1; // 玩家地图信息
+  extend Base {
+    optional JoinTheFightRs ext = 50026;
+  }
+}
+
+// 行军部队返回指令
+message TroopBackCommandRq {
+  required int32 keyId = 1;    // 行军部队的唯一id
+  optional int32 type = 2;     // 返回类型, 1 普通召回, 2 高级召回
+  optional int32 costType = 3; // 消耗类型, 1 道具消耗, 2 货币消耗
+  extend Base {
+    optional TroopBackCommandRq ext = 50027;
+  }
+}
+
+message TroopBackCommandRs {
+  extend Base {
+    optional TroopBackCommandRs ext = 50028;
+  }
+}
+
+// 行军部队加速指令
+message TroopAccelerateCommandRq {
+  required int32 keyId = 1;    // 行军部队的唯一id
+  optional int32 type = 2;     // 加速类型, 1 普通加速, 2 高级加速
+  optional int32 costType = 3; // 消耗类型, 1 道具消耗, 2 货币消耗
+  extend Base {
+    optional TroopAccelerateCommandRq ext = 50029;
+  }
+}
+
+message TroopAccelerateCommandRs {
+  extend Base {
+    optional TroopAccelerateCommandRs ext = 50030;
+  }
+}
+
+// 获取玩家所在地图地图的部队信息(暂不支持同时在多个地图派出部队的情况) [预留]
+message GetPlayerTroopRq {
+  extend Base {
+    optional GetPlayerTroopRq ext = 50031;
+  }
+}
+
+message GetPlayerTroopRs {
+  repeated BaseTroop troop = 1; // 部队信息
+  extend Base {
+    optional GetPlayerTroopRs ext = 50032;
+  }
+}
+
+// 同步玩家部队信息, 无视地图AOI规则, 无视缓存规则, 玩家在线即推送
+message SyncPlayerTroopRs {
+  optional BroadEvent event = 1; // 部队变动事件, 用于显示部队信息, 行军线通过地图推送
+  extend Base {
+    optional SyncPlayerTroopRs ext = 50034;
+  }
+}
+
+// 获取部队详情
+message GetTroopInfoRq {
+  required int32 map = 1; // 地图id
+  required int32 troopKey = 2; // 部队的唯一id
+  extend Base {
+    optional GetTroopInfoRq ext = 50035;
+  }
+}
+
+message GetTroopInfoRs {
+  optional BaseTroop troop = 1; // 部队的详情数据[Info这一层]
+  extend Base {
+    optional GetTroopInfoRs ext = 50036;
+  }
+}
+
+// 派遣信鸽部队
+message DispatchPigeonTroopRq {
+  required int32 map = 1;   // 地图id
+  required int32 pos = 2;   // 目标的坐标
+  optional int32 type = 3;  // 目标的实体类型, 对应WorldEntityTypeDefine中的定义 [用于判断行军意图, 如派出时是想去打流寇, 后流寇消失, 变成了资源点则直接返回]
+  extend Base {
+    optional DispatchPigeonTroopRq ext = 50037;
+  }
+}
+
+message DispatchPigeonTroopRs {
+  extend Base {
+    optional DispatchPigeonTroopRs ext = 50038;
+  }
+}
+
+
+// 派遣侦察部队
+message DispatchScoutTroopRq {
+  required int32 map = 1;   // 地图id
+  required int32 pos = 2;   // 侦察目标的坐标
+  optional int32 type = 3;  // 侦察目标的实体类型, 对应WorldEntityTypeDefine中的定义 [用于判断行军意图, 如派出时是想去侦察玩家, 后玩家消失, 变成了资源点则直接返回]
+  extend Base {
+    optional DispatchScoutTroopRq ext = 50039;
+  }
+}
+
+message DispatchScoutTroopRs {
+  extend Base {
+    optional DispatchScoutTroopRs ext = 50040;
+  }
+}
+
+// ================================模块定义================================
+// function 9 世界数据
+message WorldDataFunction {
+  optional SailingData sailingData = 1; // 航行功能数据[已废弃](删除会造成保存的数据错位, 可以等有新结构时覆盖)
+  repeated BasePlayerMapData pmd = 2;   // 地图数据
+  optional AutoAssemblySetting setting = 3; // 自动集结设置
+  extend FunctionClientBase {
+    optional WorldDataFunction ext = 19;
+  }
+}
+
+// ================================结构定义================================
+// 航行功能数据[已废弃]
+message SailingData {
+  optional int32 sailingStartTime = 1;   // 航行开始时间点(秒)
+  repeated SailingIsland islandData = 2; // 岛屿数据
+}
+
+// 航行-岛屿数据结构[已废弃]
+message SailingIsland {
+  required int32 islandId = 1;            // 岛屿id
+  optional int32 unlockTime = 2;          // 解锁时间点(秒)
+  optional int32 explorationProgress = 3; // 探索进度(万分比)
+  repeated int32 receivedRewardId = 4;    // 已经领取了的奖励id
+  repeated int32 criticalSequence = 5;    // 探索暴击倍率序列(服务器用)
+}
+
+//驻防部队英雄信息
+message GarrisonTroopHero {
+  optional int32 heroId = 1;
+  optional int32 armyCount = 2;//兵力
+  optional int32 armyLv = 3;//部队等级
+}
+
+//驻防部队信息
+message GarrisonTroop {
+  optional int64 roleId = 1;
+  optional string name = 2;
+  optional int32 portrait = 3;//头像
+  optional int32 portraitFrame = 4;//头像框
+  optional int32 troopKeyId = 5;
+  optional int64 endTime = 6;//部队到达时间
+  repeated GarrisonTroopHero troopHero = 7;//英雄信息
+}
+
+// ================================协议定义================================
+// 协议号范围[5101-7000]
+// 航行探索[已废弃]
+message SailingExploreRq {
+  required int32 islandId = 1; // 岛屿id
+  extend Base {
+    optional SailingExploreRq ext = 5101;
+  }
+}
+
+message SailingExploreRs {
+  optional int32 islandId = 1; // 岛屿id
+  optional int32 explorationProgress = 2; // 探索进度(万分比)
+  optional int32 explorationCritical = 3; // 探索暴击倍率(默认为1倍)
+  extend Base {
+    optional SailingExploreRs ext = 5102;
+  }
+}
+
+// 领取航行探索奖励[已废弃]
+message SailingGainRewardRq {
+  required int32 islandId = 1; // 岛屿id
+  required int32 rewardId = 2; // 奖励id
+  extend Base {
+    optional SailingGainRewardRq ext = 5103;
+  }
+}
+
+message SailingGainRewardRs {
+  optional int32 islandId = 1;        // 岛屿id
+  optional int32 rewardId = 2;        // 奖励id
+  optional ChangeInfo changeInfo = 3; // 奖励信息
+  extend Base {
+    optional SailingGainRewardRs ext = 5104;
+  }
+}
+
+// ================================驻防相关 start [5121 - 5140]================================
+//驻防的和行军部队有关，协议放到这里吧
+//查询某个坐标点 玩家、城池 的驻防部队
+message SelectPlayerGarrisonTroopRq {
+  optional int32 pos = 1;
+  extend Base {
+    optional SelectPlayerGarrisonTroopRq ext = 5121;
+  }
+}
+
+message SelectPlayerGarrisonTroopRs {
+  repeated GarrisonTroop garrisonTroop = 1;
+  extend Base {
+    optional SelectPlayerGarrisonTroopRs ext = 5122;
+  }
+}
+
+//遣返驻防我的部队
+message RepatriateGarrisonTroopRq {
+  optional int32 troopKey = 1;//等于0遣返所有 不等于0遣返单个
+  extend Base {
+    optional RepatriateGarrisonTroopRq ext = 5123;
+  }
+}
+
+//遣返成功客户端自己更新驻防部队
+message RepatriateGarrisonTroopRs {
+  extend Base {
+    optional RepatriateGarrisonTroopRs ext = 5124;
+  }
+}
+
+
+// ================================驻防相关 end [5121 - 5140]================================
+
+
+
+// 获取战斗列表概要 (需要加入观察者, 即AddObserverRq协议) [ObserverActionDefine中的FIGHT_LIST]
+message GetFightListDetailsRq {
+  extend Base {
+    optional GetFightListDetailsRq ext = 5141;
+  }
+}
+
+message GetFightListDetailsRs {
+  repeated BaseFight baseFight = 1; // 战斗列表概要 [Details层级]
+  extend Base {
+    optional GetFightListDetailsRs ext = 5142;
+  }
+}
+
+// 获取战斗详情 (需要加入观察者, 即AddObserverRq协议) [ObserverActionDefine中的FIGHT_INFO]
+message GetFightInfoRq {
+  optional int32 fightId = 1; // 战斗id
+  extend Base {
+    optional GetFightInfoRq ext = 5143;
+  }
+}
+
+message GetFightInfoRs {
+  optional BaseFight baseFight = 1; // 战斗详情 [Info层级]
+  extend Base {
+    optional GetFightInfoRs ext = 5144;
+  }
+}
+
+// 遣返加入集结的部队
+message RepatriateAssemblyTroopRq {
+  optional int32 assemblyId = 1;  // 要遣返的集结id
+  required int32 troopKey = 2;    // 要遣返的部队key
+  extend Base {
+    optional RepatriateAssemblyTroopRq ext = 5145;
+  }
+}
+
+message RepatriateAssemblyTroopRs {
+  extend Base {
+    optional RepatriateAssemblyTroopRs ext = 5146;
+  }
+}
+
+// 取消集结
+message CancelAssemblyRq {
+  optional int32 assemblyId = 1; // 集结id
+  extend Base {
+    optional CancelAssemblyRq ext = 5147;
+  }
+}
+
+message CancelAssemblyRs {
+  extend Base {
+    optional CancelAssemblyRs ext = 5148;
+  }
+}
+
+// ================================城池相关 start [5161 - 5200]================================
+//城池补兵
+message CitySupplementArmyRq {
+  optional int32 cityId = 1;//城池id
+  extend Base {
+    optional CitySupplementArmyRq ext = 5161;
+  }
+}
+
+message CitySupplementArmyRs {
+  repeated TwoInt npcInfo = 1;//npc血量信息 v1: npcId v2: 当前血量
+  extend Base {
+    optional CitySupplementArmyRs ext = 5162;
+  }
+}
+
+// 获取指定区域的首杀信息
+message GetAreaCityFirstKillInfoRq {
+  required int32 areaId = 1;    // 区域id
+  optional int32 cityType = 2;  // 城池类型, 对应s_city表中的type配置, [不传则获取该区域所有城池类型的首杀信息]
+  extend Base {
+    optional GetAreaCityFirstKillInfoRq ext = 5163;
+  }
+}
+
+message GetAreaCityFirstKillInfoRs {
+  repeated CityTeamDefeatInfo firstDefeatTeam = 1; // 区域的首杀信息
+  extend Base {
+    optional GetAreaCityFirstKillInfoRs ext = 5164;
+  }
+}
+
+// 查询距离玩家当前坐标最近的非本阵营占领城池（城池争夺战等）
+message GetNearestNonOwnCampCityRq {
+  extend Base {
+    optional GetNearestNonOwnCampCityRq ext = 5165;
+  }
+}
+
+message GetNearestNonOwnCampCityRs {
+  optional int32 cityId = 1;   // 城池配置 id
+  optional int32 cityPos = 2; // 城池世界地图坐标（中心点）
+  extend Base {
+    optional GetNearestNonOwnCampCityRs ext = 5166;
+  }
+}
+
+
+// ================================城池相关 end [5161 - 5200]================================
+
+
+// ================================搜寻功能相关 start [5201 - 5220]================================
+//搜寻功能 搜寻野怪、资源田
+message SearchEntityRq {
+  optional bool auto = 1;        // 是否是自动狩猎(客户端用来区分是否需要跳转画面)
+  optional int32 entityType = 2; // 实体类型 WorldEntityTypeDefine
+  optional int32 configId = 3;   // 对应的配置id 野怪的是野怪id 资源田的是资源田id
+  extend Base {
+    optional SearchEntityRq ext = 5201;
+  }
+}
+
+message SearchEntityRs {
+  optional bool auto = 1;         // 是否是自动狩猎(客户端用来区分是否需要跳转画面)
+  repeated BaseEntity entity = 2; // 返回的是detail级别的实体信息
+  extend Base {
+    optional SearchEntityRs ext = 5202;
+  }
+}
+
+
+// ================================搜寻功能相关 end [5201 - 5220]================================
+
+// ================================自动集结功能 start [5221 - 5240]================================
+
+message AutoAssemblySettingRq {
+  required bool enable = 1;                       // 是否开启自动集结
+  optional AutoAssemblySetting setting = 2;       // 自动集结设置 [开启自动集结需要提供设置]
+  extend Base {
+    optional AutoAssemblySettingRq ext = 5221;
+  }
+}
+
+message AutoAssemblySettingRs {
+  optional int32 curIdx = 1; // 自动集结当前索引位置 [排队顺序]
+  optional AutoAssemblySetting setting = 2; // 自动集结设置
+  extend Base {
+    optional AutoAssemblySettingRs ext = 5222;
+  }
+}
+
+message GetAutoAssemblySettingRq {
+  extend Base {
+    optional GetAutoAssemblySettingRq ext = 5223;
+  }
+}
+
+message GetAutoAssemblySettingRs {
+  optional int32 curIdx = 1; // 自动集结当前索引位置 [排队顺序]
+  extend Base {
+    optional GetAutoAssemblySettingRs ext = 5224;
+  }
+}
+// ================================自动集结功能 end [5221 - 5240]================================
+

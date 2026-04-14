@@ -1,0 +1,55 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================模块定义================================
+// function 4 背包数据
+option java_outer_classname = "BagPb";
+message BackpackDataFunction {
+  repeated AwardPb item = 1;       // 背包所有物品
+  repeated AwardPb unsafeItem = 2; // 背包非保护物品
+  extend FunctionClientBase {
+    optional BackpackDataFunction ext = 14;
+  }
+}
+
+// ================================结构定义================================
+
+// ================================协议定义================================
+// 一键领取临时背包
+message OneKeyGainTempBagRq {
+  extend Base {
+    optional OneKeyGainTempBagRq ext = 4001;
+  }
+}
+
+message OneKeyGainTempBagRs {
+  optional ChangeInfo info = 1;    // 获得奖励
+  extend Base {
+    optional OneKeyGainTempBagRs ext = 4002;
+  }
+}
+
+// 道具使用
+message PropUseRq {
+  required int32 propId = 1;   // 道具id
+  required int32 useCount = 2; // 使用数量
+  optional int32 show = 3;     // 是否显示使用(-1默认不显示 , 0之后的显示)
+  repeated int32 extParam = 4; // 额外参数(根据道具类型决定, 比如自选箱传索引, 迁城传区域或者坐标)
+  extend Base {
+    optional PropUseRq ext = 4003;
+  }
+}
+
+// 道具使用
+message PropUseRs {
+  optional int32 prodId = 1;          // 道具id
+  optional int32 useCount = 2;        // 使用数量
+  optional ChangeInfo changeInfo = 3; // 获得奖励
+  extend Base {
+    optional PropUseRs ext = 4004;
+  }
+}

@@ -1,0 +1,733 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+import "Artifact.proto";
+import "OpinionLetterBox.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// 幸存者工种
+enum SurvivorJobDefine {
+  None = 0;
+  Fireman = 2;            // 篝火-看火人
+  Hunter = 5;             // 狩猎场-猎人
+  Logger = 6;             // 伐木场-伐木工
+  Chef = 7;               // 食堂-厨师
+  Farmer1 = 8;            // 农田-农夫
+  Quarryman = 9;          // 采石场-采石工
+  Doctor = 10;            // 医馆-医生
+  Farmer2 = 12;           // 农场-农夫
+  Sawyer = 13;            // 锯木屋-锯木工
+  IronMiner = 14;         // 铁矿厂-铁矿工
+  Fisher = 15;            // 渔场-渔夫(废弃)
+  Ironworker = 16;        // 炼铁屋-炼铁工
+  Archer = 17;            // 箭塔 弓箭兵
+  Infantry = 18;          // 守卫营 步兵
+  Slinger = 19;           // 投石塔 投石兵
+  Crossbow = 20;          // 巨弩 弩兵
+  Soldier = 21;           // 士兵营地
+  Artillery = 22;         // 炮塔 炮兵
+  NoneOnlyBuild = 5001;   // 建筑大师
+}
+
+// 建筑类型
+enum BuildTypeDefine {
+  SHIP = 1;                // 船只
+  CAMPFIRE = 2;            // 篝火
+  ADVENTURE = 3;           // 探险
+  TENT = 4;                // 帐篷
+  HUNTING = 5;             // 狩猎场
+  LOGGING = 6;             // 伐木场
+  CANTEEN = 7;             // 食堂
+  FARMLAND = 8;            // 农田
+  QUARRY = 9;              // 采石场
+  CLINIC = 10;             // 医馆
+  HOUSE = 11;              // 房屋
+  FARM = 12;               // 农场
+  SAWING = 13;             // 锯木屋
+  IRON_ORE = 14;           // 铁矿厂
+  FISHERY = 15;            // 渔场(废弃)
+  IRON_MAKING = 16;        // 炼铁屋
+  ARROW_TOWER = 17;        // 箭塔
+  GUARDIAN = 18;           // 守卫营
+  CATAPULT_TOWER = 19;     // 投石塔
+  BALLISTA = 20;           // 巨弩
+  BARRACKS = 21;           // 士兵营地
+  CANNON_TOWER = 22;       // 炮塔
+  UNIVERSITY = 23;         // 大学
+  HERO_HALL = 24;          // 英雄大厅
+  WATCHTOWER = 25;         // 瞭望塔
+  MILITARY_INSTITUTE = 26; // 军事学院
+  WAREHOUSE = 27;          // 仓库
+  SIM_BARRACKS = 28;       // 兵营
+  MARKET = 29;             // 市场
+  WALL = 30;               // 城墙
+  TBC = 31;                // 待确认(废弃)
+  MAIL_BOX = 32;           // 信箱
+  SEARCH_SHIP = 33;        // 搜寻船只
+  ARENA = 34;              // 竞技场
+  HOSPITAL = 35;           // 医院
+}
+
+// 建筑库存消耗行为
+enum BuildStorageFromDefine {
+  CAMPFIRE_COST = 1;  // 篝火消耗
+  PIRATE_PILLAGE = 2; // 海盗掠夺
+  EAT_FOOD = 3;       // 吃食物
+}
+
+//广告类型
+enum AdTypeDefine {
+  WORK_SPEED_AD = 1; // 工作效率-广告
+}
+
+enum AddSurvivorTypeDefine{
+  ADD_SURVIVOR_TYPE_SEARCH = 1; // 搜寻
+}
+
+// 模拟经营功能数据
+option java_outer_classname = "SimulatePb";
+message SimDataFunction {
+  optional LandformData landform = 1;                       // 模拟经营地图数据
+  optional OfflineData offlineData = 2;                     // 离线收益数据
+  optional RoleBuffData roleBuffData = 3;                   // 角色buff数据
+  repeated ArtifactDataPb artifactData = 4;                 // 神器数据
+  optional OpinionLetterBoxDataPb opinionLetterBoxData = 5; // 民意信箱数据
+  extend FunctionClientBase {
+    optional SimDataFunction ext = 13;
+  }
+}
+
+// 建筑队列
+message BuildQueue {
+  repeated AwardPb filledRes = 1;  // 已填充的资源
+  optional int32 workingTime = 2;  // 已工作时长(秒)
+  optional int32 finishTime = 3;   // 建造完成时间点(秒)
+  optional int32 startTime = 4;    // 开始时间点(秒)
+  optional bool autoBuild = 5;     // 是否是自动建造
+}
+
+// 建筑基础数据
+message BaseBuildData {
+  required int32 id = 1;           // 建筑id
+  required int32 pos = 2;          // 坐标点
+  required int32 level = 3;        // 建筑等级(还在建造时等级为0, 建造完成变成1)
+  optional bool broken = 4;        // 是否损坏
+  required int32 type = 5;         // 建筑类型, 对应BuildTypeDefine枚举 （服务器用）
+  optional BuildQueue bdQueue = 6; // 建筑队列信息(该建筑不在建筑队列中时, 不会传这个字段)
+  optional int32 helpId = 7;       // 帮助信息的唯一ID
+  optional int32 helpNum = 8;      // 帮助次数
+  extensions 10 to 128;
+}
+
+// 资源建筑数据
+message ResBuildData {
+  optional int64 hasStorageNum = 1;    // 资源存量
+  optional int64 unsafeStorageNum = 2; // 非保护资源存量
+  extend BaseBuildData {
+    optional ResBuildData ext = 10;
+  }
+}
+
+// 帐篷建筑数据
+message TentBuildData {
+  repeated int32 survivorId = 1;  // 幸存者床位
+  extend BaseBuildData {
+    optional TentBuildData ext = 11;
+  }
+}
+
+// 通用建筑数据
+message CommonBuildData {
+  extend BaseBuildData {
+    optional CommonBuildData ext = 12;
+  }
+}
+
+// 幸存者属性
+message SurvivorAttr {
+  required int32 life = 1; //生命值(血条)
+  required int32 satiety = 2; //饱食度(饥饿)
+  required int32 energy = 3; //精力(疲劳)
+  required int32 health = 4; //健康值(生病)
+}
+
+// 上传幸存者数据
+message UploadSurvivor {
+  required int32 keyId = 1;   // 唯一标识
+  required int32 life = 2;    //生命值(血条)
+  required int32 satiety = 3; //饱食度(饥饿)
+  required int32 energy = 4;  //精力(疲劳)
+  required int32 health = 5;  //健康值(生病)
+}
+
+// 幸存者数据
+message SurvivorData {
+  required int32 keyId = 1; //唯一标识
+  required int32 job = 2; //幸存者工种 SurvivorJobDefine
+  required int32 buildId = 3; //当前绑定建筑id
+  required int32 belongTent = 4;  //归属帐篷
+  required SurvivorAttr attr = 5; //属性
+  optional int32 lastOutputTime = 6; // 上次产出时间点(服务器用)
+  optional int32 sex = 7; // 性别(0:男性, 1:女性)
+  optional int32 skinColor = 8; // 肤色(合法值: 0-7)
+}
+
+// 地图资源数据
+message LandformData {
+  required int32 mapId = 1;                   // 地图id
+  repeated TwoInt posVal = 2;                 // 资源点采集数量[坐标,已采集数量]
+  repeated SurvivorData survivors = 3;        // 幸存者列表
+  repeated BaseBuildData builds = 4;          // 建筑列表
+  optional int32 pirateLevel = 5;             // 海盗关卡id[废弃, 新加字段优先替换]
+  optional int32 todayRemainderTime = 6;      // 白天黑夜剩余时间
+  optional int32 pirateEndTime = 7;           // 上次海盗结束时间
+  optional SearchSurvivor searchSurvivor = 8; // 搜索幸存者数据
+  repeated SurpriseData surprise = 9;         // 惊喜增益和奖励数据
+  repeated int32 resSet = 10;                 // 资源点是否采集完毕[坐标, 0|1]
+  repeated WorkSpeedData workSpeed = 11;      // 工作效率看广告数据
+  repeated int32 buildedBuildId = 12;         // 建造过的建筑id(服务器用)
+  repeated TdHero tdHero = 13;                // TD驻防信息
+  optional int32 bdQueueMaxNumber = 14;       // 建造队列最大数量
+  optional bool bdQueueTrialUsed = 15;        // 是否试用过额外建造队列
+  optional int32 bdQueueExEndTime = 16;       // 额外建造队列结束时间
+  repeated TwoInt pirateLevelArr = 17;        // 海盗关卡id数组[v1:关卡类型, v2:海盗关卡id]
+  optional RiotDataPb riotData = 18;          // 暴动数据
+  optional int32 lastFreeStaminaTime = 19;     // 上次免费体力领取时间
+}
+
+// 资源状态
+message ResState {
+  optional int32 keyId = 1;         // 幸存者id
+  optional int32 type = 2;          // 类型(1:采集, 2:建造, 3:生产, 4:消耗, 5:幸存者资源回收, 6:浆果丛, 7:狩猎营, 8:满意度)
+  optional int32 buildId = 3;       // 目标建筑id
+  optional int32 changeStorage = 4; // 改变库存(增加正数, 减少负数)
+  repeated ThreeInt changeRes = 5;  // 改变资源[v1: 类型; v2: id; v3: 数量](增加正数, 减少负数)
+  repeated TwoInt costStorages = 6; // 消耗库存[v1: 消耗库存的建筑id; v2: 数量]
+  repeated ThreeInt costRes = 7;    // 消耗资源[v1: 类型; v2: id; v3: 数量]
+  repeated TwoInt takeStorages = 8; // 装载库存[v1: 装载库存的建筑id; v2: 数量]
+  repeated TwoInt takeRes = 9;      // 装载资源[v1: 采集点坐标; v2: 数量]
+  repeated ThreeInt shipRes = 10;   // 船只资源[v1: 类型; v2: id; v3: 数量](指定哪些资源是从船只里搬运过来的, 只用传正数, 服务器只做减少操作)
+  optional int32 costFrom = 11;     // 消耗行为(定义在BuildStorageFromDefine)
+}
+
+message SearchSurvivor {
+  optional int32 searchTime = 1;           // 搜索总花费时间
+  optional int32 searchEndTime = 2;        // 搜索幸存者结束时间戳
+  optional int32 searchRemainderTime = 3;  // 搜索幸存者剩余时间(秒)
+  optional int32 searchNum = 4;            // 搜索幸存者数量
+}
+
+message SurpriseData {
+  optional int32 triggerId = 1;           // s_surprise_trigger.id
+  optional int32 awardId = 2;             // s_surprise_reward.id
+  optional int32 perpetual = 3;           // 是否永久 1 是，0 否
+  optional int32 lifespanEndTime = 4;     // 持续结束时间
+  repeated AwardPb award = 5;             // 奖励内容
+  optional int32 state = 6;               // 奖励领取状态 1: 未领取，2: 已领取
+  optional int32 buffEndTime = 7;         //buff结束时间
+  
+}
+
+message WorkSpeedData {
+  optional int32 type = 1;                   // 类型
+  optional int32 buffId = 2;                 // buffId
+  optional int32 workSpeedEndTime = 3;       // buff结束时间
+  optional int32 watchLastTime = 4;          // 上次观看时间
+  optional int32 watchCnt = 5;               // 观看次数
+}
+
+message OfflineData {
+  optional int32 totalOfflineTime = 1;      // 累积离线时长
+  optional int32 maxOfflineTime = 2;        // 最大累积离线时长
+  repeated AwardPb award = 3;               // 离线奖励
+  repeated TwoInt buildData = 4;            // 建筑情况(v1: 建筑id, v2: 之前的等级)
+  optional int32 calculatedOfflineTime = 5; // 计算过奖励的时长(服务端保存, 不传给客户端)
+}
+
+// 角色buff数据
+message RoleBuffData {
+  repeated BuffData buffData = 1; // buff列表
+}
+
+// buff数据结构
+message BuffData {
+  optional int32 id = 1;         // 流水id(已废弃)
+  optional int32 buffId = 2;     // buff表里的id
+  optional int32 value = 3;      // 数值
+  optional int32 sourceType = 4; // 来源类型
+  optional int32 sourceId = 5;   // 来源id
+  optional int32 startTime = 6;  // buff开始时间(永久buff此值为0)
+  optional int32 endTime = 7;    // buff结束时间(永久buff此值为0)
+}
+
+// td篝火驻防将领
+message TdHero {
+  optional int32 heroId = 1;    //武将ID
+  optional int32 pos = 2;       //位置  0,1,2
+}
+
+// 暴动数据
+message RiotDataPb {
+  optional bool riot = 1;            // 是否在暴动
+  optional int32 endTime = 2;        // 暴动结束时间(未暴动时此值为0)
+  optional int32 coolingEndTime = 3; // 暴动冷却结束时间(未暴动时此值为0, 不传给客户端)
+}
+
+// =======================1501 - 1700 模拟经营相关的协议接口=======================
+
+// 建筑建造&升级完成
+message BuildLvUpRq {
+  required int32 buildId = 1;  //建筑id
+  required int32 pos = 2; //坐标点
+  optional bool isUp = 3; //建造or升级
+  extend Base {
+    optional BuildLvUpRq ext = 1501;
+  }
+}
+
+message BuildLvUpRs {
+  optional BaseBuildData buildData = 1; // 建筑数据
+  extend Base {
+    optional BuildLvUpRs ext = 1502;
+  }
+}
+
+// 建筑移动
+message BuildPosChangeRq {
+  required int32 buildId = 1;  //建筑id
+  required int32 pos = 2; //坐标点
+  extend Base {
+    optional BuildPosChangeRq ext = 1503;
+  }
+}
+
+message BuildPosChangeRs {
+  extend Base {
+    optional BuildPosChangeRs ext = 1504;
+  }
+}
+
+// 建筑删除
+message BuildRemoveRq {
+  required int32 buildId = 1;           // 建筑id
+  repeated TwoInt survivors = 2;        // 床位变动的幸存者, v1: id, v2: 建筑id
+  repeated int32 removeSurvivor = 3;    // 移除的幸存者id
+  extend Base {
+    optional BuildRemoveRq ext = 1505;
+  }
+}
+
+message BuildRemoveRs {
+  extend Base {
+    optional BuildRemoveRs ext = 1506;
+  }
+}
+
+// 幸存者添加 (暂时客户端发起)
+message AddSurvivorRq {
+  required int32 num = 1;//添加幸存者个数
+  optional int32 type = 2; // 添加的幸存者类型 1: 搜寻；其它情况不处理
+  extend Base {
+    optional AddSurvivorRq ext = 1507;
+  }
+}
+
+message AddSurvivorRs {
+  repeated SurvivorData survivor = 1; // 添加的幸存者数据
+  optional int32 searchEndTime = 2; // 搜寻结束时间戳
+  optional int32 searchNum = 3;     // 剩余搜寻幸存者数量
+    
+  extend Base {
+    optional AddSurvivorRs ext = 1508;
+  }
+}
+
+// 幸存者死亡 (暂时客户端发起)
+message DieSurvivorRq {
+  repeated int32 keyId = 1;//幸存者死亡keyId
+  optional int32 reason = 2; // 死亡原因
+  extend Base {
+    optional DieSurvivorRq ext = 1509;
+  }
+}
+
+message DieSurvivorRs {
+  extend Base {
+    optional DieSurvivorRs ext = 1510;
+  }
+}
+
+// 幸存者工作变更
+message ChangeSurvivorJobRq {
+  required int32 keyId = 1;   //幸存者keyId;
+  required int32 job = 2; //幸存者工种 SurvivorJobDefine
+  required int32 buildId = 3; //当前绑定建筑id
+  extend Base {
+    optional ChangeSurvivorJobRq ext = 1511;
+  }
+}
+
+message ChangeSurvivorJobRs {
+  extend Base {
+    optional ChangeSurvivorJobRs ext = 1512;
+  }
+}
+
+// 客户端获取服务最新状态后, 根据本地预测资源的增长, 定时向服务器同步资源. 服务器根据当前最大增长资源量作为依据, 超出增长值, 服务器将拒绝数据覆盖, 且会踢当前玩家下线[保留方案, 多次被服务器踢下线, 将视为恶意数据篡改, 可能采取封号等手段].
+// 资源变更同步
+message MapResChangeRq {
+  repeated IntLong buildRes = 1;      // 建筑资源 [全量数据同步] (已废弃, 客户端不传)
+  repeated TwoInt collectRes = 2;     // 资源点, 仅同步发生变动的   [坐标,已采集数量] (已废弃, 客户端不传)
+  optional int64 meat = 3;            // 肉余量 (已废弃, 客户端不传)
+  repeated UploadSurvivor survivor = 4; // 幸存者状态
+  extend Base {
+    optional MapResChangeRq ext = 1513;
+  }
+}
+
+message MapResChangeRs {
+  extend Base {
+    optional MapResChangeRs ext = 1514;
+  }
+}
+
+// 地图状态变更
+message MapStateChangeRq {
+  repeated ResState resStates = 1;       // 资源状态变更
+  extend Base {
+    optional MapStateChangeRq ext = 1515;
+  }
+}
+
+message MapStateChangeRs {
+  repeated BuildResChange buildRes = 1; // 建筑资源
+  repeated TwoInt collectRes = 2;       // 资源点(坐标,已采集数量)
+  optional TwoLong meat = 3;            // 肉余量(v1:保护资源, v2:非保护资源)
+  repeated AwardPb items = 4;           // 溢出的背包物品
+  extend Base {
+    optional MapStateChangeRs ext = 1516;
+  }
+}
+
+// 建筑开始建造or升级
+message BuildStartRq {
+  required int32 buildId = 1;     // 建筑id
+  optional int32 pos = 2;         // 坐标点
+  optional bool isFull = 3;       // 是否将资源填充满
+  optional bool isFastFinish = 4; // 是否立即完成
+  extend Base {
+    optional BuildStartRq ext = 1517;
+  }
+}
+
+message BuildStartRs {
+  optional BaseBuildData buildData = 1; // 建筑数据
+  extend Base {
+    optional BuildStartRs ext = 1518;
+  }
+}
+
+// 建筑建造变更工作者
+message BuildChangeWorkerRq {
+  required int32 buildId = 1; // 建筑id
+  repeated int32 keyIds = 2;  // 工作者id
+  optional bool isAdd = 3;    // 是否是添加
+  extend Base {
+    optional BuildChangeWorkerRq ext = 1519;
+  }
+}
+
+message BuildChangeWorkerRs {
+  optional int32 buildId = 1;     // 建筑id
+  optional int32 workingTime = 2; // 已工作时长(秒)
+  optional int32 finishTime = 3;  // 建造完成时间点(秒)
+  extend Base {
+    optional BuildChangeWorkerRs ext = 1520;
+  }
+}
+
+// 获取建筑的已工作时长
+message BuildGetBuildQueueRq {
+  required int32 buildId = 1; // 建筑id
+  extend Base {
+    optional BuildGetBuildQueueRq ext = 1521;
+  }
+}
+
+message BuildGetBuildQueueRs {
+  optional int32 buildId = 1;      // 建筑id
+  optional BuildQueue bdQueue = 2; // 建筑队列信息(建筑不在建筑队列状态不传)
+  extend Base {
+    optional BuildGetBuildQueueRs ext = 1522;
+  }
+}
+
+// 发起搜寻幸存者
+message SearchSurvivorRq {
+  optional int32 type = 1;     // 1 正常搜寻； 2 立即完成 
+  extend Base {
+    optional SearchSurvivorRq ext = 1523;
+  }
+}
+
+message SearchSurvivorRs {
+  optional int32 type = 1;                // 1 正常搜寻； 2 立即完成 
+  optional int32 searchEndTime = 2;       // 搜寻结束时间戳
+  optional int32 searchTime = 3;          // 搜索总花费时间（秒）
+  optional int32 searchNum = 4;           // 搜寻幸存者数量
+  
+  extend Base {
+    optional SearchSurvivorRs ext = 1524;
+  }
+}
+
+// 海盗胜利失败协议
+message MapEventChangeRq{
+  optional int32 mapId = 1;       // 地图id
+  optional int32 type = 2;        // 关卡类型
+  optional int32 pirateLevel = 3; // 海盗关卡id
+  optional bool result = 4;       // 海盗事件胜利失败
+  extend Base {
+    optional MapEventChangeRq ext = 1525;
+  }
+}
+
+message MapEventChangeRs{
+  optional int32 mapId = 1;       // 地图id
+  optional int32 type = 2;        // 关卡类型
+  optional int32 pirateLevel = 3; // 海盗关卡id
+  optional bool result = 4;       // 海盗事件胜利失败
+  extend Base {
+    optional MapEventChangeRs ext = 1526;
+  }
+}
+
+//客户端同步白天黑夜剩余时间
+message MapTodayRemainderTimeRq{
+  optional int32 todayRemainderTime = 1;
+  extend Base {
+    optional MapTodayRemainderTimeRq ext = 1527;
+  }
+}
+
+message MapTodayRemainderTimeRs{
+  extend Base {
+    optional MapTodayRemainderTimeRs ext = 1528;
+  }
+}
+
+// 请求海盗事件开启（服务端暂不检测，默认返回true）
+message MapEventOpenRq{
+  optional int32 mapId = 1;       // 地图id
+  optional int32 type = 2;        // 关卡类型
+  optional int32 pirateLevel = 3; // 海盗关卡id
+  extend Base {
+    optional MapEventOpenRq ext = 1529;
+  }
+}
+
+message MapEventOpenRs{
+  optional int32 mapId = 1;       // 地图id
+  optional int32 type = 2;        // 关卡类型
+  optional int32 pirateLevel = 3; // 海盗关卡id
+  optional bool result = 4;       // 默认开启
+  extend Base{
+    optional MapEventOpenRs ext = 1530;
+  }
+}
+
+//建筑加速
+message BuildSpeedRq{
+  optional int32 mapId = 1;
+  optional int32 buildId = 2;  //建筑id
+  optional int32 isGoldSpeed = 3; //1金币加速，2道具加速，3道具一键加速
+  optional int32 itemId = 4;
+  optional int32 itemNum = 5;
+  extend Base{
+    optional BuildSpeedRq ext = 1531;
+  }
+}
+
+message BuildSpeedRs{
+  optional BaseBuildData buildData = 1; // 建筑数据
+  extend Base {
+    optional BuildSpeedRs ext = 1532;
+  }
+}
+
+//工作效率-广告加速
+message WorkSpeedRq{
+  optional int32 type = 1;
+  extend Base{
+    optional WorkSpeedRq ext = 1533;
+  }
+}
+message WorkSpeedRs{
+  optional WorkSpeedData workSpeed = 1;         
+  extend Base{
+    optional WorkSpeedRs ext = 1534;
+  }
+}
+
+// 领取离线收益
+message GainOfflineAwardRq{
+  required int32 type = 1; // 领取类型(1:普通领取, 2:广告领取)
+  extend Base {
+    optional GainOfflineAwardRq ext = 1535;
+  }
+}
+
+message GainOfflineAwardRs{
+  extend Base {
+    optional GainOfflineAwardRs ext = 1536;
+  }
+}
+
+// 英雄驻防上阵
+message TdHeroUpRq {
+  required int32 heroId = 1;      // 英雄id
+  required int32 pos = 2;         //位置，0,1,2
+  extend Base {
+    optional TdHeroUpRq ext = 1537;
+  }
+}
+message TdHeroUpRs {
+  repeated TdHero tdHero = 1; // 英雄信息
+  extend Base {
+    optional TdHeroUpRs ext = 1538;
+  }
+}
+// 英雄驻防下阵
+message TdHeroDownRq {
+  required int32 heroId = 1;      // 英雄id
+  required int32 pos = 2;         //位置
+  extend Base {
+    optional TdHeroDownRq ext = 1539;
+  }
+}
+message TdHeroDownRs {
+  repeated TdHero tdHero = 1; // 英雄信息
+  extend Base {
+    optional TdHeroDownRs ext = 1540;
+  }
+}
+
+// 限时获得额外建造队列
+message GainBDQueueExTimelimitRq {
+  required int32 type = 1; // 类型(1:试用, 2:雇佣)
+  extend Base {
+    optional GainBDQueueExTimelimitRq ext = 1541;
+  }
+}
+
+message GainBDQueueExTimelimitRs {
+  optional int32 type = 1;             // 类型(1:试用, 2:雇佣)
+  optional int32 bdQueueMaxNumber = 2; // 建造队列最大数量
+  optional int32 bdQueueExEndTime = 3; // 额外建造队列结束时间
+  extend Base {
+    optional GainBDQueueExTimelimitRs ext = 1542;
+  }
+}
+
+// [推送]额外建造队列信息
+message BDQueueExInfoRs {
+  optional int32 bdQueueMaxNumber = 1; // 建造队列最大数量
+  optional int32 bdQueueExEndTime = 2; // 额外建造队列结束时间
+  extend Base {
+    optional BDQueueExInfoRs ext = 1544;
+  }
+}
+
+// 切换自动搜寻幸存者开关状态
+message SwitchAutoSearchSurvivorRq {
+  required bool switchState = 1; // 开关状态
+  extend Base {
+    optional SwitchAutoSearchSurvivorRq ext = 1545;
+  }
+}
+
+message SwitchAutoSearchSurvivorRs {
+  extend Base {
+    optional SwitchAutoSearchSurvivorRs ext = 1546;
+  }
+}
+
+// 切换自动分配幸存者开关状态
+message SwitchAutoAssignSurvivorRq {
+  required bool switchState = 1; // 开关状态
+  extend Base {
+    optional SwitchAutoAssignSurvivorRq ext = 1547;
+  }
+}
+
+message SwitchAutoAssignSurvivorRs {
+  extend Base {
+    optional SwitchAutoAssignSurvivorRs ext = 1548;
+  }
+}
+
+// 暴动和解
+message RiotReconciliationRq {
+  extend Base {
+    optional RiotReconciliationRq ext = 1549;
+  }
+}
+
+message RiotReconciliationRs {
+  optional bool riot = 1;         // 是否在暴动
+  optional int32 riotEndTime = 2; // 暴动结束时间
+  extend Base {
+    optional RiotReconciliationRs ext = 1550;
+  }
+}
+
+// [推送] 暴动变更
+message SyncRiotChangeRs {
+  optional bool riot = 1;         // 是否在暴动
+  optional int32 riotEndTime = 2; // 暴动结束时间
+  extend Base {
+    optional SyncRiotChangeRs ext = 1551;
+  }
+}
+
+//领取免费刷新的体力
+message GainFreeStaminaRq {
+  extend Base {
+    optional GainFreeStaminaRq ext = 1553;
+  }
+}
+
+message GainFreeStaminaRs {
+  optional ChangeInfo info = 1;    // 获得奖励
+  optional int32 lastFreeStaminaTime = 2;  //上次领取时间
+  extend Base {
+    optional GainFreeStaminaRs ext = 1554;
+  }
+}
+
+//推送惊喜增益和奖励
+message SyncSurpriseRewardRs {
+  repeated SurpriseData surprise = 1;    //惊喜增益和奖励数据
+  extend Base {
+    optional SyncSurpriseRewardRs ext = 1601;
+  }
+}
+
+//惊喜礼包结束推送
+message SyncSurpriseEndRs {
+  required int32 triggerId = 1;
+  extend Base {
+    optional SyncSurpriseEndRs ext = 1602;
+  }
+}
+
+// 同步新增还是删除buff
+message SyncRoleSingleBuffRs {
+  repeated BuffData buff = 1;
+  optional int32 actionType = 2; // 0是新增, 1是减去
+  extend Base {
+    optional SyncRoleSingleBuffRs ext = 1603;
+  }
+}

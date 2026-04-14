@@ -1,0 +1,107 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================模块定义================================
+// function 13 特权数据
+option java_outer_classname = "VipPb";
+message VipDataFunction {
+  optional int64 exp = 1;              // vipExp
+  optional int32 vipLevel = 2;         // vip等级
+  optional int32 vipEndTime = 3;       // vip到期时间 秒
+  optional bool vipOpen = 4;           // vip激活状态
+  optional int32 freeExpTiem = 5;      // vip下次领取 免费经验时间 /秒
+  optional int32 freeGiftPackTime = 6; // vip等级免费礼包 /每日 /秒
+  repeated TwoInt freePack = 7;        // 可领取的vip免费礼包
+  repeated PrivilegeCardData card = 8; // 拥有的特权卡信息
+  extend FunctionClientBase {
+    optional VipDataFunction ext = 24;
+  }
+}
+
+// 特权卡结构
+message PrivilegeCardData {
+  optional int32 cardId = 1;             // 特权卡id
+  optional int32 expirationTime = 2;     // 特权卡到期时间点
+  optional bool receivedTodayReward = 3; // 是否领取了今日奖励
+}
+
+// ================================常量定义================================
+// 特权类型
+enum PrivilegeType {
+  AUTO_HUNTING = 1; // 自动狩猎
+  AUTO_HELP = 2;    // 自动帮助
+}
+
+// ================================协议定义================================
+// 协议号范围[7401-7500]
+// 领取特权卡每日奖励
+message ReceivePrivilegeCardDailyRewardRq {
+  optional int32 cardId = 1; // 特权卡id
+  extend Base {
+    optional ReceivePrivilegeCardDailyRewardRq ext = 7401;
+  }
+}
+
+message ReceivePrivilegeCardDailyRewardRs {
+  optional int32 cardId = 1; // 特权卡id
+  extend Base {
+    optional ReceivePrivilegeCardDailyRewardRs ext = 7402;
+  }
+}
+
+// 领取免费经验
+message VipFreeExpRq {
+  extend Base {
+    optional VipFreeExpRq ext = 7403;
+  }
+}
+
+message VipFreeExpRs {
+  optional int32 freeExpTiem = 1; // vip下次领取 免费经验时间 秒
+  extend Base {
+    optional VipFreeExpRs ext = 7404;
+  }
+}
+
+// 每日免费礼包
+message VipFreeGiftPackRq {
+  optional int32 vipLevel = 1; // vip等级
+  extend Base {
+    optional VipFreeGiftPackRq ext = 7405;
+  }
+}
+
+message VipFreeGiftPackRs {
+  optional int32 freeGiftPackTime = 1; // 免费礼包领取时间 秒
+  optional ChangeInfo info = 2;        // 获得奖励
+  repeated TwoInt freePack = 3;        // 可领取的vip免费礼包
+  extend Base {
+    optional VipFreeGiftPackRs ext = 7406;
+  }
+}
+
+// ================================推送定义================================
+// 协议号范围[7501-7600]
+// [推送]vip数据变动推送
+message SyncVipDataRs {
+  optional int64 exp = 1;        // vipExp
+  optional int32 vipLevel = 2;   // vip等级
+  optional bool vipOpen = 3;     // vip激活状态
+  optional int32 vipEndTime = 4; // vip到期时间 秒
+  repeated TwoInt freePack = 5;  // 可领取的vip免费礼包
+  extend Base {
+    optional SyncVipDataRs ext = 7501;
+  }
+}
+
+// [推送]特权卡数据变动推送
+message SyncPrivilegeCardDataRs {
+  repeated PrivilegeCardData card = 1; // 特权卡信息(有变动才会推送)
+  extend Base {
+    optional SyncPrivilegeCardDataRs ext = 7502;
+  }
+}

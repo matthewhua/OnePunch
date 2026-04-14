@@ -1,0 +1,56 @@
+syntax = "proto2";
+package slg;
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+import "Common.proto";
+import "World.proto";
+import "Mail.proto";
+import "Activity.proto";
+import "Camp.proto";
+import "Gameplay.proto";
+
+// 公共邮件序列化
+option java_outer_classname = "SerializePb";
+message SerCommonMailDataPb {
+  repeated BaseMailPb commonMail = 1;     // 公共邮件
+  required int32 uniqueId = 2;            // 唯一id
+}
+
+// 公共活动数据序列化pb
+message SerGlobalActivityDataPb {
+  repeated ActivityDataPb globalActivity = 1;
+}
+
+
+// 公共阵营序列化
+message SerCommonCampDataPb {
+  repeated CommonCampExtPb common_camp = 1;    // 公共阵营
+  optional int64 uniqueId = 2;                // 唯一id
+  optional int32 electionEndTime = 4;            // 联盟选举结束时间
+  optional int32 nextElectionStartTime = 5;           // 联盟选举下一次开始时间
+}
+
+// 公共阵营扩展数据
+message CommonCampExtPb {
+  required BaseCampPb base_camp = 1;      // 原有阵营数据
+  optional string extra_info = 2;         // 你的扩展字段（举例，可自定义）
+  optional uint64 construct_count = 3;    // 阵营建设次数
+  optional uint64 construct_time = 4;     // 阵营上次建设时间
+  optional uint32 city_war_count = 5;         // 城战次数
+  optional uint32 country_war_count = 6;      // 国战次数
+  repeated PartyHonorRank construct_rank = 7; // 每周建设次数排行
+  repeated PartyHonorRank city_war_rank = 8;      // 每周城战次数排行
+  repeated PartyHonorRank country_war_rank = 9;   // 每周阵营战次数排行
+  repeated CampPartyJob party_job = 10;          // 阵营官员信息
+  repeated CampHelpInfoVo help_info = 11;        // 阵营帮助信息
+  repeated CampPartyElection election = 12;       // 阵营选举信息
+  repeated CampPartyCity city = 14;               // 阵营城池信息
+  repeated CampPartyLog party_log = 15;           // 阵营日志信息
+}
+
+// 玩法全局数据序列化
+message SerGlobalGameplayDataPb {
+  optional GlobalGameplayData globalGameplayData = 1; // 全局玩法数据
+}
+

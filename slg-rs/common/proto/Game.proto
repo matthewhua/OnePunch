@@ -1,0 +1,547 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+//客户端向游戏服务器请求所选服武器角色状态
+option java_outer_classname = "GamePb";
+message BeginGameRq {
+  required int32 serverId = 1;
+  required int64 keyId = 2;
+  required string token = 3;
+  required string deviceNo = 4;
+  required string curVersion = 5;
+  optional int32 masterServerId = 6;
+  optional string currentPlatName = 7; //当前登录渠道名称
+  optional int64 realAddress = 8;//ip:port 玩家真实的地址
+  extend Base
+  {
+    optional BeginGameRq ext = 1101;
+  }
+}
+
+message BeginGameRs {
+  optional int32 state = 1;       // 1.角色未创建 2.角色已创建 3.禁止登陆 4.不属于白名单，无法登陆
+  optional int32 time = 2;        // 当前时间
+  repeated string name = 3;       //角色未创建时，传递一些随机名字
+  optional int32 camp = 4;        //推荐的阵营
+  optional int32 keyId = 5;       //推荐奖励表的id
+  repeated string param = 6;      // 扩展参数 如果state是3禁止登陆, 则返回[禁止登陆时间, 禁止登陆说明]
+  optional bytes secretKey = 7;   // 通讯密钥
+  optional int64 roleId = 8;      // 角色id
+  extend Base
+  {
+    optional BeginGameRs ext = 1102;
+  }
+}
+
+//创建服务器角色
+message CreateRoleRq {
+  optional string nick = 1;       // 玩家的昵称
+  optional int32 serverId = 2;  //玩家所在服务区ID
+  extend Base
+  {
+    optional CreateRoleRq ext = 1103;
+  }
+}
+
+message CreateRoleRs {
+  optional int32 state = 1;       //0.失败 1.成功 2.角色已创建
+  extend Base
+  {
+    optional CreateRoleRs ext = 1104;
+  }
+}
+
+//获取随机名字
+message GetNamesRq {
+  extend Base
+  {
+    optional GetNamesRq ext = 1105;
+  }
+}
+
+message GetNamesRs {
+  repeated string name = 1;
+
+  extend Base
+  {
+    optional GetNamesRs ext = 1106;
+  }
+}
+
+//角色登陆进入游戏
+message RoleLoginRq {
+  optional string packId = 1;    // 客户端包的id值
+  extend Base
+  {
+    optional RoleLoginRq ext = 1107;
+  }
+}
+
+message RoleLoginRs {
+  optional int32 state = 1;       //预留扩展
+  extend Base
+  {
+    optional RoleLoginRs ext = 1108;
+  }
+}
+
+// 获取所有功能信息
+message GetRoleDataRq {
+  extend Base {
+    optional GetRoleDataRq ext = 1109;
+  }
+}
+message GetRoleDataRs {
+  repeated FunctionClientBase functionBase = 1;   // 功能信息
+  extend Base {
+    optional GetRoleDataRs ext = 1110;
+  }
+}
+
+//获取服务器时间
+message GetTimeRq {
+  extend Base {
+    optional GetTimeRq ext = 1111;
+  }
+}
+
+message GetTimeRs {
+  optional int32 time = 1;
+  optional bool openPay = 2; //是否开放充值
+  optional int64 timeMillis = 3; //当前毫秒值
+  extend Base {
+    optional GetTimeRs ext = 1112;
+  }
+}
+
+//执行GM指令，想干啥干啥
+message DoSomeRq {
+  required string str = 1;
+  optional string roleId = 2;
+  extend Base
+  {
+    optional DoSomeRq ext = 1113;
+  }
+}
+
+message DoSomeRs {
+  optional bool success = 1;
+  extend Base
+  {
+    optional DoSomeRs ext = 1114;
+  }
+}
+
+// 心跳
+message HeartbeatRq {
+  extend Base {
+    optional HeartbeatRq ext = 1115;
+  }
+}
+
+message HeartbeatRs {
+  optional int32 time = 1; // 当前时间戳(秒)
+  extend Base {
+    optional HeartbeatRs ext = 1116;
+  }
+}
+
+// 踢玩家下线
+message SyncKickOfflineRs {
+  optional int32 state = 1;  // 下线状态, 1 重复登陆, 2 系统踢出
+  extend Base
+  {
+    optional SyncKickOfflineRs ext = 1118;
+  }
+}
+
+// 同步资源变更
+message SyncResourceChangeInfoRs {
+  optional ChangeInfo info = 1;
+  extend Base {
+    optional SyncResourceChangeInfoRs ext = 1120;
+  }
+}
+
+// 同步玩家功能数据的变化
+message SyncFunctionDataRs {
+  repeated FunctionClientBase functionBase = 1;   // 功能信息
+  extend Base
+  {
+    optional SyncFunctionDataRs ext = 1122;
+  }
+}
+
+// [推送]同步玩家状态数据的变化
+message SyncRoleStatusChangeRs {
+  repeated TwoInt status = 1;   // 玩家状态
+  optional bool hideChange = 2; // 是否隐藏变化(比如战力变化不弹框)
+  extend Base
+  {
+    optional SyncRoleStatusChangeRs ext = 1123;
+  }
+}
+
+// 拉取游戏版本公告详情
+message GetVersionShowDataRq {
+  required int32 noticeId = 1; // 公告id
+  extend Base {
+    optional GetVersionShowDataRq ext = 1124;
+  }
+}
+
+message GetVersionShowDataRs {
+  optional VersionShowData data = 1; // 公告数据(包含内容)
+  extend Base {
+    optional GetVersionShowDataRs ext = 1125;
+  }
+}
+
+// [推送]同步游戏版本公告
+message SyncVersionShowDataRs {
+  optional int32 version = 1;        // 修改版本
+  repeated VersionShowData data = 2; // 公告列表(不包含内容)
+  extend Base {
+    optional SyncVersionShowDataRs ext = 1126;
+  }
+}
+
+//使用兑换码
+message GiftCodeRq {
+  required string code = 1;
+  extend Base
+  {
+    optional GiftCodeRq ext = 1127;
+  }
+}
+
+message GiftCodeRs {
+  optional ChangeInfo info = 1;
+  optional int32 state = 2;       //0.使用正常 1.该类型已兑换过 2.兑换码不存在 3.该码兑换过过 4.兑换码无效，5时效性已过,6渠道不对
+  extend Base
+  {
+    optional GiftCodeRs ext = 1128;
+  }
+}
+
+// 领取限时任务奖励
+message GainTimeLimitMissionRewardRq {
+  required int32 configId = 1; // 限时任务配置id
+  extend Base {
+    optional GainTimeLimitMissionRewardRq ext = 1175;
+  }
+}
+
+message GainTimeLimitMissionRewardRs {
+  optional TimeLimitMissionPb timeLimitMission = 1; // 限时任务数据
+  extend Base {
+    optional GainTimeLimitMissionRewardRs ext = 1176;
+  }
+}
+
+// [推送]限时任务数据更新
+message SyncTimeLimitMissionUpdateRs {
+  repeated TimeLimitMissionPb timeLimitMission = 1; // 限时任务数据
+  extend Base {
+    optional SyncTimeLimitMissionUpdateRs ext = 1177;
+  }
+}
+
+// 同步任务变更
+message SyncMissionChangeRs {
+  repeated BaseMission mission = 1;       // 任务信息
+  extend Base {
+    optional SyncMissionChangeRs ext = 1178;
+  }
+}
+
+// 领取玩家任务信息
+message ReceiveMissionRewardRq {
+  required int32 missionDefine = 1;      // 任务类型
+  required int32 configId = 2;           // 配置id
+  extend Base {
+    optional ReceiveMissionRewardRq ext = 1179;
+  }
+}
+
+message ReceiveMissionRewardRs {
+  optional ChangeInfo info = 1;         // 任务奖励
+  repeated BaseMission next = 2;        // 下一个任务信息
+  optional BaseMission cur = 3;         // 当前的任务信息
+  required int32 missionDefine = 4;     // 任务类型
+  optional DailyMission dailyMission = 5;
+  extend Base {
+    optional ReceiveMissionRewardRs ext = 1180;
+  }
+}
+
+// 领取章节任务
+message ReceiveChapterMissionRq {
+  required int32 chapterId = 1;         // 章节id
+  extend Base {
+    optional ReceiveChapterMissionRq ext = 1181;
+  }
+}
+
+message ReceiveChapterMissionRs {
+  optional ChangeInfo info = 1;         // 章节奖励
+  optional ChapterMission next = 2;     // 下一个章节任务
+  optional ChapterMission cur = 3;      // 当前章节任务
+  extend Base {
+    optional ReceiveChapterMissionRs ext = 1182;
+  }
+}
+
+// 领取每日活跃度奖励
+message GainDailyLivenessRewardRq {
+  required int32 id = 1;
+  extend Base {
+    optional GainDailyLivenessRewardRq ext = 1183;
+  }
+}
+
+// 领取每日活跃度奖励结果
+message GainDailyLivenessRewardRs {
+  optional ChangeInfo info = 1; // 获得奖励
+  optional DailyMission dailyHuoYueDuData = 2;
+  extend Base {
+    optional GainDailyLivenessRewardRs ext = 1184;
+  }
+}
+
+// 同步每日任务变化
+message SyncDailyMissionRs {
+  optional DailyMission dailyMission = 1;
+  extend Base {
+    optional SyncDailyMissionRs ext = 1185;
+  }
+}
+
+// [推送]同步体力
+message SyncStaminaRs {
+  optional int32 stamina = 1;    // 体力
+  extend Base {
+    optional SyncStaminaRs ext = 1186;
+  }
+}
+
+// 修改昵称
+message ModifyNicknameRq {
+  required string nickname = 1; // 昵称
+  extend Base {
+    optional ModifyNicknameRq ext = 1187;
+  }
+}
+
+message ModifyNicknameRs {
+  optional string nickname = 1; // 昵称
+  extend Base {
+    optional ModifyNicknameRs ext = 1188;
+  }
+}
+
+// 一键领取章节任务奖励
+message ReceiveChapterMissionRewardBatchRq {
+  extend Base {
+    optional ReceiveChapterMissionRewardBatchRq ext = 1189;
+  }
+}
+
+message ReceiveChapterMissionRewardBatchRs {
+  optional ChangeInfo info = 1;     // 奖励信息
+  optional ChapterMission cur = 2;  // 当前章节任务
+  optional ChapterMission next = 3; // 下一个章节任务
+  extend Base {
+    optional ReceiveChapterMissionRewardBatchRs ext = 1190;
+  }
+}
+
+//看广告
+message StartAdDisplayRq {
+  required int32 advertisementId = 1; //id
+  extend Base {
+    optional StartAdDisplayRq ext = 1191;
+  }
+}
+
+message StartAdDisplayRs {
+  extend Base {
+    optional StartAdDisplayRs ext = 1192;
+  }
+}
+
+// 获取排行榜
+message GetRankRq {
+  required int32 type = 1;  // 关联Common.RankTypeDefine
+  required int32 page = 2;  // 第几页
+  required int32 scope = 3; // 排行榜的范围(0: 全服, 1: 本阵营)
+  extend Base {
+    optional GetRankRq ext = 1193;
+  }
+}
+
+message GetRankRs {
+  optional int32 type = 1;        // 关联Common.RankTypeDefine
+  optional int32 page = 2;        // 第几页
+  optional int32 scope = 3;       // 排行榜的范围(0: 全服, 1: 本阵营)
+  repeated RankItem rankItem = 4; // 排行榜信息列表
+  optional RankItem myRank = 5;   // 自身排行榜信息
+  optional int32 totalPage = 6;   // 排行榜总页数
+  optional int64 version = 7;     // 榜单版本号
+  extend Base {
+    optional GetRankRs ext = 1194;
+  }
+}
+
+// 同步广播事件
+message SyncBroadEventRs {
+  repeated BroadEvent event = 1; // 广播事件
+  extend Base {
+    optional SyncBroadEventRs ext = 1195;
+  }
+}
+
+// 添加观察者
+message AddObserverRq {
+  required int32 action = 1;              // 观察者行为定义, 对应ObserverActionDefine定义
+  optional int32 key = 2;                 // 被观察者行为唯一key, 如战斗id (如果有就传, 没有就不传)
+  extend Base {
+    optional AddObserverRq ext = 1196;
+  }
+}
+
+message AddObserverRs {
+  extend Base {
+    optional AddObserverRs ext = 1197;
+  }
+}
+
+// 移除观察者
+message RemoveObserverRq {
+  required int32 action = 1;              // 观察者行为定义, 对应ObserverActionDefine定义
+  optional int32 key = 2;                 // 被观察者行为唯一key, 如战斗id (如果有就传, 没有就不传)
+  extend Base {
+    optional RemoveObserverRq ext = 1198;
+  }
+}
+
+message RemoveObserverRs {
+  extend Base {
+    optional RemoveObserverRs ext = 1199;
+  }
+}
+
+//获取其他人的信息
+message GetOtherRoleDataRq {
+  optional int64 roleId = 1;
+  extend Base {
+    optional GetOtherRoleDataRq ext = 1201;
+  }
+}
+
+message GetOtherRoleDataRs {
+  optional string nickName = 1;           // 昵称
+  optional int32 portrait = 2;            // 头像
+  optional int64 battleFight = 3;         // 战力
+  optional int32 portraitFrame = 4;       // 头像框
+  optional int32 killEnemyCount = 5;     // 杀敌(占位, 目前为0)
+  optional int32 camp = 6;            // 阵营
+  optional int32 serverId = 7;           //区服id
+  optional string serverName = 8;
+  extend Base {
+    optional GetOtherRoleDataRs ext = 1202;
+  }
+}
+
+// 同步连接会话
+message SyncConnectSessionRs {
+  required int64 connectSessionId = 1; // 连接会话id, 用于辅助服务器标识连接, 排查问题
+  extend Base {
+    optional SyncConnectSessionRs ext = 1203;
+  }
+}
+
+// 同步连接断开
+message SyncConnectBrokenRs {
+  required int32 disconnectCode = 1; // 断连状态码, 用于区分不同的断开连接原因, 对应DisconnectCodeDefine定义
+  optional string disconnectMsg = 2; // 断连描述, 用于辅助排查问题
+  extend Base {
+    optional SyncConnectBrokenRs ext = 1204;
+  }
+}
+
+// 玩家IP,语言埋点
+message IpPointRq {
+  required int64 lordId = 1;                  //角色id
+  optional string ip = 2;                     //ip
+  optional string country = 3;                //国家地区
+  optional string language = 4;               //语言
+  extend Base
+  {
+    optional IpPointRq ext = 1205;
+  }
+}
+
+
+message IpPointRs {
+  extend Base
+  {
+    optional IpPointRs ext = 1206;
+  }
+}
+
+// 领取惊喜奖励
+message GainSurpriseRewardRq {
+  required int32 triggerId = 1;
+  required int32 advertisementId = 2; // 为 0 的情况下正常领取 比如海盗宝箱不看广告单倍领取
+  extend Base {
+    optional GainSurpriseRewardRq ext = 4401;
+  }
+}
+
+message GainSurpriseRewardRs {
+  optional int32 triggerId = 1;
+  optional ChangeInfo info = 2;   // 获得奖励
+  optional int32 buffEndTime = 3; // buff结束时间
+  optional int32 awardId = 4;     // s_surprise_reward表id
+  extend Base {
+    optional GainSurpriseRewardRs ext = 4402;
+  }
+}
+
+// 查询玩家基础信息
+message QueryPlayerSnapshotRq {
+  repeated LongInt queryKey = 1;     // key: 查询的玩家id, 缓存key
+  extend Base {
+    optional QueryPlayerSnapshotRq ext = 4403;
+  }
+}
+
+message QueryPlayerSnapshotRs {
+  repeated PlayerSnapshot playerBasicInfo = 1; // 玩家快照数据
+  extend Base {
+    optional QueryPlayerSnapshotRs ext = 4404;
+  }
+}
+
+
+// 客户端上报引导埋点（与运营 GuideTrack 映射表一致）
+message GuideTrackRq {
+  required int32 guideId = 1; // 引导ID 1-7
+  required int32 tag = 2;     // 动作类型 1-10
+  optional TwoInt extra = 3;  // 额外参数
+  extend Base {
+    optional GuideTrackRq ext = 4405;
+  }
+}
+
+message GuideTrackRs {
+  extend Base {
+    optional GuideTrackRs ext = 4406;
+  }
+}
+

@@ -1,0 +1,70 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+/**
+ * 神器系统协议
+ * 
+ * 扩展号占用范围：
+ * - Base.ext = 9301 ~ 9320 (预留20个扩展号)
+ * 
+ * 系统说明：
+ * 1. 繁荣度系统：通过建筑工作、TD站岗获取，海盗伤害、农民死亡扣除
+ * 2. 神器解锁：消耗繁荣度解锁神器
+ * 3. 神器使用：消耗道具使用神器，进入生效期，结束后进入冷却期
+ * 4. 神器状态：可使用(1)、待生效(2)、生效中(3)、冷却中(4)
+ */
+
+// ==================== 功能数据 ====================
+
+/**
+ * 神器数据
+ */
+option java_outer_classname = "ArtifactPb";
+message ArtifactDataPb {
+    optional int32 artifactId = 1;      // 神器id
+    optional int32 status = 2;          // 状态（1:可使用 2:待生效 3:生效中 4:冷却中）
+    optional int32 effectStartTime = 3; // 生效开始时间（秒）
+    optional int32 effectEndTime = 4;   // 生效结束时间（秒）
+    optional int32 cooldownEndTime = 5; // 冷却结束时间（秒）
+    optional int32 usedCount = 6;       // 累计使用次数
+}
+
+// ==================== 请求/响应协议 ====================
+
+/**
+ * 使用神器
+ */
+message UseArtifactRq {
+    optional int32 artifactId = 1; // 神器id
+    
+    extend Base {
+        optional UseArtifactRq ext = 9301;
+    }
+}
+
+message UseArtifactRs {
+    optional ArtifactDataPb artifactData = 1; // 神器数据
+	optional ChangeInfo info = 2;             // 使用神器获得的奖励数据
+    
+    extend Base {
+        optional UseArtifactRs ext = 9302;
+    }
+}
+
+// ==================== 推送协议 ====================
+
+/**
+ * 神器数据变更推送
+ */
+message SyncArtifactDataChangeRs {
+    repeated ArtifactDataPb artifactData = 1; // 变更的神器数据
+    
+    extend Base {
+        optional SyncArtifactDataChangeRs ext = 9311;
+    }
+}

@@ -1,0 +1,190 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================模块定义================================
+// 协议号范围[1751-1800]
+option java_outer_classname = "PayPb";
+message PayDataFunction {
+    repeated AwardStatusData awardStatusData = 1;           // s_award相关数据：首充、签到等奖励状态
+    repeated TwoInt payStatus = 2;                          // 付费购买数据 payId,  status:1已购买过
+    repeated GiftpackPb giftpack = 3;                       // 常规礼包
+    repeated GiftpackPb triggerGiftpack = 4;                // 触发礼包-礼包数据
+    repeated TriggerGiftpackDataPb triggerGiftpackData = 5; // 触发礼包-触发数据(不传给客户端)
+    extend FunctionClientBase {
+        optional PayDataFunction ext = 21;
+    }
+}
+
+enum PayBanFlag {
+    PAY_GOLD = 0;                // 钻石直充
+    PAY_DAY_DISCOUNTS = 1;       // 每日特惠
+    PAY_VIP_GIFTPACK = 2;        // vip礼包
+    PAY_AD_GIFTPACK = 3;         // 免广告礼包
+    PAY_ACTIVITY_BATTLEPASS = 4; // 战令进阶
+    PAY_NORMAL_GIFTPACK = 5;     // 常驻礼包
+	PAY_PRIVILEGE_CARD = 6;      // 特权卡
+	PAY_ACTIVITY_GIFTPACK = 7;   // 活动礼包
+	PAY_TRIGGER_GIFTPACK = 8;    // 触发礼包
+}
+
+enum ActivityType {
+    PAY_FIRST = 1;                //首充
+    SIGN_IN = 2;                  //签到
+}
+
+//s_award相关数据
+message AwardStatusData {
+    required int32 awardId = 1;      //s_award表keyId
+    required int32 status = 2;       //领取状态：0不能领取 1可领取 2已领取
+    optional int32 trigTime = 3;      //触发时间
+
+}
+
+// 触发礼包-触发数据
+message TriggerGiftpackDataPb {
+    optional int32 triggerId = 1;       // 触发配置id
+    optional int32 triggerCount = 2;    // 已触发次数
+	optional int32 cdEndTime = 3;       // 冷却结束时间
+	optional int32 cond = 4;            // 触发条件
+	optional int64 condStoredCount = 5; // 触发条件累计计数
+}
+
+// 领取首充奖励
+message GainFirstPayRewardRq {
+    repeated int32 awardId = 1;
+    extend Base {
+        optional GainFirstPayRewardRq ext = 1751;
+    }
+}
+
+message GainFirstPayRewardRs {
+    optional ChangeInfo info = 1;    // 获得奖励
+    optional int32 status = 2;       //领取状态：0不能领取 1可领取 2已领取
+    repeated int32 awardId = 3;      //s_award表keyId
+    extend Base {
+        optional GainFirstPayRewardRs ext = 1752;
+    }
+}
+
+//推送s_award奖励状态
+message SyncPayStatusRs {
+    optional int32 awardId = 1;        //s_award表keyId
+    optional int32 status = 2;         //领取状态：0不能领取 1可领取 2已领取
+    extend Base {
+        optional SyncPayStatusRs ext = 1753;
+    }
+}
+
+
+// 同步充值后资源变更
+message SyncPayChangeInfoRs {
+    optional ChangeInfo info = 1;
+    optional int32 payId = 2;
+    extend Base {
+        optional SyncPayChangeInfoRs ext = 1754;
+    }
+}
+
+//领取每日特惠免费奖励
+message GainFreeGiftPackRewardRq {
+    optional int32 awardId = 1;      //s_act_giftpack表id
+    extend Base {
+        optional GainFreeGiftPackRewardRq ext = 1755;
+    }
+}
+message GainFreeGiftPackRewardRs {
+    optional ChangeInfo info = 1;    // 获得奖励
+    optional int32 status = 2;       //领取状态：0未领取 1已领取
+    optional int32 awardId = 3;      //s_act_giftpack表id
+    extend Base {
+        optional GainFreeGiftPackRewardRs ext = 1756;
+    }
+}
+
+//推送每日特惠礼包状态
+message SyncGiftPackStatusRs {
+    extend Base {
+        optional SyncGiftPackStatusRs ext = 1758;
+    }
+}
+
+//领取签到奖励
+message GainSignInRewardRq {
+    repeated int32 awardId = 1;
+    extend Base {
+        optional GainSignInRewardRq ext = 1761;
+    }
+}
+message GainSignInRewardRs {
+    optional ChangeInfo info = 1;    // 获得奖励
+    optional int32 status = 2;       //领取状态：0不能领取 1可领取 2已领取
+    repeated int32 awardId = 3;      //s_award表keyId
+    extend Base {
+        optional GainSignInRewardRs ext = 1762;
+    }
+}
+
+//  获取支付订单号
+message GetPaySerialIdRq {
+    required string platName = 1;       //平台名称
+    required int32 payType = 2;         //充值类型
+    required int64 roleId = 3;          //角色id
+    extend Base
+    {
+        optional GetPaySerialIdRq ext = 1771;
+    }
+}
+
+message GetPaySerialIdRs {
+    required string serialId = 1;       //服务返回的支付序列号
+    required int32 payType = 2;
+    extend Base
+    {
+        optional GetPaySerialIdRs ext = 1772;
+    }
+}
+
+// 非人民币(免费或花费钻石等)礼包购买通用接口
+message BuyNoRmbGiftpackRq {
+    /**
+    2-活动礼包, extParam: [activityId、formId]
+     */
+    optional int32 packSource = 1;
+    optional int32 packId = 2;
+    repeated int32 extParam = 3;
+    extend Base
+    {
+        optional BuyNoRmbGiftpackRq ext = 1773;
+    }
+}
+
+message BuyNoRmbGiftpackRs {
+    optional int32 packSource = 1;
+    optional int32 packId = 2;
+    repeated int32 extParam = 3;
+    repeated AwardPb award = 4;
+    extend Base
+    {
+        optional BuyNoRmbGiftpackRs ext = 1774;
+    }
+}
+
+// 礼包类型
+enum GiftpackType {
+  GIFTPACK_TYPE_NORMAL = 1;  // 常规礼包
+  GIFTPACK_TYPE_TRIGGER = 2; // 触发礼包
+}
+
+// 同步礼包状态
+message SynGiftpackStatusRs {
+    optional int32 type = 1; // 礼包类型(见枚举GiftpackType定义)
+    repeated GiftpackPb giftpack = 2; // 礼包, 购买次数用完后也会同步, 客户端根据已购买次数判断是否需要移除展示
+    extend Base
+    {
+        optional SynGiftpackStatusRs ext = 1776;
+    }
+}

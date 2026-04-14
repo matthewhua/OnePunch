@@ -1,0 +1,15 @@
+syntax = "proto2";
+package slg;
+
+// package cs;
+option java_package = "com.gryphpoem.game.zw.pb";
+
+option java_outer_classname = "BasePb";
+message Base {
+  required int32 cmd = 1;
+  optional int32 code = 2;
+  optional int64 param = 3;
+  optional int64 lordId = 4;
+  repeated string errParam = 5; // 错误码, 扩展文本参数
+  extensions 100 to max;
+}

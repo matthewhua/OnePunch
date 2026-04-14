@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "common",
+    "gateway",
+    "world",
+]
+resolver = "2"

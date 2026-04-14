@@ -1,0 +1,823 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================枚举定义================================
+
+// 帮助信息
+enum HelpType {
+  Build = 1; // 建筑建造/升级
+  Tech = 2;  // 科技研究
+  Train = 3; // 军队训练
+  Treat = 4; // 医院治疗
+}
+
+// ================================模块定义================================
+// 个人阵营数据
+option java_outer_classname = "CampPb";
+message CampDataFunction {
+  required MyCampData camp_data = 1;
+  optional CampRebelsMemberInfo rebelsMemberInfo = 2;
+  repeated BaseMission camp_mission = 3; // 军团任务
+  optional int32 camp_task_lv = 4;      // 军团任务等级
+  optional BaseCampPb base_camp_pb = 5; // 客户端用
+  optional int32 status = 6;            // 阵营状态 客户端用
+  repeated MyHelpInfoVo myHelpVo = 7;   // 我的帮助信息
+  repeated CampHelpInfoVo campHelpInfo = 8; // 帮助信息(包括自己 客户端用
+  optional int32 build = 9;           // 军团建设次数 客户端用
+  optional int32 city_battle = 10;      // 城战次数 客户端用
+  optional int32 country_battle = 11;   // 国战次数 客户端用
+  repeated int32 reward_index = 12;     // 玩家已领取奖励的荣誉礼包索引 客户端用
+  extend FunctionClientBase {
+    optional CampDataFunction ext = 26;
+  }
+}
+
+// 我的阵营数据
+message MyCampData {
+  optional uint32 camp_id = 1;
+  optional uint32 build_count = 2;            // 今天已建设次数
+  optional uint32 military_rank = 3;          // 军阶
+  optional uint32 my_rank = 4;                // 玩家在军团内的排行
+  optional uint64 exploit = 5;                // 军功
+  optional uint32 job = 6;                    // 玩家的官职
+  optional uint32 send_count = 7;             // 发送阵营邮件次数
+  optional uint32 help_count = 8;             // 帮助的次数
+  optional uint32 received_honor_index = 9;   // 已经领取接受的荣誉id
+  optional uint32 city_war_count = 10;        // 城战次数(本周
+  optional uint32 country_war_count = 11;     // 国战次数(本周
+  optional uint32 vote_ticket = 12;           // 投票剩余票
+  optional uint32 purchase_ticket_count = 13; // 购买投票次数
+  optional uint32 construct_count = 14;        // 建设次数(本周
+}
+
+// 阵营数据
+message BaseCampPb {
+  required int32 camp_id = 1;           // 阵营Id
+  required int32 camp_lv = 2;           // 阵营等级
+  required int32 camp_exp = 3;          // 阵营本级经验
+  required string slogan = 4;           // 阵营公告
+  required string author = 5;           // 最后修改军团公告的玩家名称
+  required bool job_open = 6;           // 军团官员功能是否开启
+}
+
+// 我的叛军来袭信息
+message CampRebelsMemberInfo {
+  optional int32 defenceFailedCount = 1;  // 防守失败的次数
+  optional int32 ticketCampId = 2;        // 门票所在阵营
+  optional int32 ticketValidTime = 3;     // 门票有效时间
+}
+
+// 我的帮助信息
+message MyHelpInfoVo {
+  required int64 helpId = 1; // 帮助信息的唯一ID
+  required int32 type = 2;
+  optional int32 maxHelpNum = 3; // 上限帮助次数
+  optional int32 nowHelpNum = 4; // 当前帮助次数
+  optional SendCampHelpParam helpValue = 5; // 帮助值
+}
+
+// 阵营帮助信息
+message CampHelpInfoVo {
+  required int64 helpId = 1; // 帮助信息的唯一ID
+  required int32 type = 2;
+  optional int32 maxHelpNum = 3; // 上限帮助次数
+  optional int32 nowHelpNum = 4; // 当前帮助次数
+  optional SendCampHelpParam helpValue = 5; // 帮助值
+  optional int64 roleId = 6; // 玩家id
+  optional int32 portrait = 7; // 玩家头像
+  optional int32 portraitFrame = 8; // 头像框
+  repeated int64 helperIds = 9;  // 已经帮助过这个玩家的其他玩家的ID列表
+  optional int32 sendTime = 10;  // 发布的时间
+  optional int32 reduceCostTime = 11; // 每次被帮助时减少的值
+  optional string name = 12; // 玩家昵称
+}
+
+message SendCampHelpParam {
+  required int64 onlyId = 1;
+  optional int32 protoId = 2;
+  optional int32 lv = 3;
+}
+
+
+// 阵营战简略信息
+message CampBattle {
+  required int32 city_id = 1;        // 城池id
+  required int32 atk_camp = 2;        // 进攻方阵营
+  required int32 def_camp = 3;        // 防守方阵营
+  required int32 battle_time = 4;    // 战斗开始时间
+}
+
+
+// 阵营军团城池信息
+message CampPartyCity {
+  required int32 pos = 1;
+  optional int32 city_id = 2;        // 城池id
+  optional int32 city_lv = 3;        // 城池等级
+  optional int32 cur_arm = 4;        // 城池当前兵力
+  optional int32 max_arm = 5;        // 城池最大兵力
+  optional string owner = 6;         // 城池拥有者名称
+  optional int32 end_time = 7;       // 任期结束时间
+  optional int32 leave_over = 9;     //城主撤离结束时间戳 -1未撤离
+  optional int32 owner_camp = 11;    //归属阵营
+}
+
+
+// 阵营军团荣誉排行信息
+message PartyHonorRank {
+  optional int32 rank = 1;
+  required string name = 2;
+  required int32 count = 3;        // 次数
+  optional int64 role_id = 4;
+  optional int32 rank_time = 5;    // 最后更新排行榜时间
+}
+
+
+// 阵营军团日志
+message CampPartyLog {
+  required int32 log_id = 1;        // 军团日志模版id
+  required int32 time = 2;        // 记录时间
+  repeated string param = 3;        // 参数信息
+}
+
+
+// 阵营军团官员信息
+message CampPartyJob {
+  required int64 role_id = 1;
+  required string name = 2;
+  optional int32 job = 3;
+  optional int32 lv = 4;
+  optional int64 fight = 5;
+  optional int32 portrait = 6;
+  optional int32 ranks = 7;        // 军阶
+  optional int32 portrait_frame = 8;//  头像框
+  optional int32 area = 9;       // 地区
+}
+
+
+// 阵营军团官员选举信息
+message CampPartyElection {
+  required int64 role_id = 1;
+  optional string name = 2;
+  optional int32 votes = 3;        // 得票数
+  optional int32 lv = 4;            // 玩家等级
+  optional int64 fight = 5;        // 战力
+  optional int32 ranks = 6;        // 军阶
+  optional int32 portrait = 7;      // 头像
+  optional int32 portrait_frame = 8;//  头像框
+}
+
+
+// 补给箱
+message CampPartySupply {
+  required int32 key = 1;        // 补给箱唯一标识(领取使用)
+  required int32 id = 2;        // 配置表中的id
+  required int32 end_time = 3;      // 补给结束时间
+  required int32 increment_key = 4;  // 服务器序列化使用
+  repeated LongInt status = 5;    // 服务器序列化使用
+}
+
+// 超级补给
+message CampPartySuperSupply {
+  required int32 lv = 1;        // 超级补给等级
+  required int32 energy = 2;      // 能量
+  required int64 cost_gold = 3;    // 消耗金币数量
+}
+
+//阵营战争概述信息
+message CampBattleInfo {
+  optional int32 keyId = 1;//该条阵营战争信息的唯一keyId
+  optional int32 status = 4;//战争状态 集结中、出征中 参考 World -> WorldTroopStatusDefine
+  optional int32 statusTime = 5;//状态结束时间
+  optional int32 goal = 6;//目标位置 每个目标的信息还不一样 具体由子类返回目标信息 如果是攻打玩家 这个是玩家位置 如果是攻打玩家的资源点 这个是资源点位置
+  extensions 100 to max;
+}
+
+//阵营战争 -> 单人标签里面的战争信息结构定义
+message CampSingleBattleInfo {
+  optional CampBattleFighter attackFighter = 1;//攻击方的信息 客户端根据里面的阵营判断我方阵营是攻击还是防守
+  optional CampBattleFighter defenseFighter = 2;//防守方信息
+  extend CampBattleInfo {
+    optional CampSingleBattleInfo singleBattleInfo = 101;
+  }
+}
+
+//阵营战争集结信息
+message CampAssemblyBattleInfo {
+  optional int64 attackRoleId = 1;//发起方玩家id
+  optional int32 attackName = 2;
+  repeated CampAssemblyBattleFighter attackFighter = 3;//攻击方信息 按到达时间排好序了
+  extensions 100 to max;
+  extend CampBattleInfo {
+    optional CampAssemblyBattleInfo assemblyBattleInfo = 102;
+  }
+}
+
+//阵营战争集结城池信息
+message CampAssemblyCityBattleInfo {
+  optional int64 cityId = 1;//城池id
+  repeated int32 npcId = 2;//防守的npc信息
+  repeated CampAssemblyBattleFighter defenseFighter = 3;//防守的玩家信息
+  extend CampAssemblyBattleInfo {
+    optional CampAssemblyCityBattleInfo assemblyCity = 101;
+  }
+}
+
+//阵营战争集结玩家信息
+message CampAssemblyPlayerBattleInfo {
+  optional int64 defenseRoleId = 1;//防守方玩家id
+  optional string defenseName = 2;
+  optional int32 defensePortrait = 3;//头像
+  optional int32 defensePortraitFrame = 4;//头像框
+  repeated CampAssemblyBattleFighter defenseFighter = 5;//防守的玩家信息
+  extend CampAssemblyBattleInfo {
+    optional CampAssemblyPlayerBattleInfo assemblyPlayer = 102;
+  }
+}
+
+// 阵营基础排行信息
+message CampRankInfo {
+  optional int32 campId = 1;  // 阵营id
+  optional int64 scoreValue = 2; // 阵营积分
+}
+
+
+
+// ================================客户端请求================================
+
+
+// 获取阵营信息
+message GetCampRq {
+  extend Base {
+    optional GetCampRq ext = 3001;
+  }
+}
+
+message GetCampRs {
+  required MyCampData my_camp_data = 1;
+  required BaseCampPb base_camp_pb = 2;
+  optional int32 status = 3;
+  extend Base {
+    optional GetCampRs ext = 3002;
+  }
+}
+
+// 阵营建设
+message CampBuildRq {
+
+  extend Base {
+    optional CampBuildRq ext = 3003;
+  }
+}
+message CampBuildRs {
+  required int32 build = 1;       // 已建设次数
+  required int32 party_lv = 2;     // 军团等级
+  required int32 party_exp = 3;    // 军团经验
+  required int64 exploit = 4;     // 当前军功
+  optional ChangeInfo info = 5;    // 获得奖励
+  extend Base {
+    optional CampBuildRs ext = 3004;
+  }
+}
+
+// 晋升阵营军阶
+message PromoteRanksRq {
+  extend Base {
+    optional PromoteRanksRq ext = 3005;
+  }
+}
+message PromoteRanksRs {
+  required int32 ranks = 1;       // 晋升后玩家的军阶
+  required int64 exploit = 2;     // 晋升后玩家的军功
+  extend Base {
+    optional PromoteRanksRs ext = 3006;
+  }
+}
+
+// 修改阵营公告
+message ModifySloganRq {
+  optional string slogan = 1;     // 新的公告
+  optional string qq = 2;     // qq
+  optional string wx = 3;     // wx
+  required int32 opt = 4;     //  操作 1. 更改slogan 2. 修改留言板
+  extend Base {
+    optional ModifySloganRq ext = 3007;
+  }
+}
+message ModifySloganRs {
+  optional string slogan = 1;     // 修改成功后新的公告
+  optional string qq = 2;     // qq
+  optional string wx = 3;     // wx
+  extend Base {
+    optional ModifySloganRs ext = 3008;
+  }
+}
+
+// 获取阵营城池信息
+message GetCampCityRq {
+  extend Base {
+    optional GetCampCityRq ext = 3009;
+  }
+}
+message GetCampCityRs {
+  repeated CampPartyCity city = 1;
+  extend Base {
+    optional GetCampCityRs ext = 3010;
+  }
+}
+
+// 获取阵营战争信息
+message GetCampBattleRq {
+  extend Base {
+    optional GetCampBattleRq ext = 3011;
+  }
+}
+message GetCampBattleRs {
+
+  extend Base {
+    optional GetCampBattleRs ext = 3012;
+  }
+}
+
+// 获取阵营荣誉数据
+message GetCampHonorRq {
+
+  extend Base {
+    optional GetCampHonorRq ext = 3013;
+  }
+}
+message GetCampHonorRs {
+  optional int32 my_vote = 1;          // 玩家已拥有选票数
+  optional int32 build = 2;           // 军团建设次数
+  optional int32 city_battle = 3;      // 城战次数
+  optional int32 country_battle = 4;   // 国战次数
+  repeated int32 reward_index = 5;     // 玩家已领取奖励的荣誉礼包索引
+  repeated PartyHonorRank city_rank = 6;// 每周城战次数排行
+  repeated PartyHonorRank camp_rank = 7;// 每周阵营战次数排行
+  repeated PartyHonorRank build_rank = 8;// 每周建设次数排行
+  extend Base {
+    optional GetCampHonorRs ext = 3014;
+  }
+}
+
+// 领取阵营荣誉礼包
+message CampHonorRewardRq {
+  required int32 index = 1;       // 礼包索引，1 初级礼包，2 中级礼包，3 高级礼包
+  extend Base {
+    optional CampHonorRewardRq ext = 3015;
+  }
+}
+message CampHonorRewardRs {
+  repeated int32 reward_index = 1;     // 玩家已领取奖励的荣誉礼包索引
+  extend Base {
+    optional CampHonorRewardRs ext = 3016;
+  }
+}
+
+// 获取阵营日志信息
+message GetCampLogRq {
+  required int32 page = 1;        // 页码，从1开始，一页10条信息
+  extend Base {
+    optional GetCampLogRq ext = 3017;
+  }
+}
+
+message GetCampLogRs {
+  optional int32 cur_page = 1;     // 当前页码
+  optional int32 total_page = 2;   // 总页码
+  repeated CampPartyLog log = 3;
+  extend Base {
+    optional GetCampLogRs ext = 3018;
+  }
+}
+
+// 获取阵营官员信息
+message GetCampJobRq {
+  extend Base {
+    optional GetCampJobRq ext = 3019;
+  }
+}
+message GetCampJobRs {
+  required int32 status = 1;      // 当前状态，0 未开启官员功能，1 官员投票中，2 已投票结束
+  required int32 end_time = 2;     // 状态结束时间
+  required int32 my_vote = 3;      // 玩家当前拥有选票数
+  required int32 canvass = 4;     // 玩家已拉票次数
+  repeated CampPartyJob job = 5;      // 官员信息
+  repeated CampPartyElection election = 6;// 如果是选举中，选举信息
+  optional int32 appoint_free_count = 7;  // 任命官员免费次数（司令才会）
+  optional int32 schedule_id = 8 ; // 开启官员选举时的世界进程id
+  optional int32 day_canvass = 9 ; // 今日拉票次数
+  optional int32 day_canvass_max = 10 ; // 每日拉票次数上限
+  extend Base {
+    optional GetCampJobRs ext = 3020;
+  }
+}
+
+// 阵营官员选举投票
+message CampVoteRq {
+  required int64 role_id = 1;      // 投票对象的角色id
+  optional bool purchase = 2;      // 是否购买投票
+  optional int32 vote_num = 3;     // 投票数量
+  extend Base {
+    optional CampVoteRq ext = 3021;
+  }
+}
+message CampVoteRs {
+  repeated CampPartyElection election = 1;    // 选举信息
+  optional uint32 vote_ticket = 2;            // 投票剩余票
+  optional uint32 purchase_ticket_count = 3;  // 购买投票次数
+  extend Base {
+    optional CampVoteRs ext = 3022;
+  }
+}
+
+// 阵营官员任命
+message CampAppointRq {
+  required int64 role_id = 1;      // 任命对象的角色id
+  optional int32 job = 2;         // 任命职位，默认为将军，如果是撤职，传入-1
+  extend Base {
+    optional CampAppointRq ext = 3023;
+  }
+}
+message CampAppointRs {
+  repeated CampPartyJob job = 1;      // <官员信息></官员信息>
+  optional int32 job_status = 2;         // 任命职位，默认为将军，如果是撤职，传入-1
+  extend Base {
+    optional CampAppointRs ext = 3024;
+  }
+}
+
+// 通知玩家阵营职务变更
+message SyncJobChangeRs {
+  required int32 job = 1;         // 如果是撤职，-1，否则传职务id
+  extend Base {
+    optional SyncJobChangeRs ext = 3026;
+  }
+}
+
+// 阵营官员选举拉票
+message CampCanvassRq {
+  required int64 role_id = 1;      // 拉票对象的角色id
+  extend Base {
+    optional CampCanvassRq ext = 3027;
+  }
+}
+message CampCanvassRs {
+  repeated CampPartyElection election = 1;// 选举信息
+  optional int32 day_canvass = 2 ; // 今日拉票次数
+  optional int32 day_canvass_max = 3 ; // 每日拉票次数上限
+  extend Base {
+    optional CampCanvassRs ext = 3028;
+  }
+}
+
+// 阵营邮件
+message SendCampMailRq {
+  optional string content = 1;         // 邮件信息
+  extend Base {
+    optional SendCampMailRq ext = 3029;
+  }
+}
+message SendCampMailRs {
+  optional int32 send_cnt = 1;         // 当天发送次数
+  extend Base {
+    optional SendCampMailRs ext = 3030;
+  }
+}
+
+// 补给大厅
+message SupplyHallRq {
+  extend Base {
+    optional SupplyHallRq ext = 3031;
+  }
+}
+message SupplyHallRs {
+  optional int32 award = 1;                   // 可领取的补给箱数量
+  optional CampPartySuperSupply superSupply = 2;  // 超级补给的信息
+  repeated CampPartySupply supplyInfo = 3;        // 超级箱的信息(根据结束时间排序)
+  extend Base {
+    optional SupplyHallRs ext = 3032;
+  }
+}
+
+// 领取补给奖励
+message SupplyRewardRq {
+  required int32 type = 1;         // 领取类型, 0 普通补给箱, 1 超级补给 2 一键领取(key需要传一件领取的补给类型s_party_supply中的type)
+  optional int32 key = 2;          // 普通补给需要传keyId指定领取
+  extend Base {
+    optional SupplyRewardRq ext = 3033;
+  }
+}
+message SupplyRewardRs {
+  repeated AwardPb award = 1;                   // 领取的奖励
+  repeated int32 key = 2;                     // 领取的补给key
+  extend Base {
+    optional SupplyRewardRs ext = 3034;
+  }
+}
+
+
+message SyncCampSupplyRs {
+  optional CampPartySuperSupply super_supply = 1;
+  optional CampPartySupply supply_info = 2;
+  extend Base {
+    optional SyncCampSupplyRs ext = 3036;
+  }
+}
+
+// 获取军团任务
+message GetPartyTaskRq {
+  extend Base {
+    optional GetPartyTaskRq ext = 3037;
+  }
+}
+
+message GetPartyTaskRs {
+  repeated BaseMission task = 1;             //任务
+  optional int32 task_lv = 2;          //军团任务等级
+  extend Base {
+    optional GetPartyTaskRs ext = 3038;
+  }
+}
+
+
+//领取任务奖励
+message PartyTaskAwardRq {
+  optional int32 task_id = 1;          //任务编号
+  extend Base {
+    optional PartyTaskAwardRq ext = 3039;
+  }
+}
+
+message PartyTaskAwardRs {
+  optional ChangeInfo change_info = 1;
+  optional BaseMission task = 2;             //任务
+  optional ChangeInfo extra_change = 3;       //额外奖励改变
+  extend Base {
+    optional PartyTaskAwardRs ext = 3040;
+  }
+}
+
+
+//军团任务完成推送
+message SyncPartyFinishRs {
+  repeated BaseMission mission = 1;      //完成军团任务的id
+  extend Base {
+    optional SyncPartyFinishRs ext = 3042;
+  }
+}
+
+// 选择阵营
+message ChooseCampIdRq {
+  required int32 camp_id = 1;
+  extend Base {
+    optional ChooseCampIdRq ext = 3043;
+  }
+}
+
+message ChooseCampIdRs {
+  required int32 camp_id = 1;
+  extend Base {
+    optional ChooseCampIdRs ext = 3044;
+  }
+}
+
+// 推荐阵营
+message RecommendCampIdRq{
+  extend Base {
+    optional RecommendCampIdRq ext = 3045;
+  }
+}
+
+
+message RecommendCampIdRs{
+  required int32 camp_id = 1;  //阵营Id
+  extend Base {
+    optional RecommendCampIdRs ext = 3046;
+  }
+}
+
+
+// 登记帮助信息
+message SendCampHelpRq {
+  required int32 type = 1; // 帮助类型
+  repeated SendCampHelpParam helpParam = 2;
+  extend Base {
+    optional SendCampHelpRq ext = 3047;
+  }
+}
+
+message SendCampHelpRs {
+  required int32 helpType = 1; // 帮助类型
+  extend Base {
+    optional SendCampHelpRs ext = 3048;
+  }
+}
+
+// 打开联盟帮助
+message OpenAllianceHelpRq {
+  optional int32 queryDetailInfo = 1; // 是否需要详细数据
+  extend Base {
+    optional OpenAllianceHelpRq ext = 3049;
+  }
+}
+
+message OpenAllianceHelpRs {
+  repeated CampHelpInfoVo helpVos = 1; // 成员的帮助信息(包括自己
+  extend Base {
+    optional OpenAllianceHelpRs ext = 3050;
+  }
+}
+
+// 进行帮助
+message GoCampHelpRq {
+  repeated CampHelpInfoVo allianceHelpVos = 1; //要帮助的集合
+  extend Base {
+    optional GoCampHelpRq ext = 3051;
+  }
+}
+
+message GoCampHelpRs {
+  optional int32 help_today_count = 1;
+  extend Base {
+    optional GoCampHelpRs ext = 3052;
+  }
+}
+
+// 推送同步新的阵营帮助请求
+message SyncNewCampHelpRs {
+    repeated int64 helpId = 1; // 只推一个帮助Id, 具体信息打开帮助界面
+    extend Base {
+        optional SyncNewCampHelpRs ext = 3053;
+    }
+}
+
+// 帮助之后的推送
+message SyncDealAfterHelpRs {
+  optional int64 helpId = 1;
+  optional int32 helpType = 2;
+  optional SendCampHelpParam param = 3;
+  optional int32 reduceCostTime = 4;    // 每次被帮助时减少的值
+  optional int64 helpPlayerId = 5;      // 被帮助的玩家id
+  optional string helpNickName = 6;     // 帮助玩家名称
+  optional int32 nowHelpNum = 7; // 当前帮助次数
+  optional int32 maxHelpNum = 8; // 上限帮助次数
+  extend Base {
+    optional SyncDealAfterHelpRs ext = 3054;
+  }
+}
+
+// 获取阵营战斗排行信息(非官员)
+message GetCampFightRankInfoRq {
+  extend Base {
+    optional GetCampFightRankInfoRq ext = 3055;
+  }
+}
+
+
+message GetCampFightRankInfoRs {
+  repeated CampPartyJob job = 1;  //应该都是非官员 job = 0
+  extend Base {
+    optional GetCampFightRankInfoRs ext = 3056;
+  }
+}
+
+message CampSearchRq {
+  optional int64 roleId = 1;
+  optional string roleName = 2;
+  extend Base {
+    optional CampSearchRq ext = 3057;
+  }
+}
+
+message CampSearchRs {
+  optional CampPartyJob job = 1;
+  extend Base {
+    optional CampSearchRs ext = 3058;
+  }
+}
+
+
+message SyncElectionStatusRs {
+  optional uint32 status = 1; // 当前状态，1 官员投票中，2 已投票结束
+  extend Base {
+    optional SyncElectionStatusRs ext = 3060;
+  }
+}
+
+// 同步阵营帮助被删掉的Id
+message SyncCampHelpDeleteRs {
+  optional int64 helpId = 1;
+  extend Base {
+    optional SyncCampHelpDeleteRs ext = 3062;
+  }
+}
+
+
+// 同步阵营帮助自己的更新值
+message SyncMyHelpInfoVoRs {
+  repeated MyHelpInfoVo myHelpInfo = 1; // 自己的信息
+  extend Base {
+    optional SyncMyHelpInfoVoRs ext = 3064;
+  }
+}
+
+// 同步上线提醒
+message SyncOnlineRemindRs {
+  optional CampPartyJob job = 1;  //上线玩家的信息
+  extend Base {
+    optional SyncOnlineRemindRs ext = 3066;
+  }
+}
+
+// 同步阵营城池信息
+message SyncPartyCityRs {
+  optional CampPartyCity partyCity = 1;
+  extend Base {
+    optional SyncPartyCityRs ext = 3068;
+  }
+}
+
+
+// 城池征收
+message CityLevyRq {
+  required int32 cityId = 1;
+  extend Base {
+    optional CityLevyRq ext = 3069;
+  }
+}
+
+message CityLevyRs {
+  required int32 finishTime = 1;  // 本次生产完成时间
+  optional ChangeInfo change_info = 2;
+  extend Base {
+    optional CityLevyRs ext = 3070;
+  }
+}
+
+
+// 城池重建
+message CityRebuildRq {
+  required int32 cityId = 1;
+  extend Base {
+    optional CityRebuildRq ext = 3071;
+  }
+}
+
+message CityRebuildRs {
+  optional int32 endTime = 1;     // 任期结束时间
+  optional int32 curArm = 2;      // 城防当前兵力
+  optional int32 total = 3;       // 城防总兵力上限
+  optional string nick = 4;       // 城主名称
+  extend Base {
+    optional CityRebuildRs ext = 3072;
+  }
+}
+
+// 城主撤离城池
+message LeaveCityRq {
+  required int32 cityId = 1;
+  extend Base {
+    optional LeaveCityRq ext = 3073;
+  }
+}
+
+message LeaveCityRs {
+  required int32 cityId = 1;      // 城池id
+  required int32 curArm = 2;      // 城池当前兵力
+  required int32 maxArm = 3;      // 城池最大兵力
+  optional int32 leaveTimeStamp = 4;   //城主撤离结束时间戳
+  extend Base {
+    optional LeaveCityRs ext = 3074;
+  }
+}
+
+
+
+// 同步删除阵营的帮助id
+message SyncDeleteCampHelpRs {
+  repeated int64 helpId = 1;
+  extend Base {
+    optional SyncDeleteCampHelpRs ext = 3076;
+  }
+}
+
+// 阵营荣誉战争变化
+message SyncCampWarChangeRs {
+  optional int32 index = 1; //阵营荣誉战争变化的索引 CampCountType
+  optional int32 num = 2;   //变化后的数值
+  extend Base {
+    optional SyncCampWarChangeRs ext = 3077;
+  }
+}
+
+// 阵营荣誉战争变化类型
+enum CampCountType {
+  CAMP_COUNT_TYPE_BUILD = 1;  // 建设次数
+  CAMP_COUNT_TYPE_CITY_WAR = 2;  // 城战次数
+  CAMP_COUNT_TYPE_COUNTRY_WAR = 3;  // 国战次数
+}

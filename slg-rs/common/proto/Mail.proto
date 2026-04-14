@@ -1,0 +1,349 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+import "Battle.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================模块定义================================
+// 邮件功能信息
+option java_outer_classname = "MailPb";
+message MailFunction {
+  repeated BaseMailPb baseMail = 1;   // 数据存储结构
+  extend FunctionClientBase {
+    optional MailFunction ext = 20;
+  }
+}
+
+// ================================结构定义================================
+// 邮件基础PB
+message BaseMailPb {
+  optional int32 keyId = 1;           // 邮件唯一id
+  required int32 templateId = 2;      // 邮件模板id
+  required int32 type = 3;            // 邮件类型  0 个人邮件  1 公共邮件(全服邮件)
+  optional int64 time = 4;            // 时间戳
+  optional string title = 5;          // 邮件标题
+  optional string content = 6;        // 邮件内容
+  repeated string tParam = 7;         // 标题内容参数
+  repeated string cParam = 8;         // 邮件内容参数
+  repeated AwardPb award = 9;         // 邮件奖励
+  optional int64 mailOwnerId = 10;    // 邮件拥有者id
+  optional int32 status = 11;         // 客户端消息
+  optional bool lock = 12;            // 客户端消息
+  repeated int32 camp = 13;           // 邮件所属阵营
+  repeated string extParam = 14;      // 额外参数, 部分需求需要通过邮件携带额外参数实现, 例如 竞技场排行榜结算埋点
+  optional int32 expiredTime = 15;    // 过期时间
+  extensions 21 to 30;
+}
+
+// 公共邮件
+message CommonMailPb {
+  repeated LongBool lockStatus = 1;
+  repeated LongInt readStatus = 2;
+  repeated int64 mailOwnerList = 3;
+  repeated int64 removeRole = 4;
+  extend BaseMailPb {
+    optional CommonMailPb ext = 21;
+  }
+}
+
+// 私人邮件
+message PersonalMailPb {
+  extensions 10 to 20;
+  extend BaseMailPb {
+    optional PersonalMailPb ext = 22;
+  }
+}
+
+
+// 采集邮件
+message CollectReportMailPb {
+  repeated CollectReportPb report = 1;  // 采集报告
+  extend PersonalMailPb {
+    optional CollectReportMailPb ext = 11;
+  }
+}
+
+
+// 采集报告
+message CollectReportPb {
+  required int32 collectTime = 1;       // 采集时间
+  required int32 map = 2;               // 采集所在地图
+  required int32  pos = 3;              // 采集坐标
+  repeated AwardPb award = 4;           // 采集奖励预览
+  optional bool isRead = 5;             // 报告是否已读 [服务器使用, 用于记录客户端缓存]
+  optional int32 mineId = 6;            // 采集点配置id [s_mine的mineId字段]
+}
+
+// 战斗邮件
+message BattleReportMailPb {
+  optional string recordId = 1;           // 战斗记录id[详细战斗结构唯一id]
+  optional ReportPb report = 2;           // 通用战斗报告
+  repeated AwardPb plunderAwardPb = 3;    // 掠夺的资源
+  repeated AwardPb bePlunderedAwardPb = 4;// 被掠夺的资源
+  extensions 21 to 30;
+  extend PersonalMailPb  {
+    optional BattleReportMailPb ext = 12;
+  }
+}
+
+// ================================战斗邮件扩展 Begin================================
+
+// 战斗积分邮件
+message BattleScoreMailPb {
+  repeated BattleScorePb score = 1;       // 战斗积分列表
+  extend BattleReportMailPb {
+    optional BattleScoreMailPb ext = 21;
+  }
+}
+
+// ================================战斗邮件扩展 End================================
+
+// 战斗排名邮件
+message BattleRankMailPb {
+  optional int64 rankId = 1;      // 榜单唯一id [服务器使用]
+  repeated RankItem rankItem = 2; // 排名信息列表
+  extend PersonalMailPb {
+    optional BattleRankMailPb ext = 13;
+  }
+}
+
+
+// 侦查报告邮件
+message ScoutReportMailPb {
+  optional ScoutReportPb report = 1;    // 侦查报告
+  extend PersonalMailPb {
+    optional ScoutReportMailPb ext = 14;
+  }
+}
+
+// 侦查报告
+message ScoutReportPb {
+  optional PlayerSnapshot snapshot = 1; // 目标快照信息（使用PlayerSnapshot结构）[当前最新快照数据]
+  optional int32 map = 2;               // 目标所在地图
+  optional int32 pos = 3;               // 目标坐标
+  repeated AwardPb resources = 4;       // 可获得资源信息（使用AwardPb结构）
+  repeated BattleHeroUnitPb unit = 5;   // 英雄单位信息
+  repeated TwoInt buff = 6;             // buff加成, v1: buffId, v2: buffValue
+  optional bool isOnline = 7;           // 是否在线
+  optional int32 scoutTime = 8;         // 侦查时间
+  optional bool isRead = 9;             // 报告是否已读 [服务器使用, 用于记录客户端缓存]
+  optional TwoInt barrack = 10;         // 兵营信息, v1: 兵营等级, v2: 兵力数量
+  optional TwoInt wall = 11;            // 城墙信息, v1: 城墙等级, v2: 城墙耐久值
+}
+
+// 邮件列表展示
+message MailShowPb {
+  required int32 keyId = 1;
+  required int32 templateId = 2;      // 邮件模板id
+  required int32 type = 3;            // 邮件类型  0 个人邮件  1 公共邮件(全服邮件)
+  optional int64 time = 4;            // 时间戳
+  optional int32 state = 5;            // 1未读 2已读 3未读含附件 4已读含附件 5已读已领附件
+  optional bool lock = 6;              // 0未锁定 1锁定
+  optional string title = 7;          // 邮件标题
+  optional string content = 8;        // 邮件内容
+  repeated string tParam = 9;         // 标题内容参数
+  repeated string cParam = 10;        // 邮件内容参数
+  optional int32 expiredTime = 11;    // 过期时间
+}
+
+// ================================协议定义================================
+// 协议号范围[6001-7000]
+// 获取邮件列表信息
+message GetMailListRq {
+  extend Base {
+    optional GetMailListRq ext = 6001;
+  }
+}
+
+message GetMailListRs {
+  repeated MailShowPb mailPb = 1;     // 邮件内容
+  extend Base {
+    optional GetMailListRs ext = 6002;
+  }
+}
+
+// 获取邮件详情
+message GetPersonalMailByIdRq {
+  required int32 keyId = 1;
+  extend Base {
+    optional GetPersonalMailByIdRq ext = 6003;
+  }
+}
+
+message GetPersonalMailByIdRs {
+  optional BaseMailPb mailPb = 1;     // 邮件内容
+  extend Base {
+    optional GetPersonalMailByIdRs ext = 6004;
+  }
+}
+
+// 获取公共邮件详情
+message GetCommonMailByIdRq {
+  required int32 keyId = 1;
+  extend Base {
+    optional GetCommonMailByIdRq ext = 6005;
+  }
+}
+
+message GetCommonMailByIdRs {
+  optional BaseMailPb mailPb = 1;     // 邮件内容
+  extend Base {
+    optional GetCommonMailByIdRs ext = 6006;
+  }
+}
+
+// 领取私人邮件奖励
+message ReceivePersonalMailAwardRq {
+  required int32 keyId = 1;
+  extend Base {
+    optional ReceivePersonalMailAwardRq ext = 6007;
+  }
+}
+
+message ReceivePersonalMailAwardRs {
+  repeated AwardPb award = 1;
+  optional int32 keyId = 2;
+  optional int32 status = 3;
+  extend Base
+  {
+    optional ReceivePersonalMailAwardRs ext = 6008;
+  }
+}
+
+// 领取私人邮件奖励
+message ReceiveCommonMailAwardRq {
+  required int32 keyId = 1;
+  extend Base {
+    optional ReceiveCommonMailAwardRq ext = 6009;
+  }
+}
+
+message ReceiveCommonMailAwardRs {
+  repeated AwardPb award = 1;
+  optional int32 keyId = 2;
+  optional int32 status = 3;
+  extend Base
+  {
+    optional ReceiveCommonMailAwardRs ext = 6010;
+  }
+}
+
+// 设置多封邮件已读
+message ReadAllMailRq {
+  repeated TwoInt keyId = 1;   // 需要已读的邮件  v1 邮件id  v2 邮件类型 （0 个人邮件  1 公共邮件）
+  extend Base
+  {
+    optional ReadAllMailRq ext = 6011;
+  }
+}
+
+message ReadAllMailRs {
+  repeated AwardPb award = 1;         // 附件中的奖励
+  repeated TwoInt personalMail = 2; // 个人邮件 v1-邮件id, v2-邮件状态
+  repeated TwoInt commonMail = 3;   // 公共邮件 v1-邮件id, v2-邮件状态
+  extend Base
+  {
+    optional ReadAllMailRs ext = 6012;
+  }
+}
+
+// 删除邮件
+message DelMailRq {
+  repeated TwoInt keyId = 1;   // 需要删除的邮件  v1 邮件id  v2 邮件类型 （0 个人邮件  1 公共邮件）
+  extend Base
+  {
+    optional DelMailRq ext = 6013;
+  }
+}
+
+message DelMailRs {
+  repeated MailShowPb mailShow = 1; // 删除后邮件显示
+  extend Base
+  {
+    optional DelMailRs ext = 6014;
+  }
+}
+
+// 同步新增邮件
+message SyncSendRoleMailRs {
+  repeated MailShowPb mail = 1;
+  extend Base
+  {
+    optional SyncSendRoleMailRs ext = 6016;
+  }
+}
+
+// 锁住私人邮件
+message LockOrNotPersonalMailRq {
+  required int32 keyId = 1;
+  required bool lock = 2;
+  extend Base {
+    optional LockOrNotPersonalMailRq ext = 6017;
+  }
+}
+
+message LockOrNotPersonalMailRs {
+  optional BaseMailPb mailPb = 1;     // 邮件信息
+  required bool lock = 2;
+  extend Base {
+    optional LockOrNotPersonalMailRs ext = 6018;
+  }
+}
+
+// 锁住公共邮件
+message LockOrNotCommonMailRq {
+  required int32 keyId = 1;
+  required bool lock = 2;
+  extend Base {
+    optional LockOrNotCommonMailRq ext = 6019;
+  }
+}
+
+message LockOrNotCommonMailRs {
+  optional BaseMailPb mailPb = 1;     // 邮件信息
+  required bool lock = 2;
+  extend Base {
+    optional LockOrNotCommonMailRs ext = 6020;
+  }
+}
+
+// 获取战报信息
+message GetFightReportRq {
+  required string reportId = 1;       // 战报id
+  optional bool mine = 2;             // 是否自己的战报
+  extend Base {
+    optional GetFightReportRq ext = 6021;
+  }
+}
+
+message GetFightReportRs {
+  optional RecordPb record = 1;    // 战报
+  extend Base {
+    optional GetFightReportRs ext = 6022;
+  }
+}
+
+// 清除战报未读标识
+message ClearFightReportNewStateRq {
+  repeated string reportId = 1;
+  extend Base {
+    optional ClearFightReportNewStateRq ext = 6023;
+  }
+}
+
+message ClearFightReportNewStateRs {
+  repeated string reportId = 1;
+  extend Base {
+    optional ClearFightReportNewStateRs ext = 6024;
+  }
+}
+
+// 同步过期邮件
+message SyncExpiredMailRs {
+  repeated MailShowPb mail = 1;
+  extend Base {
+    optional SyncExpiredMailRs ext = 6026;
+  }
+}

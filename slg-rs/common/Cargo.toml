@@ -1,0 +1,24 @@
+[package]
+name = "common"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# Protobuf 序列化支持
+prost = "0.13"
+# gRPC 框架支持
+tonic = "0.12"
+# 异步运行时
+tokio = { version = "1.39", features = ["full"] }
+# 错误处理
+anyhow = "1.0"
+thiserror = "1.0"
+
+[build-dependencies]
+# 编译 proto 文件的核心脚本工具
+tonic-build = "0.12"
+# 自动通过 vendor 提供 protoc 编译器，避免环境依赖
+protoc-bin-vendored = "3.2.0"

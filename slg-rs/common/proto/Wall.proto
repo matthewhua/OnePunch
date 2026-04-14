@@ -1,0 +1,126 @@
+syntax = "proto2";
+package slg;
+
+import "Base.proto";
+import "Common.proto";
+option java_package = "com.gryphpoem.game.zw.pb";
+
+// ================================常量定义================================
+
+// ================================模块定义================================
+// function 16 城墙数据
+option java_outer_classname = "WallPb";
+message WallDataFunction {
+  optional Formation formation = 1;       // 城墙编队
+  optional int32 durability = 2;          // 城墙耐久度
+  optional int32 fireTime = 3;            // 城墙失火结束时间
+  optional bool lockDispatch = 4;         // 驻守英雄不能派遣
+  optional int32 freeRepairTime = 5;      // 城墙免费修复时间
+  optional int32 durabilityZeroTime = 6;  // 城墙耐久归零时间 [服务器序列化使用]
+  optional bool isTempFormation = 7;      // 是否临时编队 [服务器序列化使用]
+  repeated int32 tempFormation = 8;       // 临时编队包含英雄id [服务器序列化使用]
+  extend FunctionClientBase {
+    optional WallDataFunction ext = 27;
+  }
+}
+
+// ================================结构定义================================
+
+// ================================协议定义================================
+// 协议号范围[2601-2700]
+
+// 城墙编队上阵
+message WallFormationUpRq {
+  required int32 formationId = 1; // 编队id
+  repeated TwoInt idxHeroId = 2;  // 上阵索引位置和英雄id
+  extend Base {
+    optional WallFormationUpRq ext = 2601;
+  }
+}
+
+message WallFormationUpRs {
+  optional Formation formation = 1; // 编队数据
+  repeated int32 heroId = 2;        // 被顶下阵英雄id(如果有才会传)
+  extend Base {
+    optional WallFormationUpRs ext = 2602;
+  }
+}
+
+// 城墙编队下阵
+message WallFormationDownRq {
+  required int32 formationId = 1; // 编队id
+  required int32 index = 2;       // 索引位置(从0开始)
+  extend Base {
+    optional WallFormationDownRq ext = 2603;
+  }
+}
+
+message WallFormationDownRs {
+  optional Formation formation = 1; // 编队数据
+  optional int32 heroId = 2;        // 下阵英雄id
+  extend Base {
+    optional WallFormationDownRs ext = 2604;
+  }
+}
+
+// 设置编队出征锁
+message SetFormationLockRq {
+  required bool lockDispatch = 1;   // 是否锁定编队英雄的出征操作
+  extend Base {
+    optional SetFormationLockRq ext = 2605;
+  }
+}
+
+message SetFormationLockRs {
+  extend Base {
+    optional SetFormationLockRs ext = 2606;
+  }
+}
+
+// 修复城墙
+message WallRepairRq {
+  required int32 type = 1;                // 修复类型, 1 免费, 2 钻石
+  extend Base {
+    optional WallRepairRq ext = 2607;
+  }
+}
+
+message WallRepairRs {
+  optional int32 durability = 1;          // 城墙耐久度, v1 当前耐久度
+  optional int32 freeRepairTime = 2;      // 城墙免费修复时间 [免费修改才使用]
+  extend Base {
+    optional WallRepairRs ext = 2608;
+  }
+}
+
+// 城墙灭火
+message ExtinguishFireRq {
+  extend Base {
+    optional ExtinguishFireRq ext = 2609;
+  }
+}
+
+message ExtinguishFireRs {
+  extend Base {
+    optional ExtinguishFireRs ext = 2610;
+  }
+}
+
+// 同步城墙耐久度归零 [在线时会主动推送, 离线再上线时也会主动推送]
+message SyncWallDurabilityZeroRs {
+  required int32 durabilityZeroTime = 6;  // 城墙耐久归零时间 [预留]
+  extend Base {
+    optional SyncWallDurabilityZeroRs ext = 2611;
+  }
+}
+
+// ================================推送定义================================
+// 协议号范围[2701-2800]
+
+// [推送]编队状态变更
+message SyncWallFormationStateChangeRs {
+  repeated TwoInt states = 1; // 状态数据(v1: 编队id, v2: 编队状态)
+  extend Base {
+    optional SyncWallFormationStateChangeRs ext = 2701;
+  }
+}
