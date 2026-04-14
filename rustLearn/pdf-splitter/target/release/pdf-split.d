@@ -1,1 +1,0 @@
-C:\dev\Company\OnePunch\rustLearn\pdf-splitter\target\release\pdf-split.exe: C:\dev\Company\OnePunch\rustLearn\pdf-splitter\src\main.rs C:\dev\Company\OnePunch\rustLearn\pdf-splitter\src\web.rs C:\dev\Company\OnePunch\rustLearn\pdf-splitter\static\index.html
