@@ -1,7 +1,10 @@
 [workspace]
 members = [
-    "common",
-    "gateway",
-    "world",
+    "crates/proto",
+    "crates/shared",
+    "crates/gateway",
+    "crates/auth",
+    "crates/home",
+    "crates/world",
 ]
 resolver = "2"

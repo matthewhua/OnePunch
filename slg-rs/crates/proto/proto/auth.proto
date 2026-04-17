@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package slg;
+
+service AuthService {
+    // 登录验证
+    rpc Login (LoginRequest) returns (LoginResponse);
+    // 验证 Token
+    rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+message LoginRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message LoginResponse {
+    bool success = 1;
+    string token = 2;
+    int64 account_id = 3;
+    string error_msg = 4;
+}
+
+message ValidateTokenRequest {
+    string token = 1;
+}
+
+message ValidateTokenResponse {
+    bool valid = 1;
+    int64 account_id = 2;
+}

@@ -912,8 +912,7 @@ Rust_Cluster -> Storage.etcd: "服务注册"
 | 并发 Map | `dashmap` | 无锁并发 HashMap |
 | 缓存 | `moka` | 类似 Caffeine |
 | 序列化 | `serde` + `bincode` | 高性能二进制序列化 |
-| 日志 | `tracing` | 结构化日志 |
-| 配置 | `config` | 多格式配置加载 |
+| 日志 | `tracing` | 结构化日志 |¬¬
 | 错误处理 | `thiserror` + `anyhow` | 类型安全错误 |
 | 定时任务 | `tokio-cron-scheduler` | 定时任务调度 |
 

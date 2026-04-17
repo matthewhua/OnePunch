@@ -1,0 +1,19 @@
+[package]
+name = "world"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+shared = { path = "../shared" }
+proto = { path = "../proto" }
+
+tokio = { version = "1.39", features = ["full"] }
+tonic = "0.12"
+prost = "0.13"
+sqlx = { version = "0.8", features = ["runtime-tokio", "tls-rustls", "mysql", "chrono"] }
+dashmap = "6.1"
+tracing = "0.1"
+anyhow = "1.0"
+futures = "0.3"
+rand = "0.8"
+priority-queue = "2.1"
