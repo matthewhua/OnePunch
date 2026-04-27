@@ -20,13 +20,18 @@ pub enum PlayerMessage {
     Shutdown,
 }
 
+use crate::systems::activity::ActivitySystem;
+use crate::systems::ToFunctionClientBase;
+
 pub struct PlayerActor {
     pub account_id: i64,
     pub role_id: i64,
     pub state: PlayerState,
     
     msg_rx: mpsc::UnboundedReceiver<PlayerMessage>,
-    // TODO: 各个系统模块 (SkinSystem, BuildingSystem)
+    
+    // システムモジュール
+    pub activity_system: ActivitySystem,
 }
 
 impl PlayerActor {
@@ -36,6 +41,7 @@ impl PlayerActor {
             role_id,
             state: PlayerState::Loading,
             msg_rx: rx,
+            activity_system: ActivitySystem::new(),
         }
     }
 
@@ -68,7 +74,28 @@ impl PlayerActor {
     }
 
     async fn handle_get_role_data(&mut self, tx: oneshot::Sender<anyhow::Result<GetRoleDataRs>>) {
-        // TODO: 汇总各个系统的 FunctionClientBase
-        let _ = tx.send(Ok(GetRoleDataRs { function_base: vec![], ..Default::default() }));
+        use proto::slg::FunctionClientBase;
+        use prost::Message;
+
+        let mut function_base = Vec::new();
+
+        // 1. 获取 Activity 数据
+        match self.activity_system.to_function_base_bytes() {
+            Ok(bytes) => {
+                if let Ok(f_base) = FunctionClientBase::decode(&bytes[..]) {
+                    function_base.push(f_base);
+                }
+            }
+            Err(e) => tracing::error!("Failed to get activity function base: {}", e),
+        }
+
+        // TODO: 获取 Lord, Hero 等其他系统数据
+
+        let rs = GetRoleDataRs {
+            function_base,
+            ..Default::default()
+        };
+        let _ = tx.send(Ok(rs));
     }
 }
+

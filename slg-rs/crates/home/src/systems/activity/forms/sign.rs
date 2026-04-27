@@ -30,10 +30,34 @@ impl PersonalForm for SignForm {
         Ok(serde_json::to_vec(self)?)
     }
 
-    fn to_client_pb(&self, _activity: &ActivityData) -> Result<Vec<u8>> {
-        // TODO: 构建 ActivityFormSignPb
-        Ok(vec![])
+    fn to_pb(&self, activity_id: i32, form_id: i32) -> Result<proto::slg::ActivityFormPb> {
+        use proto::slg::{ActivityFormPb, ActivityFormSignPb};
+        use shared::msg::GameMessage;
+        use bytes::Buf;
+        use prost::Message;
+
+        let mut form_pb = ActivityFormPb::default();
+        form_pb.activity_id = Some(activity_id);
+        form_pb.form_id = Some(form_id);
+        form_pb.form_type = Some(self.form_type() as i32);
+
+        // 构建 Sign 具体的 Extension 数据
+        let mut sign_ext = ActivityFormSignPb::default();
+        // 这里需要将内部状态映射到 sign_ext.sign_info
+        // 示例：目前只有 sign_days
+        sign_ext.sign_info.push(proto::slg::IntLong {
+            v1: self.sign_days,
+            v2: if self.signed_today { 3 } else { 2 }
+        });
+
+        // 编码 Extension 并存入 unknown_fields
+        let mut buf = bytes::BytesMut::new();
+        GameMessage::encode_extension(11, &sign_ext, &mut buf);
+        form_pb.unknown_fields.extend_from_slice(&buf);
+
+        Ok(form_pb)
     }
+
 
     fn on_daily_tick(&mut self, _activity: &ActivityData, _day_num: i32) {
         // 跨天重置今日签到状态

@@ -73,10 +73,13 @@ impl ConnectionHandler {
     }
 
     async fn handle_login(&self, packet: GamePacket, framed: &mut Framed<TcpStream, GameCodec>) -> anyhow::Result<i64> {
-        // 解码 LoginRequest (假设使用的是 auth.proto 定义的结构)
-        // 注意：这里需要根据实际使用的 proto 包名来 decode
-        use prost::Message;
-        let req = proto::slg::LoginRequest::decode(&packet.payload[..])?;
+        // 1. 将原始包转换为 GameMessage (解析 Base + Extensions)
+        let msg = packet.to_message()?;
+        
+        // 2. 从 Extension 中提取具体的请求 payload
+        // 注意：由于是内部 AuthService 用的 LoginRequest，这里假设客户端协议与之对应
+        // 如果客户端协议不同，则需要根据具体的 proto2 消息类型进行中转
+        let req: proto::slg::LoginRequest = msg.get_payload()?;
         
         // 调用 Auth 服务
         let mut client = AuthServiceClient::connect(self.auth_addr.clone()).await?;
@@ -84,14 +87,16 @@ impl ConnectionHandler {
 
         if response.success {
             // 返回成功给客户端
-            let res_payload = response.encode_to_vec();
-            framed.send(GamePacket {
-                cmd: GameCmd::LoginRs,
-                payload: res_payload,
-            }).await?;
+            // 3. 使用 build_rs 构建符合全兼容协议的响应包 (Base + Extension)
+            let rs_packet = GamePacket::build_rs(GameCmd::LoginRs, &response)?;
+            framed.send(rs_packet).await?;
             
             Ok(response.account_id)
         } else {
+            // 4. 构建带错误码的响应包 (Base.code)
+            let err_payload = shared::msg::GameMessage::build_error(GameCmd::LoginRs.into(), 101)?; // 101: 登录失败错误码
+            framed.send(GamePacket::new(GameCmd::LoginRs, err_payload)).await?;
+            
             return Err(anyhow::anyhow!("Auth failed: {}", response.error_msg));
         }
     }

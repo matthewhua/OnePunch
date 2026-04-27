@@ -58,3 +58,31 @@ impl Into<u32> for GameCmd {
         self as u32
     }
 }
+
+/// 指令路由目标
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CmdRoute {
+    Auth,   // 认证相关 (Gateway/Auth Service)
+    Home,   // 个人业务 (Home Service)
+    World,  // 地图/行军/战斗 (World Service)
+}
+
+impl GameCmd {
+    /// 获取指令对应的业务路由
+    pub fn route(self) -> CmdRoute {
+        let id = self as u32;
+        match id {
+            // 登录认证相关
+            1001..=1108 => CmdRoute::Auth,
+            
+            // 世界地图/战斗 (2000-3999)
+            2000..=3999 => CmdRoute::World,
+            
+            // 运营活动 (8000-8999)
+            8000..=8999 => CmdRoute::Home,
+            
+            // 其他默认路由到 Home
+            _ => CmdRoute::Home,
+        }
+    }
+}

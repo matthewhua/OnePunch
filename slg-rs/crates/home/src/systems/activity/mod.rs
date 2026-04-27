@@ -64,6 +64,44 @@ impl PlayerSystem for ActivitySystem {
     }
 }
 
+impl crate::systems::ToFunctionClientBase for ActivitySystem {
+    fn to_function_base_bytes(&self) -> Result<Vec<u8>> {
+        use proto::slg::{FunctionClientBase, ActivityFunction, ActivityDataPb};
+        use shared::msg::{GameMessage, module_id, module_tag};
+        use prost::Message;
+
+        // 1. 构建全量活动数据 PB
+        let mut activity_func = ActivityFunction::default();
+        
+        for (activity_id, personal) in &self.activities {
+            let mut data_pb = ActivityDataPb::default();
+            data_pb.activity_id = *activity_id;
+            data_pb.open_times = Some(personal.open_times);
+            
+            // 填充表单
+            for (form_id, form) in &personal.forms {
+               match form.to_pb(*activity_id, *form_id) {
+                   Ok(f_pb) => data_pb.form.push(f_pb),
+                   Err(e) => tracing::error!("Failed to encode activity form: {}", e),
+               }
+            }
+            activity_func.activity.push(data_pb);
+        }
+
+        // 2. 构造 FunctionClientBase 外壳
+        let mut f_base = FunctionClientBase::default();
+        f_base.r#type = Some(module_id::ACTIVITY);
+
+        // 3. 将 ActivityFunction 作为 Extension 手动编码到外壳中
+        let mut buf = bytes::BytesMut::new();
+        f_base.encode(&mut buf)?;
+        GameMessage::encode_extension(module_tag::ACTIVITY, &activity_func, &mut buf);
+
+        Ok(buf.to_vec())
+    }
+}
+
+
 /// 辅助函数：由于 proto2 extension 不被 prost 直接支持，此函数用于手动分发 Extension 字段编解码
 #[allow(dead_code)]
 fn decode_form_extension(form_type: types::ActivityFormType, raw_bytes: &[u8]) -> Result<Box<dyn model::PersonalForm>> {

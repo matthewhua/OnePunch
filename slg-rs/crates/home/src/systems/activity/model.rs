@@ -29,12 +29,13 @@ pub trait PersonalForm: Send + Sync {
     /// 序列化为二进制数据（save_db=true 时包含服务端专用字段）
     fn serialize(&self, save_db: bool) -> Result<Vec<u8>>;
     
-    /// 构建客户端推送的 PB 数据
-    fn to_client_pb(&self, activity: &ActivityData) -> Result<Vec<u8>>;
+    /// 构建客户端推送的 PB 数据 (包含 ActivityFormPb 及其 Extension)
+    fn to_pb(&self, activity_id: i32, form_id: i32) -> Result<proto::slg::ActivityFormPb>;
     
     /// 每日心跳处理
     fn on_daily_tick(&mut self, _activity: &ActivityData, _day_num: i32) {}
 }
+
 
 /// 公共活动表单 trait（对应 Java CommonActivityForm）
 pub trait CommonForm: Send + Sync {
