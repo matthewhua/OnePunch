@@ -1,0 +1,17 @@
+# 数据库连接
+database_url: "mysql://root:password@127.0.0.1:3306/slg"
+# Redis 连接
+redis_url: "redis://127.0.0.1:6379"
+
+# 各服务监听地址
+server_addr: "0.0.0.0:8080"
+
+# 内部集群服务 RPC 地址
+auth_service_addr: "http://127.0.0.1:50051"
+home_service_addr: "http://127.0.0.1:50052"
+world_service_addr: "http://127.0.0.1:50053"
+
+# Etcd 配置
+etcd_endpoints: ["http://127.0.0.1:2379"]
+# 当前服务实例的 ID (在每个服的本地配置里覆盖此项)
+server_id: "home-1"

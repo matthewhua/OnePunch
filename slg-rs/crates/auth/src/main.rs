@@ -4,6 +4,7 @@ use shared::config::AppConfig;
 use shared::db::{init_mysql, init_redis};
 use std::sync::Arc;
 use tracing::info;
+use shared::registry::EtcdRegistry;
 
 mod service;
 mod session;
@@ -13,17 +14,16 @@ async fn main() -> anyhow::Result<()> {
     // 1. 初始化日志
     tracing_subscriber::fmt::init();
 
-    // 2. 加载配置 (假设有默认配置或从环境变量读取)
-    // 注意：在没有配置文件时，AppConfig::load 会返回错误，这里为了演示使用硬编码 fallback 或让它报错提示
-    let config = AppConfig::load().unwrap_or_else(|_| AppConfig {
-        database_url: "mysql://root:password@localhost:3306/slg".to_string(),
-        redis_url: "redis://127.0.0.1:6379".to_string(),
-        server_addr: "0.0.0.0:50051".to_string(),
-    });
+    // 2. 加载配置
+    let config = AppConfig::load().unwrap_or_else(|_| AppConfig::default());
 
     info!("Starting Auth Service on {}", config.server_addr);
 
-    // 3. 初始化数据库连接
+    // 3. 服务注册 (Etcd)
+    let registry = EtcdRegistry::new(config.etcd_endpoints.clone()).await?;
+    registry.register("auth", &config.server_id, &config.server_addr, 30).await?;
+
+    // 4. 初始化数据库连接
     let db = init_mysql(&config.database_url).await?;
     let redis = init_redis(&config.redis_url)?;
     

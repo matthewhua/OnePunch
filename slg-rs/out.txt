@@ -1,0 +1,9 @@
+cargo :     Checking shared v0.1.0 (C:\dev\Company\OnePunch\slg-rs\crates\shared)
+???? ?:1 ??: 1
++ cargo check -p shared 2>&1 | Out-File -FilePath out.txt -Encoding asc ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking sh...\crates\shared):String) [], RemoteExce 
+   ption
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.91s

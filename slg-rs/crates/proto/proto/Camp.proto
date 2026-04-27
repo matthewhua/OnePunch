@@ -172,21 +172,6 @@ message CampPartyElection {
 }
 
 
-// 补给箱
-message CampPartySupply {
-  required int32 key = 1;        // 补给箱唯一标识(领取使用)
-  required int32 id = 2;        // 配置表中的id
-  required int32 end_time = 3;      // 补给结束时间
-  required int32 increment_key = 4;  // 服务器序列化使用
-  repeated LongInt status = 5;    // 服务器序列化使用
-}
-
-// 超级补给
-message CampPartySuperSupply {
-  required int32 lv = 1;        // 超级补给等级
-  required int32 energy = 2;      // 能量
-  required int64 cost_gold = 3;    // 消耗金币数量
-}
 
 //阵营战争概述信息
 message CampBattleInfo {
@@ -486,46 +471,6 @@ message SendCampMailRs {
   optional int32 send_cnt = 1;         // 当天发送次数
   extend Base {
     optional SendCampMailRs ext = 3030;
-  }
-}
-
-// 补给大厅
-message SupplyHallRq {
-  extend Base {
-    optional SupplyHallRq ext = 3031;
-  }
-}
-message SupplyHallRs {
-  optional int32 award = 1;                   // 可领取的补给箱数量
-  optional CampPartySuperSupply superSupply = 2;  // 超级补给的信息
-  repeated CampPartySupply supplyInfo = 3;        // 超级箱的信息(根据结束时间排序)
-  extend Base {
-    optional SupplyHallRs ext = 3032;
-  }
-}
-
-// 领取补给奖励
-message SupplyRewardRq {
-  required int32 type = 1;         // 领取类型, 0 普通补给箱, 1 超级补给 2 一键领取(key需要传一件领取的补给类型s_party_supply中的type)
-  optional int32 key = 2;          // 普通补给需要传keyId指定领取
-  extend Base {
-    optional SupplyRewardRq ext = 3033;
-  }
-}
-message SupplyRewardRs {
-  repeated AwardPb award = 1;                   // 领取的奖励
-  repeated int32 key = 2;                     // 领取的补给key
-  extend Base {
-    optional SupplyRewardRs ext = 3034;
-  }
-}
-
-
-message SyncCampSupplyRs {
-  optional CampPartySuperSupply super_supply = 1;
-  optional CampPartySupply supply_info = 2;
-  extend Base {
-    optional SyncCampSupplyRs ext = 3036;
   }
 }
 

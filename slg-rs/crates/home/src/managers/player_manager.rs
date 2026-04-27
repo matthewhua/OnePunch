@@ -2,6 +2,9 @@ use dashmap::DashMap;
 use tokio::sync::mpsc;
 use std::sync::Arc;
 use crate::actors::player_actor::{PlayerActor, PlayerMessage};
+use crate::actors::global_event_bus::GlobalEventBus;
+use shared::static_config::StaticConfig;
+use tokio::sync::watch;
 
 /// 玩家管理器：维护在线玩家的 AccountID/RoleID -> Actor Sender 的映射
 pub struct PlayerManager {
@@ -9,13 +12,19 @@ pub struct PlayerManager {
     account_to_actor: DashMap<i64, mpsc::UnboundedSender<PlayerMessage>>,
     // RoleID -> Sender
     role_to_actor: DashMap<i64, mpsc::UnboundedSender<PlayerMessage>>,
+    // 全服事件总线
+    global_event_bus: GlobalEventBus,
+    // 静态配置订阅
+    config_rx: watch::Receiver<Arc<StaticConfig>>,
 }
 
 impl PlayerManager {
-    pub fn new() -> Self {
+    pub fn new(global_event_bus: GlobalEventBus, config_rx: watch::Receiver<Arc<StaticConfig>>) -> Self {
         Self {
             account_to_actor: DashMap::new(),
             role_to_actor: DashMap::new(),
+            global_event_bus,
+            config_rx,
         }
     }
 
@@ -28,7 +37,13 @@ impl PlayerManager {
     pub fn spawn_actor(&self, account_id: i64, role_id: i64) -> mpsc::UnboundedSender<PlayerMessage> {
         let (tx, rx) = mpsc::unbounded_channel();
         
-        let actor = PlayerActor::new(account_id, role_id, rx);
+        let actor = PlayerActor::new(
+            account_id, 
+            role_id, 
+            rx, 
+            self.global_event_bus.clone(),
+            self.config_rx.clone()
+        );
         tokio::spawn(async move {
             actor.run().await;
         });

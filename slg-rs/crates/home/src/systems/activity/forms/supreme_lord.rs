@@ -29,8 +29,11 @@ impl PersonalForm for SupremeLordForm {
         Ok(serde_json::to_vec(self)?)
     }
 
-    fn to_client_pb(&self, _activity: &ActivityData) -> Result<Vec<u8>> {
-        // TODO: 构建 ActivityFormSupremeLordPb
-        Ok(vec![])
+    fn to_pb(&self, activity_id: i32, form_id: i32) -> Result<proto::slg::ActivityFormPb> {
+        let mut pb = proto::slg::ActivityFormPb::default();
+        pb.activity_id = Some(activity_id);
+        pb.form_id = Some(form_id);
+        pb.form_type = Some(self.form_type() as i32);
+        Ok(pb)
     }
 }

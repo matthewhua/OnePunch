@@ -1,0 +1,35 @@
+commit 06312282430a2bf6b0d9e4f86c15409cc3548b43
+Author: hqy <1229926359@qq.com>
+Date:   Mon Apr 27 14:12:37 2026 +0800
+
+    refactor(home): 整理 actor 与 manager 目录结构
+    
+    - 将 PlayerActor 移动到 actors 目录
+    
+    - 将 PlayerManager 移动到新创建的 managers 目录
+    
+    - 更新 main.rs 和 service.rs 的模块引用
+
+commit dd669e04d4d4c19b5cf0b78824b71f83a6908f93
+Author: hqy <1229926359@qq.com>
+Date:   Mon Apr 27 11:32:47 2026 +0800
+
+    feat(world): implement Phase 4 Robustness P2 (WAL, Circuit Breaker, Metrics) and add transition plan
+
+commit 8dea2412930a73b66fd663aee136e3f93e1ec512
+Author: matthewhua <1229926359@qq.com>
+Date:   Fri Apr 17 09:59:34 2026 +0800
+
+    提交rust代码
+
+commit a56f1e1e4b26f5a2312db6c1af5aaa4139ec415b
+Author: hqy <1229926359@qq.com>
+Date:   Thu Apr 16 22:29:41 2026 +0800
+
+    新增Rust README
+
+commit 13722052c9c214a13b8827496da3d80565491e88
+Author: matthewhua <1229926359@qq.com>
+Date:   Wed Apr 15 02:15:44 2026 +0800
+
+    init: initialize slg-rs workspace with common, gateway, and world crates

@@ -109,52 +109,52 @@ pub mod module_tag {
 }
 
 /// 将系统模块数据转换为 FunctionClientBase (用于 GetRoleDataRs 或 SyncFunctionDataRs)
-pub trait ToFunctionClientBase {
-    /// 转换为兼容协议的 FunctionClientBase
-    fn to_function_client_base(&self) -> proto::FunctionClientBase;
+pub trait ToFunctionClientBaseBytes {
+    /// 转换为兼容协议的 FunctionClientBase 字节流（包含 Extension）
+    fn to_function_base_bytes(&self) -> Vec<u8>;
 }
 
-impl ToFunctionClientBase for proto::ActivityFunction {
-    fn to_function_client_base(&self) -> proto::FunctionClientBase {
-        let mut base = proto::FunctionClientBase::default();
+impl ToFunctionClientBaseBytes for proto::slg::ActivityFunction {
+    fn to_function_base_bytes(&self) -> Vec<u8> {
+        let mut base = proto::slg::FunctionClientBase::default();
         base.r#type = Some(module_id::ACTIVITY);
         let mut buf = BytesMut::new();
+        base.encode(&mut buf).unwrap();
         GameMessage::encode_extension(module_tag::ACTIVITY, self, &mut buf);
-        base.unknown_fields.extend_from_slice(&buf);
-        base
+        buf.to_vec()
     }
 }
 
-impl ToFunctionClientBase for proto::LordDataFunction {
-    fn to_function_client_base(&self) -> proto::FunctionClientBase {
-        let mut base = proto::FunctionClientBase::default();
+impl ToFunctionClientBaseBytes for proto::slg::LordDataFunction {
+    fn to_function_base_bytes(&self) -> Vec<u8> {
+        let mut base = proto::slg::FunctionClientBase::default();
         base.r#type = Some(module_id::LORD);
         let mut buf = BytesMut::new();
+        base.encode(&mut buf).unwrap();
         GameMessage::encode_extension(module_tag::LORD, self, &mut buf);
-        base.unknown_fields.extend_from_slice(&buf);
-        base
+        buf.to_vec()
     }
 }
 
-impl ToFunctionClientBase for proto::MissionDataFunction {
-    fn to_function_client_base(&self) -> proto::FunctionClientBase {
-        let mut base = proto::FunctionClientBase::default();
+impl ToFunctionClientBaseBytes for proto::slg::MissionDataFunction {
+    fn to_function_base_bytes(&self) -> Vec<u8> {
+        let mut base = proto::slg::FunctionClientBase::default();
         base.r#type = Some(module_id::MISSION);
         let mut buf = BytesMut::new();
+        base.encode(&mut buf).unwrap();
         GameMessage::encode_extension(module_tag::MISSION, self, &mut buf);
-        base.unknown_fields.extend_from_slice(&buf);
-        base
+        buf.to_vec()
     }
 }
 
-impl ToFunctionClientBase for proto::HeroDataFunction {
-    fn to_function_client_base(&self) -> proto::FunctionClientBase {
-        let mut base = proto::FunctionClientBase::default();
+impl ToFunctionClientBaseBytes for proto::slg::HeroDataFunction {
+    fn to_function_base_bytes(&self) -> Vec<u8> {
+        let mut base = proto::slg::FunctionClientBase::default();
         base.r#type = Some(module_id::HERO);
         let mut buf = BytesMut::new();
+        base.encode(&mut buf).unwrap();
         GameMessage::encode_extension(module_tag::HERO, self, &mut buf);
-        base.unknown_fields.extend_from_slice(&buf);
-        base
+        buf.to_vec()
     }
 }
 
@@ -203,13 +203,17 @@ mod tests {
             ..Default::default()
         });
 
-        // 2. 使用 Trait 包装为 FunctionClientBase
-        let f_base = act_func.to_function_client_base();
+        // 2. 使用 Trait 包装为 FunctionClientBase 字节流
+        let f_base_bytes = act_func.to_function_base_bytes();
+        
+        // 3. 模拟解析：从字节流提取 ActivityFunction
+        let mut buf = &f_base_bytes[..];
+        // 首先解析出 FunctionClientBase 的 type 字段
+        let f_base = proto::slg::FunctionClientBase::decode_length_delimited(&mut buf).expect("Failed to decode base");
         assert_eq!(f_base.r#type, Some(module_id::ACTIVITY));
-        assert!(!f_base.unknown_fields.is_empty());
-
-        // 3. 模拟解析：从 FunctionClientBase 提取 ActivityFunction
-        let mut buf = &f_base.unknown_fields[..];
+        
+        // 剩余部分应为 Extension
+        let (tag, wire_type) = decode_key(&mut buf).expect("Failed to decode key");
         let (tag, wire_type) = decode_key(&mut buf).expect("Failed to decode key");
         assert_eq!(tag, module_tag::ACTIVITY);
         assert_eq!(wire_type, WireType::LengthDelimited);

@@ -5,6 +5,8 @@ package slg;
 import "Rpc.proto";
 import "World.proto";
 
+import "Game.proto";
+
 // 定义 World 服务
 service WorldService {
     // 统一入口，模拟 Dubbo/Command 模式的转发
@@ -12,6 +14,13 @@ service WorldService {
 
     // 也可以定义具体业务接口
     rpc JoinMap(JoinMapRequest) returns (JoinMapResponse);
+}
+
+// 定义 Home 服务
+service HomeService {
+    rpc BeginGame(BeginGameRq) returns (BeginGameRs);
+    rpc CreateRole(CreateRoleRq) returns (CreateRoleRs);
+    rpc RoleLogin(RoleLoginRq) returns (RoleLoginRs);
 }
 
 message JoinMapRequest {

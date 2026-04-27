@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use super::PlayerSystem;
+use shared::event::{EventHandler, GameEvent, MissionEvent, ActivityTriggerEvent, PlayerContext};
 
 pub mod types;
 pub mod model;
@@ -98,6 +99,40 @@ impl crate::systems::ToFunctionClientBase for ActivitySystem {
         GameMessage::encode_extension(module_tag::ACTIVITY, &activity_func, &mut buf);
 
         Ok(buf.to_vec())
+    }
+}
+
+impl EventHandler for ActivitySystem {
+    fn interested_in(&self, event: &GameEvent) -> bool {
+        match event {
+            GameEvent::Mission(_) | GameEvent::ActivityTrigger(_) => true,
+            _ => false,
+        }
+    }
+
+    fn handle(&mut self, event: &GameEvent, ctx: &mut PlayerContext) {
+        match event {
+            GameEvent::Mission(mission_event) => self.on_mission_event(mission_event),
+            GameEvent::ActivityTrigger(trigger_event) => self.on_activity_trigger(trigger_event),
+            _ => {}
+        }
+    }
+}
+
+impl ActivitySystem {
+    pub fn on_mission_event(&mut self, _event: &MissionEvent) {
+        // TODO: 遍历活动，更新任务玩法（TaskForm）进度
+    }
+
+    pub fn on_activity_trigger(&mut self, _event: &ActivityTriggerEvent) {
+        // TODO: 根据触发类型，激活/更新活动状态
+    }
+
+    /// 外层封装调用
+    pub fn handle_event(&mut self, event: &GameEvent, ctx: &mut PlayerContext) {
+        if self.interested_in(event) {
+            self.handle(event, ctx);
+        }
     }
 }
 
