@@ -17,6 +17,7 @@ mod rpc_client;
 mod wal;
 mod circuit_breaker;
 mod metrics;
+pub mod router;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

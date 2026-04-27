@@ -3,8 +3,8 @@ use proto::slg::home_service_server::HomeService;
 use proto::slg::{BeginGameRq, BeginGameRs, CreateRoleRq, CreateRoleRs, RoleLoginRq, RoleLoginRs};
 use sqlx::MySqlPool;
 use std::sync::Arc;
-use crate::manager::PlayerManager;
-use crate::actor::PlayerMessage;
+use crate::managers::player_manager::PlayerManager;
+use crate::actors::player_actor::PlayerMessage;
 use rand::{distributions::Alphanumeric, Rng};
 use tracing::info;
 

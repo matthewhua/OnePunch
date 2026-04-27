@@ -5,9 +5,10 @@ use shared::db::init_mysql;
 use std::sync::Arc;
 use tracing::info;
 
-mod actor;
-mod manager;
 mod service;
+pub mod systems;
+pub mod actors;
+pub mod managers;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -27,7 +28,7 @@ async fn main() -> anyhow::Result<()> {
     let db = init_mysql(&config.database_url).await?;
     
     // 4. 初始化管理器与服务
-    let manager = Arc::new(manager::PlayerManager::new());
+    let manager = Arc::new(managers::player_manager::PlayerManager::new());
     let home_service = service::HomeServiceImpl::new(db, manager);
 
     // 5. 启动 gRPC 服务

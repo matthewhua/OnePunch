@@ -3,6 +3,7 @@ use prost::Message;
 
 pub mod building;
 pub mod skin;
+pub mod activity;
 
 /// 玩家子系统组件基类特征
 /// 所有系统（建筑、背包、皮肤等）都需要实现此特征以支持数据落盘

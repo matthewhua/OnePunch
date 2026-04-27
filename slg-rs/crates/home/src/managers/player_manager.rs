@@ -1,7 +1,7 @@
 use dashmap::DashMap;
 use tokio::sync::mpsc;
 use std::sync::Arc;
-use crate::actor::{PlayerActor, PlayerMessage};
+use crate::actors::player_actor::{PlayerActor, PlayerMessage};
 
 /// 玩家管理器：维护在线玩家的 AccountID/RoleID -> Actor Sender 的映射
 pub struct PlayerManager {
