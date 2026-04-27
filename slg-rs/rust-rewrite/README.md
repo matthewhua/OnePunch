@@ -739,16 +739,50 @@ impl MapSectorActor {
 - [ ] 逐步迁移各功能系统（建筑 → 背包 → 将领 → ...）
 - [ ] 事件系统
 
-### Phase 4：World Service（4-6 周）
-- [ ] 地图管理 + AOI
-- [ ] MapSectorActor
-- [ ] 行军系统
+### Phase 4：World Service（4-6 周）→ [大地图改进 + 健壮性设计](phase4-world-robustness.md)
+- [ ] MapSectorActor 分区 Actor 模型
+- [ ] 时间轮替代全表扫描
+- [ ] AOI 事件广播机制
+- [ ] 跨区行军转移
+- [ ] 行军系统完善（召回、加速、侦查）
 - [ ] 战斗触发（可复用 Java fight 模块）
+- [ ] Actor 监督与自动重启（ActorSupervisor）
+- [ ] 背压、超时、优雅关闭
 
 ### Phase 5：集成测试 + 灰度（2-3 周）
 - [ ] 端到端测试
 - [ ] 压力测试
 - [ ] 灰度发布策略
+
+### Phase 6：活动大框架（3-4 周）→ [详细文档](phase6-activity-framework.md)
+- [ ] 活动 Form trait 体系（PersonalForm / CommonForm）
+- [ ] ActivitySystem（玩家侧活动数据管理）
+- [ ] ActivityActor（全服活动生命周期管理）
+- [ ] 18 种活动玩法类型实现（排除战令和社区跳转）
+- [ ] 阶段排行结算（最强领主等）
+
+### Phase 7：游戏协议兼容层（2-3 周）→ [详细文档](phase7-protocol-compat.md)
+- [ ] proto2 extensions 自定义编解码
+- [ ] Base 消息 extension 提取/构建
+- [ ] 命令号路由表完善
+- [ ] FunctionClientBase 体系兼容
+- [ ] 与 Java 客户端联调验证
+
+### Phase 8：事件总线系统（1-2 周）→ [详细文档](phase8-event-system.md)
+- [ ] GameEvent 枚举 + EventHandler trait
+- [ ] PlayerActor 内部同步事件分发
+- [ ] 跨 Actor 全服事件（GlobalEventBus）
+- [ ] 任务进度、活动积分、里程碑联动
+
+### Phase 9：静态配置加载（1-2 周）→ [详细文档](phase9-static-config.md)
+- [ ] MySQL s_ 表批量加载框架
+- [ ] 活动/任务/道具/建筑等配置结构体
+- [ ] watch channel 配置热加载
+
+### Phase 10：剩余功能系统 → [详细文档](phase10-remaining-systems.md)
+- [ ] Home 系统：将领、背包、科技、装备、任务、VIP、商店、邮件、聊天等
+- [ ] World 系统：地图、AOI、行军、部队、战斗、采集、NPC、阵营
+- [ ] 跨服系统、战斗引擎
 
 ---
 

@@ -30,13 +30,15 @@ impl MarchingManager {
             .unwrap()
             .as_millis() as i64;
         
-        let distance = self.calculate_distance(troop.origin, troop.goal);
+        let origin = troop.origin.unwrap_or(0);
+        let goal = troop.goal.unwrap_or(0);
+        let distance = self.calculate_distance(origin, goal);
         let duration_ms = (distance / speed * 1000.0) as i64;
         
         troop.start_time = Some(now);
         troop.end_time = Some(now + duration_ms);
         
-        info!("March started: Troop {} from {} to {}. Duration: {}ms", 
+        info!("March started: Troop {} from {:?} to {:?}. Duration: {}ms", 
             troop.key, troop.origin, troop.goal, duration_ms);
             
         self.troops.insert(troop.key, MarchingTroop { base: troop, speed });

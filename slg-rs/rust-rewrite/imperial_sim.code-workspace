@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../../../imperial_sim"
+		},
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"java.configuration.updateBuildConfiguration": "interactive",
+		"java.compile.nullAnalysis.mode": "automatic"
+	}
+}

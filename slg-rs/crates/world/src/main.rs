@@ -7,6 +7,16 @@ use tracing::{info, error};
 mod map;
 mod march;
 mod service;
+mod timer_wheel;
+mod message;
+mod sector_actor;
+mod supervisor;
+mod shutdown;
+mod health;
+mod rpc_client;
+mod wal;
+mod circuit_breaker;
+mod metrics;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

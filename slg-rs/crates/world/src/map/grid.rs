@@ -5,6 +5,10 @@ use proto::slg::BaseEntity;
 pub const MAP_WIDTH: i32 = 1300;
 pub const MAP_HEIGHT: i32 = 1300;
 pub const GRID_SIZE: i32 = 50; // 50x50 一个格子
+pub const SECTOR_COUNT_X: i32 = 4;
+pub const SECTOR_COUNT_Y: i32 = 4;
+pub const SECTOR_WIDTH: i32 = MAP_WIDTH / SECTOR_COUNT_X; // 325
+pub const SECTOR_HEIGHT: i32 = MAP_HEIGHT / SECTOR_COUNT_Y; // 325
 
 /// 坐标转换工具
 pub fn pos_to_xy(pos: i32) -> (i32, i32) {
@@ -22,6 +26,14 @@ pub fn pos_to_grid(pos: i32) -> i32 {
     let gy = y / GRID_SIZE;
     // 假设横向有 1300/50 = 26 个 Grid
     gy * (MAP_WIDTH / GRID_SIZE) + gx
+}
+
+/// 计算坐标所在的 Sector 索引
+pub fn pos_to_sector_id(pos: i32) -> i32 {
+    let (x, y) = pos_to_xy(pos);
+    let sx = (x / SECTOR_WIDTH).min(SECTOR_COUNT_X - 1);
+    let sy = (y / SECTOR_HEIGHT).min(SECTOR_COUNT_Y - 1);
+    sy * SECTOR_COUNT_X + sx
 }
 
 /// 地图网格存储
