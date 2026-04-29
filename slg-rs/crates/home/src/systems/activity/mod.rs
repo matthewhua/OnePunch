@@ -55,7 +55,6 @@ impl ActivitySystem {
 impl PlayerSystem for ActivitySystem {
     fn load_from_bin(&mut self, _data: &[u8]) -> Result<()> {
         // TODO: 使用 Prost 解析 ActivityFunction PB
-        // 这里需要处理 proto2 的 extension 映射逻辑
         Ok(())
     }
 
@@ -63,42 +62,49 @@ impl PlayerSystem for ActivitySystem {
         // TODO: 序列化为二进制
         Ok(vec![])
     }
+
+    fn is_dirty(&self) -> bool {
+        self.dirty
+    }
+
+    fn mark_dirty(&mut self) {
+        self.dirty = true;
+    }
+
+    fn clear_dirty(&mut self) {
+        self.dirty = false;
+    }
+
+    fn column_name(&self) -> &'static str {
+        "activity_func"
+    }
 }
 
 impl crate::systems::ToFunctionClientBase for ActivitySystem {
-    fn to_function_base_bytes(&self) -> Result<Vec<u8>> {
-        use proto::slg::{FunctionClientBase, ActivityFunction, ActivityDataPb};
-        use shared::msg::{GameMessage, module_id, module_tag};
-        use prost::Message;
+    fn to_function_base_bytes(&self) -> Vec<u8> {
+        use proto::slg::{ActivityFunction, ActivityDataPb};
+        use shared::msg::ToFunctionClientBaseBytes;
 
-        // 1. 构建全量活动数据 PB
+        // 构建全量活动数据 PB
         let mut activity_func = ActivityFunction::default();
-        
+
         for (activity_id, personal) in &self.activities {
             let mut data_pb = ActivityDataPb::default();
             data_pb.activity_id = *activity_id;
             data_pb.open_times = Some(personal.open_times);
-            
+
             // 填充表单
             for (form_id, form) in &personal.forms {
-               match form.to_pb(*activity_id, *form_id) {
-                   Ok(f_pb) => data_pb.form.push(f_pb),
-                   Err(e) => tracing::error!("Failed to encode activity form: {}", e),
-               }
+                match form.to_pb(*activity_id, *form_id) {
+                    Ok(f_pb) => data_pb.form.push(f_pb),
+                    Err(e) => tracing::error!("Failed to encode activity form: {}", e),
+                }
             }
             activity_func.activity.push(data_pb);
         }
 
-        // 2. 构造 FunctionClientBase 外壳
-        let mut f_base = FunctionClientBase::default();
-        f_base.r#type = Some(module_id::ACTIVITY);
-
-        // 3. 将 ActivityFunction 作为 Extension 手动编码到外壳中
-        let mut buf = bytes::BytesMut::new();
-        f_base.encode(&mut buf)?;
-        GameMessage::encode_extension(module_tag::ACTIVITY, &activity_func, &mut buf);
-
-        Ok(buf.to_vec())
+        // 使用 shared::msg 中统一的 ToFunctionClientBaseBytes 实现
+        activity_func.to_function_base_bytes()
     }
 }
 

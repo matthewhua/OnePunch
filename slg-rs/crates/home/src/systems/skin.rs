@@ -23,4 +23,8 @@ impl PlayerSystem for SkinSystem {
     fn save_to_bin(&self) -> Result<Vec<u8>> {
         Ok(vec![])
     }
+
+    fn column_name(&self) -> &'static str {
+        "skin_func"
+    }
 }

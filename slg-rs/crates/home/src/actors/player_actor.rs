@@ -129,20 +129,19 @@ impl PlayerActor {
     async fn handle_get_role_data(&mut self, tx: oneshot::Sender<anyhow::Result<GetRoleDataRs>>) {
         use proto::slg::FunctionClientBase;
         use prost::Message;
+        use shared::msg::ToFunctionClientBaseBytes;
 
         let mut function_base = Vec::new();
 
-        // 1. 获取 Activity 数据
-        match self.activity_system.to_function_base_bytes() {
-            Ok(bytes) => {
-                if let Ok(f_base) = FunctionClientBase::decode(&bytes[..]) {
-                    function_base.push(f_base);
-                }
-            }
-            Err(e) => tracing::error!("Failed to get activity function base: {}", e),
+        // 获取 Activity 数据
+        let act_bytes = self.activity_system.to_function_base_bytes();
+        if let Ok(f_base) = FunctionClientBase::decode(act_bytes.as_slice()) {
+            function_base.push(f_base);
         }
 
-        // TODO: 获取 Lord, Hero 等其他系统数据
+        // TODO: 获取 Lord, Hero, Building, Tech 等其他系统数据
+        // let lord_bytes = self.lord_system.to_function_base_bytes();
+        // ...
 
         let rs = GetRoleDataRs {
             function_base,

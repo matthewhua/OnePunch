@@ -1,0 +1,13 @@
+{
+  "name": "Git Commit Message Generator",
+  "version": "1.0.0",
+  "description": "从 staged changes 生成符合规范的 git commit message",
+  "when": {
+    "type": "preToolUse",
+    "toolTypes": ["shell"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "用户即将执行 git commit 命令。请先检查暂存区是否有内容：\n\n1. 运行 `git diff --cached --name-only` 确认暂存了哪些文件\n2. 如果暂存区为空，回复 \"暂存区为空，请先 git add 要提交的文件\"\n3. 如果暂存区有内容，运行 `git diff --cached --stat` 查看改动摘要\n4. 根据仓库规范生成 commit message：\n   - 格式：`<type>(<scope>): <subject>`\n   - type 可选：feat, fix, chore, refactor, perf, docs, style, test\n   - scope 对应 crates/ 下的模块：auth, gateway, home, world, proto, shared, workspace\n   - subject 中文，动词开头，不超过50字，不加句号\n5. 告诉用户建议的 commit message，并询问是否确认提交\n\n如果用户确认，执行: git commit -m \"<生成的message>\""
+  }
+}

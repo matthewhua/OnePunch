@@ -7,7 +7,6 @@ use tracing::{info, warn, error};
 use crate::codec::{GameCodec, GamePacket};
 use shared::cmd::GameCmd;
 use proto::slg::auth_service_client::AuthServiceClient;
-use proto::slg::LoginRequest;
 
 pub struct ConnectionHandler {
     auth_addr: String,
@@ -94,7 +93,7 @@ impl ConnectionHandler {
             Ok(response.account_id)
         } else {
             // 4. 构建带错误码的响应包 (Base.code)
-            let err_payload = shared::msg::GameMessage::build_error(GameCmd::LoginRs.into(), 101)?; // 101: 登录失败错误码
+            let err_payload = shared::msg::GameMessage::build_error(GameCmd::LoginRs as i32, 101)?; // 101: 登录失败错误码
             framed.send(GamePacket::new(GameCmd::LoginRs, err_payload)).await?;
             
             return Err(anyhow::anyhow!("Auth failed: {}", response.error_msg));

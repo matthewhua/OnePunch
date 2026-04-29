@@ -28,4 +28,8 @@ bytes = "1.7"
 # Protobuf (可能在 shared 中处理一些通用逻辑)
 prost = "0.13"
 proto = { path = "../proto" }
-etcd-client = "0.14"
+etcd-client = { version = "0.14", optional = true }
+
+[features]
+default = []
+etcd = ["etcd-client"]

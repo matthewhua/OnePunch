@@ -22,7 +22,7 @@ impl GamePacket {
 
     /// 从具体业务消息构建响应包
     pub fn build_rs<T: prost::Message>(cmd: GameCmd, msg: &T) -> anyhow::Result<Self> {
-        let payload = GameMessage::build_response(cmd.into(), msg)?;
+        let payload = GameMessage::build_response(cmd as i32, msg)?;
         Ok(Self { cmd, payload })
     }
 
@@ -62,8 +62,8 @@ impl Decoder for GameCodec {
         // 确认数据完整后，消费长度头
         src.advance(4);
 
-        // 2. 读取 Cmd ID (4字节)
-        let cmd_id = src.get_u32_be();
+        // 2. 读取 Cmd ID (4字节，大端)
+        let cmd_id = src.get_u32();
         let cmd = GameCmd::from(cmd_id);
 
         // 3. 读取剩余 Payload (Base 消息)
@@ -82,8 +82,8 @@ impl Encoder<GamePacket> for GameCodec {
         let total_len = (4 + item.payload.len()) as u32;
         
         dst.reserve(4 + total_len as usize);
-        dst.put_u32_be(total_len);
-        dst.put_u32_be(item.cmd.into());
+        dst.put_u32(total_len);
+        dst.put_u32(item.cmd.into());
         dst.put_slice(&item.payload);
         
         Ok(())
@@ -95,57 +95,155 @@ mod tests {
     use super::*;
     use shared::cmd::GameCmd;
     use shared::msg::GameMessage;
-    use proto::slg::BeginGameRq;
+    use proto::slg::{BeginGameRq, BeginGameRs, RoleLoginRs};
 
     #[test]
-    fn test_codec_roundtrip() {
+    fn test_codec_roundtrip_raw_payload() {
         let mut codec = GameCodec;
         let mut buf = BytesMut::new();
-        
+
         let original_payload = vec![1, 2, 3, 4, 5];
-        let packet = GamePacket::new(GameCmd::LoginRq, original_payload.clone());
-        
+        let packet = GamePacket::new(GameCmd::BeginGameRq, original_payload.clone());
+
         codec.encode(packet, &mut buf).unwrap();
-        
-        // [Len: 4+5=9] [Cmd: 1001] [Payload: 1,2,3,4,5]
+
+        // 帧格式：[Len=9(4+5): 4字节] [Cmd=1101: 4字节] [Payload: 5字节]
         assert_eq!(buf.len(), 4 + 4 + 5);
-        
+
         let decoded = codec.decode(&mut buf).unwrap().unwrap();
-        assert_eq!(decoded.cmd, GameCmd::LoginRq);
+        assert_eq!(decoded.cmd, GameCmd::BeginGameRq);
         assert_eq!(decoded.payload, original_payload);
     }
 
     #[test]
-    fn test_full_protocol_stack_roundtrip() {
-        // 1. 模拟客户端行为：构建业务消息并序列化为 Base Extension 格式
+    fn test_codec_empty_payload() {
+        let mut codec = GameCodec;
+        let mut buf = BytesMut::new();
+
+        let packet = GamePacket::new(GameCmd::HeartbeatRq, vec![]);
+        codec.encode(packet, &mut buf).unwrap();
+
+        // 帧格式：[Len=4: 4字节] [Cmd=1115: 4字节]
+        assert_eq!(buf.len(), 8);
+
+        let decoded = codec.decode(&mut buf).unwrap().unwrap();
+        assert_eq!(decoded.cmd, GameCmd::HeartbeatRq);
+        assert!(decoded.payload.is_empty());
+    }
+
+    #[test]
+    fn test_codec_partial_data() {
+        let mut codec = GameCodec;
+        let mut buf = BytesMut::new();
+
+        // 只写入 3 字节（不足以读取长度头）
+        buf.put_slice(&[0, 0, 0]);
+        assert!(codec.decode(&mut buf).unwrap().is_none());
+
+        // 写入长度头但 payload 不完整
+        buf.clear();
+        buf.put_u32(100); // 声明 100 字节，但实际只有 4 字节
+        buf.put_u32(1101);
+        assert!(codec.decode(&mut buf).unwrap().is_none());
+    }
+
+    #[test]
+    fn test_full_protocol_stack_begin_game() {
+        // 1. 构建业务消息
         let mut rq = BeginGameRq::default();
         rq.server_id = 99;
         rq.token = "session_key".to_string();
         rq.device_no = "iphone_15".to_string();
-        
+        rq.key_id = 888888;
+
         let cmd = GameCmd::BeginGameRq;
-        let base_payload = GameMessage::build_response(cmd.into(), &rq).expect("Failed to build base response");
-        
-        // 2. 网关层封包：添加帧长度头和命令号头
+
+        // 2. 编码为 Base + extension 格式
+        let base_payload = GameMessage::build_response(cmd as i32, &rq)
+            .expect("build_response failed");
+
+        // 3. 封包（添加帧头）
         let mut codec = GameCodec;
         let mut buf = BytesMut::new();
         let packet = GamePacket::new(cmd, base_payload);
-        codec.encode(packet, &mut buf).expect("Failed to encode packet");
-        
-        // 3. 模拟网关接收：剥离封包头，验证命令号一致性
-        let decoded_packet = codec.decode(&mut buf).expect("Failed to decode").expect("Packet is None");
+        codec.encode(packet, &mut buf).expect("encode failed");
+
+        // 4. 解包
+        let decoded_packet = codec.decode(&mut buf)
+            .expect("decode error")
+            .expect("packet is None");
         assert_eq!(decoded_packet.cmd, GameCmd::BeginGameRq);
-        
-        // 4. 应用层解析：使用 GameMessage 解析 Base 消息并提取其内嵌的 Extension
-        let msg = decoded_packet.to_message().expect("Failed to parse GameMessage");
+
+        // 5. 解析 Base + extension
+        let msg = decoded_packet.to_message().expect("to_message failed");
         assert_eq!(msg.base.cmd, cmd as i32);
-        
-        let decoded_rq: BeginGameRq = msg.get_payload().expect("Failed to get business payload");
-        
-        // 5. 验证业务数据完整性
+
+        let decoded_rq: BeginGameRq = msg.get_payload().expect("get_payload failed");
         assert_eq!(decoded_rq.server_id, rq.server_id);
         assert_eq!(decoded_rq.token, rq.token);
         assert_eq!(decoded_rq.device_no, rq.device_no);
+        assert_eq!(decoded_rq.key_id, rq.key_id);
+    }
+
+    #[test]
+    fn test_full_protocol_stack_role_login_rs() {
+        // 测试服务端响应消息的编解码
+        let mut rs = RoleLoginRs::default();
+        rs.state = Some(1);
+
+        let cmd = GameCmd::RoleLoginRs;
+        let base_payload = GameMessage::build_response(cmd as i32, &rs)
+            .expect("build_response failed");
+
+        let mut codec = GameCodec;
+        let mut buf = BytesMut::new();
+        codec.encode(GamePacket::new(cmd, base_payload), &mut buf).unwrap();
+
+        let decoded = codec.decode(&mut buf).unwrap().unwrap();
+        assert_eq!(decoded.cmd, GameCmd::RoleLoginRs);
+
+        let msg = decoded.to_message().unwrap();
+        let decoded_rs: RoleLoginRs = msg.get_payload().unwrap();
+        assert_eq!(decoded_rs.state, Some(1));
+    }
+
+    #[test]
+    fn test_error_response_codec() {
+        let cmd = GameCmd::BeginGameRs;
+        let err_payload = GameMessage::build_error(cmd as i32, 403)
+            .expect("build_error failed");
+
+        let mut codec = GameCodec;
+        let mut buf = BytesMut::new();
+        codec.encode(GamePacket::new(cmd, err_payload), &mut buf).unwrap();
+
+        let decoded = codec.decode(&mut buf).unwrap().unwrap();
+        let msg = decoded.to_message().unwrap();
+        assert_eq!(msg.base.cmd, cmd as i32);
+        assert_eq!(msg.base.code, Some(403));
+    }
+
+    #[test]
+    fn test_multiple_packets_in_buffer() {
+        // 测试粘包处理：buffer 中有多个完整包
+        let mut codec = GameCodec;
+        let mut buf = BytesMut::new();
+
+        let p1 = GamePacket::new(GameCmd::HeartbeatRq, vec![]);
+        let p2 = GamePacket::new(GameCmd::HeartbeatRs, vec![1, 2]);
+
+        codec.encode(p1, &mut buf).unwrap();
+        codec.encode(p2, &mut buf).unwrap();
+
+        let d1 = codec.decode(&mut buf).unwrap().unwrap();
+        assert_eq!(d1.cmd, GameCmd::HeartbeatRq);
+
+        let d2 = codec.decode(&mut buf).unwrap().unwrap();
+        assert_eq!(d2.cmd, GameCmd::HeartbeatRs);
+        assert_eq!(d2.payload, vec![1, 2]);
+
+        // buffer 已空
+        assert!(codec.decode(&mut buf).unwrap().is_none());
     }
 }
 

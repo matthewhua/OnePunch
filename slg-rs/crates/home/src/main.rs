@@ -28,9 +28,10 @@ async fn main() -> anyhow::Result<()> {
     // 3. 初始化数据库
     let db = init_mysql(&config.database_url).await?;
 
-    // 4. 服务注册 (Etcd)
-    let registry = EtcdRegistry::new(config.etcd_endpoints.clone()).await?;
-    registry.register("home", &config.server_id, &config.server_addr, 30).await?;
+    // 4. 服务注册（etcd feature 未启用时跳过）
+    let _registry = EtcdRegistry::new(config.etcd_endpoints.clone()).await;
+    // 注意：register 方法仅在 etcd feature 启用时可用
+    // registry.register("home", &config.server_id, &config.server_addr, 30).await?;
     // 初始化静态配置及 Watcher
     let (config_watcher, config_rx) = shared::static_config::ConfigWatcher::new(db.clone()).await?;
     let _config_watcher = Arc::new(config_watcher);

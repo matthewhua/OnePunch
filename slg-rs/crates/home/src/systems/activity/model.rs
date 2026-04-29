@@ -9,6 +9,7 @@ pub struct ActivityData {
 }
 
 /// 全服活动数据上下文
+#[derive(Clone)]
 pub struct GlobalActivityData {
     pub activity_id: i32,
     pub stage: ActivityStage,

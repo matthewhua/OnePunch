@@ -21,14 +21,14 @@ impl BuildingSystem {
 
 impl PlayerSystem for BuildingSystem {
     fn load_from_bin(&mut self, _data: &[u8]) -> Result<()> {
-        // 使用 Prost 解码二进制数据
-        // self.data = BuildingPb::decode(data)?;
         Ok(())
     }
 
     fn save_to_bin(&self) -> Result<Vec<u8>> {
-        // 序列化回二进制数据
-        // Ok(self.data.encode_to_vec())
         Ok(vec![])
+    }
+
+    fn column_name(&self) -> &'static str {
+        "building_func"
     }
 }
