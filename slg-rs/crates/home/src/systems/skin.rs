@@ -2,15 +2,17 @@ use super::PlayerSystem;
 use anyhow::Result;
 
 pub struct SkinSystem {
-    // owned_skins: Vec<i32>,
+    dirty: bool,
+    // TODO: 皮肤数据字段
 }
 
 impl SkinSystem {
     pub fn new() -> Self {
-        Self { }
+        Self { dirty: false }
     }
 
     pub fn use_skin(&mut self, _skin_id: i32) -> Result<()> {
+        self.dirty = true;
         Ok(())
     }
 }
@@ -24,11 +26,11 @@ impl PlayerSystem for SkinSystem {
         Ok(vec![])
     }
 
-    fn key_id(&self) -> i32 {
-        shared::persistence::key_id::SKIN
-    }
+    fn is_dirty(&self) -> bool { self.dirty }
+    fn mark_dirty(&mut self) { self.dirty = true; }
+    fn clear_dirty(&mut self) { self.dirty = false; }
 
     fn column_name(&self) -> &'static str {
-        "skin_func"
+        shared::persistence::col::SKIN
     }
 }

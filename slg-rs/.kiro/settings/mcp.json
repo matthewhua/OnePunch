@@ -15,7 +15,8 @@
       "disabled": false,
       "autoApprove": [
         "describe_table",
-        "list_tables"
+        "list_tables",
+        "fetch_data"
       ]
     },
     "mysql-ini": {

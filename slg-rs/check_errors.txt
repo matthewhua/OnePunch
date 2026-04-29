@@ -1,32 +1,78 @@
-﻿cargo : warning: proto@0.1.0: cmd_generated.rs: 
-652 commands extracted
+﻿cargo : warning: proto@0.1.0: cmd_generated.rs: 652 commands extracted
 所在位置 行:1 字符: 1
-+ cargo test -p gateway 2>&1 | Out-File -FilePat
-h check_errors.txt -Enc ...
-+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (wa 
-   rning: proto@...mands extracted:String) [],  
-   RemoteException
-    + FullyQualifiedErrorId : NativeCommandErro 
-   r
++ cargo check -p shared -p home@0.1.0 2>&1 | Out-File -FilePath check_e ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: proto@...mands extracted 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
  
-   Compiling shared v0.1.0 (C:\dev\Company\OnePu
-nch\slg-rs\crates\shared)
-   Compiling gateway v0.1.0 (C:\dev\Company\OneP
-unch\slg-rs\crates\gateway)
-    Finished `test` profile [unoptimized + debug
-info] target(s) in 3.78s
-     Running unittests src\main.rs (target\debug
-\deps\gateway-01789e6450d4b20d.exe)
+    Checking home v0.1.0 (C:\dev\Company\OnePunch\slg-rs\crates\home)
+warning: unused import: `ActivityData`
+ --> crates\home\src\systems\activity\forms\task.rs:4:53
+  |
+4 | use crate::systems::activity::model::{PersonalForm, ActivityData};
+  |                                                     ^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
 
-running 7 tests
-test codec::tests::test_codec_partial_data ... ok
-test codec::tests::test_codec_empty_payload ... ok
-test codec::tests::test_codec_roundtrip_raw_payload ... ok
-test codec::tests::test_multiple_packets_in_buffer ... ok
-test codec::tests::test_error_response_codec ... ok
-test codec::tests::test_full_protocol_stack_role_login_rs ... ok
-test codec::tests::test_full_protocol_stack_begin_game ... ok
+warning: unused import: `ActivityData`
+ --> crates\home\src\systems\activity\forms\score.rs:4:53
+  |
+4 | use crate::systems::activity::model::{PersonalForm, ActivityData};
+  |                                                     ^^^^^^^^^^^^
 
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+warning: unused import: `ActivityData`
+ --> crates\home\src\systems\activity\forms\supreme_lord.rs:4:53
+  |
+4 | use crate::systems::activity::model::{PersonalForm, ActivityData};
+  |                                                     ^^^^^^^^^^^^
 
+warning: unnecessary parentheses around `if` condition
+   --> crates\home\src\actors\player_actor.rs:224:12
+    |
+224 |         if (force_all || self.lord_dirty) {
+    |            ^                            ^
+    |
+    = note: `#[warn(unused_parens)]` on by default
+help: remove these parentheses
+    |
+224 -         if (force_all || self.lord_dirty) {
+224 +         if force_all || self.lord_dirty {
+    |
+
+warning: unused import: `shared::msg::ToFunctionClientBaseBytes`
+  --> crates\home\src\systems\activity\mod.rs:86:13
+   |
+86 |         use shared::msg::ToFunctionClientBaseBytes;
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `ctx`
+   --> crates\home\src\systems\activity\mod.rs:119:45
+    |
+119 |     fn handle(&mut self, event: &GameEvent, ctx: &mut PlayerContext) {
+    |                                             ^^^ help: if this is intentio
+nal, prefix it with an underscore: `_ctx`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `act_msg_tx`
+  --> crates\home\src\main.rs:40:10
+   |
+40 |     let (act_msg_tx, act_msg_rx) = mpsc::channel::<ActivityMessage>(1024);
+   |          ^^^^^^^^^^ help: if this is intentional, prefix it with an unders
+core: `_act_msg_tx`
+
+warning: field `manager` is never read
+  --> crates\home\src\service.rs:12:5
+   |
+10 | pub struct HomeServiceImpl {
+   |            --------------- field in this struct
+11 |     db: MySqlPool,
+12 |     manager: Arc<PlayerManager>,
+   |     ^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `home` (bin "home") generated 8 warnings (run `cargo fix --bin "home"`
+ to apply 4 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.33s

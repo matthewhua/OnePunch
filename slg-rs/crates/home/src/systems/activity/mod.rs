@@ -76,11 +76,7 @@ impl PlayerSystem for ActivitySystem {
     }
 
     fn column_name(&self) -> &'static str {
-        "activity_func"
-    }
-
-    fn key_id(&self) -> i32 {
-        shared::persistence::key_id::ACTIVITY
+        shared::persistence::col::ACTIVITY
     }
 }
 

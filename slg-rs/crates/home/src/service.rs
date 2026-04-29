@@ -4,7 +4,6 @@ use proto::slg::{BeginGameRq, BeginGameRs, CreateRoleRq, CreateRoleRs, RoleLogin
 use sqlx::MySqlPool;
 use std::sync::Arc;
 use crate::managers::player_manager::PlayerManager;
-use crate::actors::player_actor::PlayerMessage;
 use rand::{distributions::Alphanumeric, Rng};
 use tracing::info;
 
@@ -18,84 +17,132 @@ impl HomeServiceImpl {
         Self { db, manager }
     }
 
-    /// 生成随机名: Guest{serverId}{Random}
     fn generate_random_name(&self, server_id: i32) -> String {
         let suffix: String = rand::thread_rng()
             .sample_iter(&Alphanumeric)
             .take(6)
             .map(char::from)
             .collect();
-        format!("Guest{}{}", server_id, suffix)
+        format!("Lord{}{}", server_id, suffix)
     }
 }
 
 #[tonic::async_trait]
 impl HomeService for HomeServiceImpl {
+    /// BeginGame：检查角色是否存在，返回状态
+    ///
+    /// 对应 Java 版 BeginGameHandler。
+    /// key_id 是账号唯一ID（account_key_id），server_id 是区服号。
     async fn begin_game(
         &self,
         request: Request<BeginGameRq>,
     ) -> Result<Response<BeginGameRs>, Status> {
         let req = request.into_inner();
-        let account_id = req.key_id; // 假设 keyId 就是 account_id
-        
-        // 1. 检查角色是否存在
-        let role: Option<(i64, i32, String)> = sqlx::query_as("SELECT role_id, camp, nickname FROM p_role WHERE account_id = ? AND serverId = ?")
-            .bind(account_id)
-            .bind(req.server_id)
-            .fetch_optional(&self.db)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let account_key_id = req.key_id;
+        let server_id = req.server_id;
+
+        // 查询 p_account 是否已有该账号在本服的记录
+        let account: Option<(i64, i32)> = sqlx::query_as(
+            "SELECT role_id, 0 FROM p_account WHERE account_key_id = ? AND server_id = ?"
+        )
+        .bind(account_key_id)
+        .bind(server_id)
+        .fetch_optional(&self.db)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
 
         let mut res = BeginGameRs::default();
         res.time = Some(chrono::Utc::now().timestamp() as i32);
 
-        match role {
-            Some((role_id, camp, _)) => {
-                res.state = Some(2); // 已创建
+        match account {
+            Some((role_id, _)) => {
+                // 已有角色，查询 p_lord 获取 camp
+                let lord: Option<(i32,)> = sqlx::query_as(
+                    "SELECT camp_id FROM p_lord WHERE role_id = ?"
+                )
+                .bind(role_id)
+                .fetch_optional(&self.db)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+                res.state = Some(2); // 已创建角色
                 res.role_id = Some(role_id);
-                res.camp = Some(camp);
+                res.camp = lord.map(|(c,)| c).or(Some(0));
             }
             None => {
-                res.state = Some(1); // 未创建
-                // 生成一些随机名字供预览
+                res.state = Some(1); // 未创建角色
                 res.name = vec![
-                    self.generate_random_name(req.server_id),
-                    self.generate_random_name(req.server_id),
-                    self.generate_random_name(req.server_id),
+                    self.generate_random_name(server_id),
+                    self.generate_random_name(server_id),
+                    self.generate_random_name(server_id),
                 ];
-                res.camp = Some(1); // 默认推荐阵营
+                res.camp = Some(1);
             }
         }
 
         Ok(Response::new(res))
     }
 
+    /// CreateRole：创建新角色
+    ///
+    /// 对应 Java 版 CreateRoleHandler。
     async fn create_role(
         &self,
         request: Request<CreateRoleRq>,
     ) -> Result<Response<CreateRoleRs>, Status> {
         let req = request.into_inner();
-        // 此处需要获取 account_id。通常从 context 获取，此处演示直接先假设从某处拿。
-        // 为了演示，我们假设 account_id 在请求里或通过外部注入。
-        // TODO: 完善从 gRPC Metadata 获取 account_id
-        
-        info!("Creating role for server {}: {}", req.server_id.unwrap_or(0), req.nick.as_deref().unwrap_or(""));
+        let nick = req.nick.as_deref().unwrap_or("").to_string();
+        let server_id = req.server_id.unwrap_or(1);
+        let camp = 1i32; // 默认阵营，客户端不传 camp（由服务端分配）
 
-        // 简化的创角逻辑
-        // TODO: 实现真正的 DB 插入并返回 role_id
-        
+        info!(nick, server_id, "Creating role");
+
+        // 生成 role_id（Java 版格式：server_id * 10^9 + 自增序列）
+        // 简化：使用 p_lord 自增 + server_id 前缀
+        // 实际应从 p_server_config 读取 max_key 并原子递增
+        let on_time = chrono::Utc::now().timestamp() as i32;
+
+        // 1. 插入 p_lord（role_id 由 Java 侧生成，这里用 server_id * 1e9 + 随机）
+        // TODO: 实现与 Java 版一致的 role_id 生成策略
+        let role_id: i64 = (server_id as i64) * 1_000_000_000
+            + rand::thread_rng().gen_range(1..=999_999_999);
+
+        // 2. 插入 p_lord
+        sqlx::query(
+            "INSERT INTO p_lord (role_id, nick, diamond, gold, meat, stamina, \
+             vip_level, vip_exp, camp_id, on_time, ol_time, off_time, \
+             total_login, current_streak, battle_fight, fame, pay_amount) \
+             VALUES (?, ?, 0, 0, 0, 200, 0, 0, ?, ?, 0, 0, 1, 1, 0, 0, 0)"
+        )
+        .bind(role_id)
+        .bind(&nick)
+        .bind(camp)
+        .bind(on_time)
+        .execute(&self.db)
+        .await
+        .map_err(|e| Status::internal(format!("Failed to create lord: {}", e)))?;
+
+        // 3. 插入 p_data（全列 NULL）
+        sqlx::query("INSERT IGNORE INTO p_data (role_id) VALUES (?)")
+            .bind(role_id)
+            .execute(&self.db)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to init p_data: {}", e)))?;
+
+        info!(role_id, nick, "Role created");
+
         Ok(Response::new(CreateRoleRs {
-            state: Some(1), // 成功
+            state: Some(1),
             ..Default::default()
         }))
     }
 
+    /// RoleLogin：玩家进入游戏，启动 PlayerActor
     async fn role_login(
         &self,
-        request: Request<RoleLoginRq>,
+        _request: Request<RoleLoginRq>,
     ) -> Result<Response<RoleLoginRs>, Status> {
-        // TODO: 从 Manager 启动或获取 Actor
-        // TODO: 这里的逻辑需要 account_id 和 role_id
+        // TODO: 从 gRPC Metadata 获取 account_id 和 role_id，启动 PlayerActor
         Ok(Response::new(RoleLoginRs {
             state: Some(1),
             ..Default::default()

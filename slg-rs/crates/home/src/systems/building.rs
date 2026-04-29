@@ -1,20 +1,19 @@
 use super::PlayerSystem;
 use anyhow::Result;
-// use proto::slg::BuildingPb; // 假设 proto 里有相关的结构
 
 pub struct BuildingSystem {
-    // 内存中的建筑数据，例如映射：建筑ID -> 建筑信息
-    // schools: Vec<Building>,
+    dirty: bool,
+    // TODO: 建筑数据字段
 }
 
 impl BuildingSystem {
     pub fn new() -> Self {
-        Self { }
+        Self { dirty: false }
     }
 
-    /// 升级建筑业务逻辑
     pub fn upgrade_building(&mut self, _building_id: i32) -> Result<()> {
         // TODO: 实现升级逻辑
+        self.dirty = true;
         Ok(())
     }
 }
@@ -28,11 +27,11 @@ impl PlayerSystem for BuildingSystem {
         Ok(vec![])
     }
 
-    fn key_id(&self) -> i32 {
-        shared::persistence::key_id::BUILDING
-    }
+    fn is_dirty(&self) -> bool { self.dirty }
+    fn mark_dirty(&mut self) { self.dirty = true; }
+    fn clear_dirty(&mut self) { self.dirty = false; }
 
     fn column_name(&self) -> &'static str {
-        "building_func"
+        shared::persistence::col::SIM  // 建筑对应 sim_func（模拟经营）
     }
 }
