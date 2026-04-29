@@ -5,7 +5,7 @@ pub mod skin;
 pub mod activity;
 
 /// 玩家功能系统 trait
-/// 每个系统管理一块玩家数据（对应 p_data 表的一个 blob 字段）
+/// 每个系统管理一块玩家数据（对应 p_data 表的一行，按 keyId 区分）
 pub trait PlayerSystem: Send + Sync {
     /// 从二进制数据加载（兼容 Java 版存储的 Blob）
     fn load_from_bin(&mut self, data: &[u8]) -> Result<()>;
@@ -18,13 +18,16 @@ pub trait PlayerSystem: Send + Sync {
         false
     }
 
-    /// 设置 dirty 标记
+    /// 标记数据已变更
     fn mark_dirty(&mut self) {}
 
     /// 清除 dirty 标记（存盘后调用）
     fn clear_dirty(&mut self) {}
 
-    /// 对应 p_data 表的列名（用于按需存盘）
+    /// 对应 p_data 表的 keyId（与 Java 版 FunctionTypeDefine 一致）
+    fn key_id(&self) -> i32;
+
+    /// 对应 p_data 表的列名（用于日志和调试）
     fn column_name(&self) -> &'static str;
 
     /// 每秒 tick（驱动倒计时、buff 过期等）

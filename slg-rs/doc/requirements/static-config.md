@@ -137,13 +137,27 @@
 
 | 功能 | 当前状态 | 差距 |
 |------|---------|------|
-| StaticConfig 容器 | ✅ 基础 | 仅有 ActivityConfig |
-| ConfigWatcher | ✅ 基础 | watch channel 已实现 |
-| ActivityConfig | ⚠️ 骨架 | 结构定义，查询逻辑待实现 |
-| 其他配置 | ❌ 缺失 | 将领、建筑、科技等全部缺失 |
-| 配置校验 | ❌ 缺失 | 需要实现 |
-| 并行加载 | ❌ 缺失 | 当前串行加载 |
-| 二级索引 | ❌ 缺失 | 需要实现 |
+| StaticConfig 容器 | ✅ 完成 | 16 个模块全部实现 |
+| ConfigWatcher | ✅ 完成 | watch channel 热加载已实现 |
+| ActivityConfig | ✅ 完成 | 10 张表、4 个二级索引 |
+| HeroConfig | ✅ 完成 | 将领/等级/升星/技能 |
+| BuildingConfig | ✅ 完成 | 建筑属性 + 类型索引 |
+| TechConfig | ✅ 完成 | 科技等级 + 类型索引 |
+| EquipConfig | ✅ 完成 | 装备 + 强化等级 |
+| ItemConfig | ✅ 完成 | 道具配置 + 类型索引 |
+| TaskConfig | ✅ 完成 | 任务/章节/日常 |
+| ShopConfig | ✅ 完成 | 商店 + 商品 |
+| VipConfig | ✅ 完成 | VIP 等级 |
+| SkinConfig | ✅ 完成 | 皮肤 + 类型索引 |
+| LordEquipConfig | ✅ 完成 | 领主装备 + 套装 |
+| LordTalentConfig | ✅ 完成 | 领主天赋 + 阶段 |
+| MailConfig | ✅ 完成 | 邮件模板 |
+| WorldConfig | ✅ 完成 | 地图/NPC/矿/城墙 |
+| BattleConfig | ✅ 完成 | 战斗技能/类型/buff |
+| PayConfig | ✅ 完成 | 充值商品 |
+| 并行加载 | ✅ 完成 | tokio::try_join! 两批并行 |
+| 二级索引 | ✅ 完成 | 各模块 build_indexes() |
+| 配置校验 | ✅ 基础 | 外键引用校验（告警不阻塞） |
 
 ---
 

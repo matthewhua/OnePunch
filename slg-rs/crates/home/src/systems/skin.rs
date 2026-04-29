@@ -24,6 +24,10 @@ impl PlayerSystem for SkinSystem {
         Ok(vec![])
     }
 
+    fn key_id(&self) -> i32 {
+        shared::persistence::key_id::SKIN
+    }
+
     fn column_name(&self) -> &'static str {
         "skin_func"
     }

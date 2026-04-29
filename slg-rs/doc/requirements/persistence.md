@@ -136,13 +136,20 @@ CREATE TABLE p_data (
 
 | 功能 | 当前状态 | 差距 |
 |------|---------|------|
-| p_account 读写 | ❌ 缺失 | 需要实现 |
-| p_data 读写 | ❌ 缺失 | 需要实现 |
-| 定时存盘 | ❌ 缺失 | 需要在 PlayerActor 中添加 |
-| Dirty 标记 | ❌ 缺失 | 需要在 PlayerSystem trait 中添加 |
-| 下线存盘 | ❌ 缺失 | 需要实现 |
-| 紧急存盘 | ❌ 缺失 | 需要实现 |
-| 数据版本控制 | ❌ 缺失 | 需要实现 |
+| p_role 读写 | ✅ 完成 | PlayerDao: CRUD + login/logout 时间更新 |
+| p_data 读写 | ✅ 完成 | PlayerDao: load_all / save_data (事务 upsert) |
+| p_global 读写 | ✅ 完成 | PlayerDao: load_global / save_global |
+| 定时存盘 | ✅ 完成 | PlayerActor 每 5 分钟自动存盘 dirty 模块 |
+| Dirty 标记 | ✅ 完成 | PlayerSystem trait: is_dirty / mark_dirty / clear_dirty |
+| 下线存盘 | ✅ 完成 | Shutdown 消息触发全量存盘 |
+| 关键操作存盘 | ✅ 完成 | ForceSave 消息触发立即存盘 |
+| 紧急存盘 | ✅ 完成 | 连续 3 次失败后序列化到本地文件 |
+| 存盘超时保护 | ✅ 完成 | 10 秒超时 |
+| 新玩家初始化 | ✅ 完成 | init_player_data 批量插入空行 |
+| keyId 常量 | ✅ 完成 | 25 个模块 keyId 定义 |
+| 踢重复登录 | ✅ 完成 | PlayerManager spawn 时自动踢旧 Actor |
+| 优雅关闭 | ✅ 完成 | shutdown_all 通知所有玩家存盘 |
+| 数据版本控制 | ❌ 待实现 | 乐观锁（后续优化） |
 
 ---
 

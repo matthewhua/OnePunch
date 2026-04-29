@@ -4,8 +4,11 @@ use std::path::Path;
 use regex::Regex;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 设置内置的 protoc 路径（无需系统安装 protoc）
-    std::env::set_var("PROTOC", protoc_bin_vendored::protoc_bin_path().unwrap());
+    // 使用 protoc-bin-vendored 提供的现代 protoc（支持 proto2 + proto3）
+    // 旧的 crates/proto/protoc.exe 是 2.5.0 版本，不支持 proto3 语法
+    let protoc = protoc_bin_vendored::protoc_bin_path()
+        .expect("Failed to find vendored protoc binary");
+    std::env::set_var("PROTOC", &protoc);
 
     println!("cargo:rerun-if-changed=proto");
 

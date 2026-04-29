@@ -47,7 +47,8 @@ async fn main() -> anyhow::Result<()> {
     });
 
     // 5. 初始化管理器与服务
-    let manager = Arc::new(managers::player_manager::PlayerManager::new(event_bus, config_rx));
+    let dao = Arc::new(shared::persistence::PlayerDao::new(db.clone()));
+    let manager = Arc::new(managers::player_manager::PlayerManager::new(event_bus, config_rx, dao));
     let home_service = service::HomeServiceImpl::new(db, manager);
 
     // 5. 启动 gRPC 服务

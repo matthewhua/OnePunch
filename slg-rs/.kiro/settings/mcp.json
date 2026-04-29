@@ -1,0 +1,42 @@
+{
+  "mcpServers": {
+    "mysql-game": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-mysql"
+      ],
+      "env": {
+        "MYSQL_HOST": "172.16.13.110",
+        "MYSQL_PORT": "3307",
+        "MYSQL_USER": "root",
+        "MYSQL_PASSWORD": "00000000",
+        "MYSQL_DATABASE": "imperial_sim_game_hqy"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "describe_table",
+        "list_tables"
+      ]
+    },
+    "mysql-ini": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-mysql"
+      ],
+      "env": {
+        "MYSQL_HOST": "172.16.13.110",
+        "MYSQL_PORT": "3307",
+        "MYSQL_USER": "root",
+        "MYSQL_PASSWORD": "00000000",
+        "MYSQL_DATABASE": "simulate_ini_test"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "list_tables",
+        "fetch_data",
+        "describe_table",
+        "execute_query"
+      ]
+    }
+  }
+}

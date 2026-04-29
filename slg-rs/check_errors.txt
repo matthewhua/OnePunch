@@ -1,123 +1,32 @@
-cargo :     Checking world v0.1.0 (C:\dev\Company\OnePunch\slg-rs\crates\world)
-???? ?:1 ??: 1
-+ cargo check -p world *>&1 | Out-File -FilePath check_errors.txt -Enco ...
-+ ~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (    Checking wo...s\crates\world):String 
-   ) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
+﻿cargo : warning: proto@0.1.0: cmd_generated.rs: 
+652 commands extracted
+所在位置 行:1 字符: 1
++ cargo test -p gateway 2>&1 | Out-File -FilePat
+h check_errors.txt -Enc ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (wa 
+   rning: proto@...mands extracted:String) [],  
+   RemoteException
+    + FullyQualifiedErrorId : NativeCommandErro 
+   r
  
-error: no rules expected `,`
-  --> crates\world\src\metrics.rs:29:9
-   |
-29 |         gauge!("sector_marching_troops", count as f64, "sector" => sector_id.to_s
-tring());
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-^^^^^^^^ no rules expected this token in macro call
-   |
-note: while trying to match `=>`
-  --> C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\metr
-ics-0.23.1\src\macros.rs:48:36
-   |
-48 |     ($name:expr, $($label_key:expr => $label_value:expr),*) => {{
-   |                                    ^^
-   = note: this error originates in the macro `$crate::gauge` which comes from the exp
-ansion of the macro `gauge` (in Nightly builds, run with -Z macro-backtrace for more i
-nfo)
+   Compiling shared v0.1.0 (C:\dev\Company\OnePu
+nch\slg-rs\crates\shared)
+   Compiling gateway v0.1.0 (C:\dev\Company\OneP
+unch\slg-rs\crates\gateway)
+    Finished `test` profile [unoptimized + debug
+info] target(s) in 3.78s
+     Running unittests src\main.rs (target\debug
+\deps\gateway-01789e6450d4b20d.exe)
 
-error: no rules expected `,`
-  --> crates\world\src\metrics.rs:33:9
-   |
-33 |         counter!("sector_messages_processed", 1, "sector" => sector_id.to_string(
-));
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-^^ no rules expected this token in macro call
-   |
-note: while trying to match `=>`
-  --> C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\metr
-ics-0.23.1\src\macros.rs:35:42
-   |
-35 |     ($name:literal, $($label_key:literal => $label_value:literal),*) => {{
-   |                                          ^^
-   = note: this error originates in the macro `$crate::counter` which comes from the e
-xpansion of the macro `counter` (in Nightly builds, run with -Z macro-backtrace for mo
-re info)
+running 7 tests
+test codec::tests::test_codec_partial_data ... ok
+test codec::tests::test_codec_empty_payload ... ok
+test codec::tests::test_codec_roundtrip_raw_payload ... ok
+test codec::tests::test_multiple_packets_in_buffer ... ok
+test codec::tests::test_error_response_codec ... ok
+test codec::tests::test_full_protocol_stack_role_login_rs ... ok
+test codec::tests::test_full_protocol_stack_begin_game ... ok
 
-warning: unused import: `error`
- --> crates\world\src\main.rs:5:21
-  |
-5 | use tracing::{info, error};
-  |                     ^^^^^
-  |
-  = note: `#[warn(unused_imports)]` on by default
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-warning: unused imports: `Duration` and `Instant`
- --> crates\world\src\march\mod.rs:1:17
-  |
-1 | use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-  |                 ^^^^^^^^  ^^^^^^^
-
-warning: unused import: `debug`
- --> crates\world\src\march\mod.rs:4:21
-  |
-4 | use tracing::{info, debug};
-  |                     ^^^^^
-
-warning: unused import: `warn`
-  --> crates\world\src\sector_actor.rs:12:21
-   |
-12 | use tracing::{info, warn, error};
-   |                     ^^^^
-
-warning: unused import: `JoinHandle`
- --> crates\world\src\supervisor.rs:3:28
-  |
-3 | use tokio::task::{JoinSet, JoinHandle};
-  |                            ^^^^^^^^^^
-
-warning: unused import: `std::collections::HashMap`
- --> crates\world\src\health.rs:1:5
-  |
-1 | use std::collections::HashMap;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
-
-warning: unused variable: `gid`
-  --> crates\world\src\map\aoi.rs:71:31
-   |
-71 |     pub fn unsubscribe(&self, gid: i32, account_id: i64) {
-   |                               ^^^ help: if this is intentional, prefix it with an
- underscore: `_gid`
-   |
-   = note: `#[warn(unused_variables)]` on by default
-
-warning: unused variable: `account_id`
-  --> crates\world\src\map\aoi.rs:71:41
-   |
-71 |     pub fn unsubscribe(&self, gid: i32, account_id: i64) {
-   |                                         ^^^^^^^^^^ help: if this is intentional, 
-prefix it with an underscore: `_account_id`
-
-warning: variable does not need to be mutable
-  --> crates\world\src\timer_wheel.rs:65:13
-   |
-65 |         let mut expired = std::mem::take(&mut self.ticks[tick_idx]);
-   |             ----^^^^^^^
-   |             |
-   |             help: remove this `mut`
-   |
-   = note: `#[warn(unused_mut)]` on by default
-
-warning: unused variable: `grid`
-  --> crates\world\src\main.rs:27:9
-   |
-27 |     let grid = Arc::new(map::grid::MapGrid::new());
-   |         ^^^^ help: if this is intentional, prefix it with an underscore: `_grid`
-
-warning: unused variable: `aoi`
-  --> crates\world\src\main.rs:28:9
-   |
-28 |     let aoi = Arc::new(map::aoi::AoiManager::new());
-   |         ^^^ help: if this is intentional, prefix it with an underscore: `_aoi`
-
-warning: `world` (bin "world") generated 11 warnings
-error: could not compile `world` (bin "world") due to 2 previous errors; 11 warnings e
-mitted

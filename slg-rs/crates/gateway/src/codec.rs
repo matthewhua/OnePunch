@@ -95,7 +95,7 @@ mod tests {
     use super::*;
     use shared::cmd::GameCmd;
     use shared::msg::GameMessage;
-    use proto::slg::{BeginGameRq, BeginGameRs, RoleLoginRs};
+    use proto::slg::{BeginGameRq, RoleLoginRs};
 
     #[test]
     fn test_codec_roundtrip_raw_payload() {

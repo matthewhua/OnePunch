@@ -28,6 +28,10 @@ impl PlayerSystem for BuildingSystem {
         Ok(vec![])
     }
 
+    fn key_id(&self) -> i32 {
+        shared::persistence::key_id::BUILDING
+    }
+
     fn column_name(&self) -> &'static str {
         "building_func"
     }
