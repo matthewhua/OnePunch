@@ -1,68 +1,128 @@
+//! 连接处理器
+//!
+//! 每个 TCP 连接对应一个 `ConnectionHandler` 实例（在独立 tokio task 中运行）。
+//! 实现完整的会话状态机和消息路由。
+//!
+//! # 登录流程
+//!
+//! ```text
+//! Client                    Gateway                   Auth Service
+//!   │──DoLoginRq(plat_id)──▶│──gRPC Login(plat_id)──▶│
+//!   │                        │◀──LoginResponse─────────│
+//!   │◀──DoLoginRs(keyId,tok)─│
+//!   │
+//!   │──VerifyRq(keyId,token)─▶│──gRPC ValidateToken──▶│
+//!   │                          │◀──ValidateTokenRs──────│
+//!   │◀──VerifyRs(keyId,platId)─│
+//!   │
+//!   │──BeginGameRq(serverId)──▶│──gRPC BeginGame──▶ Home Service
+//!   │◀──BeginGameRs(state)──────│
+//!   │
+//!   │──[业务消息]──────────────▶│──路由到 Home/World Service
+//! ```
+
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
 use futures::{SinkExt, StreamExt};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::timeout;
-use tracing::{info, warn, error};
-use crate::codec::{GameCodec, GamePacket};
-use shared::cmd::GameCmd;
-use proto::slg::auth_service_client::AuthServiceClient;
+use tracing::{info, warn, error, debug};
+use anyhow::{Result, anyhow};
 
+use crate::codec::{GameCodec, GamePacket};
+use crate::session::{SessionStore, SessionState, DisconnectTx, DisconnectNotice};
+use shared::cmd::{GameCmd, GameCmdExt, CmdRoute};
+use proto::slg::auth_service_client::AuthServiceClient;
+use proto::slg::home_service_client::HomeServiceClient;
+
+/// 心跳超时（60 秒无任何包则断开）
+const HEARTBEAT_TIMEOUT_SECS: u64 = 60;
+/// 最大帧大小（64KB）
+const MAX_FRAME_SIZE: usize = 65536;
+
+/// 连接处理器
+///
+/// 每个连接一个实例，持有共享的 SessionStore 和服务地址。
 pub struct ConnectionHandler {
-    auth_addr: String,
+    pub sessions: Arc<SessionStore>,
+    pub auth_addr: String,
+    pub home_addr: String,
+    pub disconnect_tx: DisconnectTx,
 }
 
 impl ConnectionHandler {
-    pub fn new(auth_addr: String) -> Self {
-        Self { auth_addr }
+    pub fn new(
+        sessions: Arc<SessionStore>,
+        auth_addr: String,
+        home_addr: String,
+        disconnect_tx: DisconnectTx,
+    ) -> Self {
+        Self { sessions, auth_addr, home_addr, disconnect_tx }
     }
 
-    pub async fn handle(&self, stream: TcpStream) -> anyhow::Result<()> {
-        let mut framed = Framed::new(stream, GameCodec);
-        let mut account_id: Option<i64> = None;
+    /// 处理一个 TCP 连接的完整生命周期
+    pub async fn handle(&self, stream: TcpStream) -> Result<()> {
+        let peer_addr = stream.peer_addr()?;
+        let conn_id = self.sessions.alloc_conn_id();
+        self.sessions.register(conn_id, peer_addr);
 
-        info!("New connection from: {:?}", framed.get_ref().peer_addr()?);
+        info!(conn_id, %peer_addr, "Connection established");
+
+        let result = self.run_connection(conn_id, stream).await;
+
+        // 连接结束，清理会话并发送下线通知
+        let account_key_id = self.sessions.get_account_key_id(conn_id);
+        let role_id = self.sessions.get_role_id(conn_id);
+        self.sessions.remove(conn_id);
+
+        if let Some(akid) = account_key_id {
+            let _ = self.disconnect_tx.send(DisconnectNotice {
+                conn_id,
+                account_key_id: akid,
+                role_id,
+            });
+        }
+
+        info!(conn_id, %peer_addr, online = self.sessions.online_count(), "Connection closed");
+
+        result
+    }
+
+    async fn run_connection(&self, conn_id: u64, stream: TcpStream) -> Result<()> {
+        let mut framed = Framed::new(stream, GameCodec);
 
         loop {
-            // 设置 60 秒超时
-            let packet_result = timeout(Duration::from_secs(60), framed.next()).await;
+            let packet_result = timeout(
+                Duration::from_secs(HEARTBEAT_TIMEOUT_SECS),
+                framed.next(),
+            ).await;
 
             match packet_result {
                 Ok(Some(Ok(packet))) => {
-                    if account_id.is_none() {
-                        // 鉴权前，只允许登录请求
-                        if packet.cmd == GameCmd::DoLoginRq {
-                            match self.handle_login(packet, &mut framed).await {
-                                Ok(id) => {
-                                    account_id = Some(id);
-                                    info!("Login success for account: {}", id);
-                                }
-                                Err(e) => {
-                                    warn!("Login failed: {}", e);
-                                    break;
-                                }
-                            }
-                        } else {
-                            warn!("Unauthorized command before login: {:?}", packet.cmd);
-                            break;
-                        }
-                    } else {
-                        // 已登录逻辑
-                        self.handle_authenticated_packet(packet, account_id.unwrap(), &mut framed).await?;
+                    // 帧大小检查
+                    if packet.payload.len() > MAX_FRAME_SIZE {
+                        warn!(conn_id, cmd = ?packet.cmd, size = packet.payload.len(), "Frame too large");
+                        break;
+                    }
+
+                    self.sessions.touch(conn_id);
+
+                    if let Err(e) = self.dispatch(conn_id, packet, &mut framed).await {
+                        warn!(conn_id, "Dispatch error: {}", e);
+                        break;
                     }
                 }
                 Ok(Some(Err(e))) => {
-                    error!("Protocol error: {}", e);
+                    error!(conn_id, "Protocol error: {}", e);
                     break;
                 }
                 Ok(None) => {
-                    info!("Connection closed by peer");
+                    debug!(conn_id, "Connection closed by peer");
                     break;
                 }
                 Err(_) => {
-                    // 60秒超时
-                    warn!("Connection idle timeout (60s)");
-                    // 可以尝试发送断开通知
+                    warn!(conn_id, "Heartbeat timeout ({}s)", HEARTBEAT_TIMEOUT_SECS);
                     break;
                 }
             }
@@ -71,51 +131,275 @@ impl ConnectionHandler {
         Ok(())
     }
 
-    async fn handle_login(&self, packet: GamePacket, framed: &mut Framed<TcpStream, GameCodec>) -> anyhow::Result<i64> {
-        // 1. 将原始包转换为 GameMessage (解析 Base + Extensions)
-        let msg = packet.to_message()?;
-        
-        // 2. 从 Extension 中提取客户端发来的 DoLoginRq（proto2 消息，ext = 103）
-        let do_login_rq: proto::slg::DoLoginRq = msg.get_payload()?;
-        
-        // 3. 将 DoLoginRq 转换为内部 gRPC LoginRequest
-        let req = proto::slg::LoginRequest {
-            username: do_login_rq.param.first().cloned().unwrap_or_default(),
-            password: String::new(), // DoLoginRq 不含密码，由 token 验证
-        };
+    /// 根据会话状态分发消息
+    async fn dispatch(
+        &self,
+        conn_id: u64,
+        packet: GamePacket,
+        framed: &mut Framed<TcpStream, GameCodec>,
+    ) -> Result<()> {
+        let state = self.sessions.get_state(conn_id)
+            .unwrap_or(SessionState::Disconnecting);
 
-        // 调用 Auth 服务
-        let mut client = AuthServiceClient::connect(self.auth_addr.clone()).await?;
-        let response = client.login(req).await?.into_inner();
-
-        if response.success {
-            // 4. 将 gRPC 响应转换为客户端期望的 DoLoginRs（proto2 消息，ext = 104）
-            let do_login_rs = proto::slg::DoLoginRs {
-                key_id: Some(response.account_id),
-                token: Some(response.token),
-                ..Default::default()
-            };
-            let rs_packet = GamePacket::build_rs(GameCmd::DoLoginRs, &do_login_rs)?;
-            framed.send(rs_packet).await?;
-            
-            Ok(response.account_id)
-        } else {
-            // 5. 构建带错误码的响应包 (Base.code)
-            let err_payload = shared::msg::GameMessage::build_error(GameCmd::DoLoginRs as i32, 101)?;
-            framed.send(GamePacket::new(GameCmd::DoLoginRs, err_payload)).await?;
-            
-            return Err(anyhow::anyhow!("Auth failed: {}", response.error_msg));
+        match state {
+            SessionState::Connected => {
+                // 未登录：只允许 DoLoginRq
+                if packet.cmd == GameCmd::DoLoginRq {
+                    self.handle_do_login(conn_id, packet, framed).await
+                } else {
+                    warn!(conn_id, cmd = ?packet.cmd, "Rejected: not authenticated");
+                    let err = shared::msg::GameMessage::build_error(packet.cmd as i32, 401)?;
+                    framed.send(GamePacket::new(packet.cmd, err)).await?;
+                    Err(anyhow!("Unauthorized command before login"))
+                }
+            }
+            SessionState::Authenticated => {
+                // 已登录：只允许 VerifyRq
+                if packet.cmd == GameCmd::VerifyRq {
+                    self.handle_verify(conn_id, packet, framed).await
+                } else {
+                    warn!(conn_id, cmd = ?packet.cmd, "Rejected: verify required");
+                    Err(anyhow!("VerifyRq required"))
+                }
+            }
+            SessionState::Verified => {
+                // 已验证：只允许 BeginGameRq
+                if packet.cmd == GameCmd::BeginGameRq {
+                    self.handle_begin_game(conn_id, packet, framed).await
+                } else {
+                    warn!(conn_id, cmd = ?packet.cmd, "Rejected: BeginGame required");
+                    Err(anyhow!("BeginGameRq required"))
+                }
+            }
+            SessionState::InGame => {
+                // 已进入游戏：按 cmd 路由
+                self.handle_in_game(conn_id, packet, framed).await
+            }
+            SessionState::Disconnecting => {
+                Err(anyhow!("Session is disconnecting"))
+            }
         }
     }
 
-    async fn handle_authenticated_packet(
-        &self, 
-        packet: GamePacket, 
-        account_id: i64, 
-        _framed: &mut Framed<TcpStream, GameCodec>
-    ) -> anyhow::Result<()> {
-        info!("Handling packet for authenticated user {}: {:?}", account_id, packet.cmd);
-        // 这里后续会转发到 Home/World 服务
+    // ── 登录流程 ──────────────────────────────────────────────────────────────
+
+    /// 处理 DoLoginRq（ext=103）
+    ///
+    /// 从 DoLoginRq 提取 plat_id（param[0]）和 device_no，
+    /// 调用 Auth Service 验证，返回 DoLoginRs（keyId + token）。
+    async fn handle_do_login(
+        &self,
+        conn_id: u64,
+        packet: GamePacket,
+        framed: &mut Framed<TcpStream, GameCodec>,
+    ) -> Result<()> {
+        let msg = packet.to_message()?;
+        let rq: proto::slg::DoLoginRq = msg.get_payload()?;
+
+        // plat_id 在 param[0]，device_no 在 deviceNo 字段
+        let plat_id = rq.param.first().cloned().unwrap_or_default();
+        let device_no = rq.device_no.clone();
+
+        debug!(conn_id, plat_id, "DoLogin attempt");
+
+        // 调用 Auth Service
+        let mut auth_client = AuthServiceClient::connect(self.auth_addr.clone()).await
+            .map_err(|e| anyhow!("Auth service unavailable: {}", e))?;
+
+        let login_resp = auth_client.login(proto::slg::LoginRequest {
+            username: plat_id.clone(),
+            password: device_no,
+        }).await?.into_inner();
+
+        if !login_resp.success {
+            warn!(conn_id, plat_id, "DoLogin failed: {}", login_resp.error_msg);
+            let err = shared::msg::GameMessage::build_error(GameCmd::DoLoginRs as i32, 101)?;
+            framed.send(GamePacket::new(GameCmd::DoLoginRs, err)).await?;
+            return Err(anyhow!("Login failed: {}", login_resp.error_msg));
+        }
+
+        let account_key_id = login_resp.account_id;
+        let token = login_resp.token.clone();
+
+        // 踢掉旧连接（如果有）
+        if let Some(old_conn_id) = self.sessions.bind_account(conn_id, account_key_id, token.clone()) {
+            warn!(conn_id, old_conn_id, account_key_id, "Kicking duplicate login");
+            // 旧连接会在下次 dispatch 时因 session 被覆盖而断开
+        }
+
+        // 返回 DoLoginRs
+        let rs = proto::slg::DoLoginRs {
+            key_id: Some(account_key_id),
+            token: Some(token),
+            ..Default::default()
+        };
+        framed.send(GamePacket::build_rs(GameCmd::DoLoginRs, &rs)?).await?;
+
+        info!(conn_id, account_key_id, "DoLogin success");
+        Ok(())
+    }
+
+    /// 处理 VerifyRq（ext=105）
+    ///
+    /// 验证 token 有效性，确认区服号，返回 VerifyRs。
+    async fn handle_verify(
+        &self,
+        conn_id: u64,
+        packet: GamePacket,
+        framed: &mut Framed<TcpStream, GameCodec>,
+    ) -> Result<()> {
+        let msg = packet.to_message()?;
+        let rq: proto::slg::VerifyRq = msg.get_payload()?;
+
+        let token = rq.token.clone();
+        let server_id = rq.server_id;
+
+        debug!(conn_id, server_id, "Verify attempt");
+
+        // 调用 Auth Service 验证 token
+        let mut auth_client = AuthServiceClient::connect(self.auth_addr.clone()).await
+            .map_err(|e| anyhow!("Auth service unavailable: {}", e))?;
+
+        let validate_resp = auth_client.validate_token(proto::slg::ValidateTokenRequest {
+            token: token.clone(),
+        }).await?.into_inner();
+
+        if !validate_resp.valid {
+            warn!(conn_id, "Verify failed: invalid token");
+            let err = shared::msg::GameMessage::build_error(GameCmd::VerifyRs as i32, 102)?;
+            framed.send(GamePacket::new(GameCmd::VerifyRs, err)).await?;
+            return Err(anyhow!("Invalid token"));
+        }
+
+        // 更新会话状态
+        self.sessions.set_verified(conn_id, server_id);
+
+        // 返回 VerifyRs
+        let rs = proto::slg::VerifyRs {
+            key_id: Some(validate_resp.account_id),
+            server_id: Some(server_id),
+            ..Default::default()
+        };
+        framed.send(GamePacket::build_rs(GameCmd::VerifyRs, &rs)?).await?;
+
+        info!(conn_id, account_key_id = validate_resp.account_id, server_id, "Verify success");
+        Ok(())
+    }
+
+    /// 处理 BeginGameRq（ext=1101）
+    ///
+    /// 查询角色状态，转发到 Home Service，返回 BeginGameRs。
+    async fn handle_begin_game(
+        &self,
+        conn_id: u64,
+        packet: GamePacket,
+        framed: &mut Framed<TcpStream, GameCodec>,
+    ) -> Result<()> {
+        let msg = packet.to_message()?;
+        let rq: proto::slg::BeginGameRq = msg.get_payload()?;
+
+        let account_key_id = self.sessions.get_account_key_id(conn_id)
+            .ok_or_else(|| anyhow!("No account_key_id in session"))?;
+        let server_id = self.sessions.get_server_id(conn_id)
+            .unwrap_or(rq.server_id);
+
+        debug!(conn_id, account_key_id, server_id, "BeginGame");
+
+        // 转发到 Home Service
+        let mut home_client = HomeServiceClient::connect(self.home_addr.clone()).await
+            .map_err(|e| anyhow!("Home service unavailable: {}", e))?;
+
+        let begin_rq = proto::slg::BeginGameRq {
+            server_id,
+            key_id: account_key_id,
+            token: rq.token.clone(),
+            device_no: rq.device_no.clone(),
+            cur_version: rq.cur_version.clone(),
+            ..Default::default()
+        };
+
+        let rs = home_client.begin_game(begin_rq).await?.into_inner();
+
+        // 如果已有角色，更新 role_id
+        if let Some(role_id) = rs.role_id {
+            self.sessions.set_in_game(conn_id, role_id);
+            info!(conn_id, account_key_id, role_id, state = rs.state, "BeginGame: role exists");
+        } else {
+            // 未创建角色，仍进入 InGame 状态（等待 CreateRole）
+            self.sessions.set_in_game(conn_id, 0);
+            info!(conn_id, account_key_id, "BeginGame: no role yet");
+        }
+
+        framed.send(GamePacket::build_rs(GameCmd::BeginGameRs, &rs)?).await?;
+        Ok(())
+    }
+
+    // ── 游戏内消息路由 ────────────────────────────────────────────────────────
+
+    /// 处理已登录玩家的业务消息
+    async fn handle_in_game(
+        &self,
+        conn_id: u64,
+        packet: GamePacket,
+        framed: &mut Framed<TcpStream, GameCodec>,
+    ) -> Result<()> {
+        let cmd = packet.cmd;
+
+        // 心跳特殊处理（直接回包，不转发后端）
+        if cmd == GameCmd::HeartbeatRq {
+            return self.handle_heartbeat(conn_id, framed).await;
+        }
+
+        // 按 cmd 路由
+        match cmd.route() {
+            CmdRoute::Auth => {
+                // Auth 命令在 InGame 阶段不应出现，忽略
+                warn!(conn_id, cmd = ?cmd, "Unexpected Auth cmd in InGame state");
+                Ok(())
+            }
+            CmdRoute::Home => {
+                self.forward_to_home(conn_id, packet, framed).await
+            }
+            CmdRoute::World => {
+                // TODO: 转发到 World Service
+                debug!(conn_id, cmd = ?cmd, "World cmd (not yet implemented)");
+                Ok(())
+            }
+        }
+    }
+
+    /// 处理心跳（HeartbeatRq ext=1115 → HeartbeatRs ext=1116）
+    async fn handle_heartbeat(
+        &self,
+        conn_id: u64,
+        framed: &mut Framed<TcpStream, GameCodec>,
+    ) -> Result<()> {
+        let rs = proto::slg::HeartbeatRs {
+            time: Some(chrono::Utc::now().timestamp() as i32),
+        };
+        framed.send(GamePacket::build_rs(GameCmd::HeartbeatRs, &rs)?).await?;
+        debug!(conn_id, "Heartbeat");
+        Ok(())
+    }
+
+    /// 转发消息到 Home Service
+    ///
+    /// 当前实现：将原始 payload 透传给 Home Service 的 gRPC Dispatch 接口。
+    /// TODO: 实现完整的 gRPC Dispatch 协议
+    async fn forward_to_home(
+        &self,
+        conn_id: u64,
+        packet: GamePacket,
+        framed: &mut Framed<TcpStream, GameCodec>,
+    ) -> Result<()> {
+        let role_id = self.sessions.get_role_id(conn_id).unwrap_or(0);
+        let account_key_id = self.sessions.get_account_key_id(conn_id).unwrap_or(0);
+
+        debug!(conn_id, role_id, account_key_id, cmd = ?packet.cmd, "Forward to Home");
+
+        // TODO: 调用 HomeService::Dispatch gRPC 接口
+        // 当前占位：直接返回空响应
+        let _ = (role_id, account_key_id, framed);
         Ok(())
     }
 }
