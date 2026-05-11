@@ -1,5 +1,24 @@
 {
   "mcpServers": {
+    "mysql-account": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-mysql"
+      ],
+      "env": {
+        "MYSQL_HOST": "172.16.13.110",
+        "MYSQL_PORT": "3307",
+        "MYSQL_USER": "root",
+        "MYSQL_PASSWORD": "00000000",
+        "MYSQL_DATABASE": "imperial_sim_center"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "describe_table",
+        "list_tables",
+        "fetch_data"
+      ]
+    },
     "mysql-game": {
       "command": "uvx",
       "args": [

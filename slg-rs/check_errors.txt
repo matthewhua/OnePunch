@@ -1,78 +1,46 @@
 ﻿cargo : warning: proto@0.1.0: cmd_generated.rs: 652 commands extracted
 所在位置 行:1 字符: 1
-+ cargo check -p shared -p home@0.1.0 2>&1 | Out-File -FilePath check_e ...
-+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++ cargo check -p gateway 2>&1 | Out-File -FilePath check_errors.txt -En ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
     + CategoryInfo          : NotSpecified: (warning: proto@...mands extracted 
    :String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
-    Checking home v0.1.0 (C:\dev\Company\OnePunch\slg-rs\crates\home)
-warning: unused import: `ActivityData`
- --> crates\home\src\systems\activity\forms\task.rs:4:53
-  |
-4 | use crate::systems::activity::model::{PersonalForm, ActivityData};
-  |                                                     ^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` on by default
-
-warning: unused import: `ActivityData`
- --> crates\home\src\systems\activity\forms\score.rs:4:53
-  |
-4 | use crate::systems::activity::model::{PersonalForm, ActivityData};
-  |                                                     ^^^^^^^^^^^^
-
-warning: unused import: `ActivityData`
- --> crates\home\src\systems\activity\forms\supreme_lord.rs:4:53
-  |
-4 | use crate::systems::activity::model::{PersonalForm, ActivityData};
-  |                                                     ^^^^^^^^^^^^
-
-warning: unnecessary parentheses around `if` condition
-   --> crates\home\src\actors\player_actor.rs:224:12
-    |
-224 |         if (force_all || self.lord_dirty) {
-    |            ^                            ^
-    |
-    = note: `#[warn(unused_parens)]` on by default
-help: remove these parentheses
-    |
-224 -         if (force_all || self.lord_dirty) {
-224 +         if force_all || self.lord_dirty {
-    |
-
-warning: unused import: `shared::msg::ToFunctionClientBaseBytes`
-  --> crates\home\src\systems\activity\mod.rs:86:13
+    Checking gateway v0.1.0 (C:\dev\Company\OnePunch\slg-rs\crates\gateway)
+warning: fields `conn_id`, `peer_addr`, and `connected_at` are never read
+  --> crates\gateway\src\session.rs:40:9
    |
-86 |         use shared::msg::ToFunctionClientBaseBytes;
-   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-warning: unused variable: `ctx`
-   --> crates\home\src\systems\activity\mod.rs:119:45
-    |
-119 |     fn handle(&mut self, event: &GameEvent, ctx: &mut PlayerContext) {
-    |                                             ^^^ help: if this is intentio
-nal, prefix it with an underscore: `_ctx`
-    |
-    = note: `#[warn(unused_variables)]` on by default
-
-warning: unused variable: `act_msg_tx`
-  --> crates\home\src\main.rs:40:10
+39 | pub struct Session {
+   |            ------- fields in this struct
+40 |     pub conn_id: u64,
+   |         ^^^^^^^
+41 |     pub peer_addr: SocketAddr,
+   |         ^^^^^^^^^
+...
+54 |     pub connected_at: Instant,
+   |         ^^^^^^^^^^^^
    |
-40 |     let (act_msg_tx, act_msg_rx) = mpsc::channel::<ActivityMessage>(1024);
-   |          ^^^^^^^^^^ help: if this is intentional, prefix it with an unders
-core: `_act_msg_tx`
-
-warning: field `manager` is never read
-  --> crates\home\src\service.rs:12:5
-   |
-10 | pub struct HomeServiceImpl {
-   |            --------------- field in this struct
-11 |     db: MySqlPool,
-12 |     manager: Arc<PlayerManager>,
-   |     ^^^^^^^
-   |
+   = note: `Session` has a derived impl for the trait `Debug`, but this is inte
+ntionally ignored during dead code analysis
    = note: `#[warn(dead_code)]` on by default
 
-warning: `home` (bin "home") generated 8 warnings (run `cargo fix --bin "home"`
- to apply 4 suggestions)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.33s
+warning: method `is_idle` is never used
+  --> crates\gateway\src\session.rs:77:12
+   |
+57 | impl Session {
+   | ------------ method in this implementation
+...
+77 |     pub fn is_idle(&self, timeout: Duration) -> bool {
+   |            ^^^^^^^
+
+warning: method `find_idle` is never used
+   --> crates\gateway\src\session.rs:187:12
+    |
+94  | impl SessionStore {
+    | ----------------- method in this implementation
+...
+187 |     pub fn find_idle(&self, timeout: Duration) -> Vec<u64> {
+    |            ^^^^^^^^^
+
+warning: `gateway` (bin "gateway") generated 3 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.28s
