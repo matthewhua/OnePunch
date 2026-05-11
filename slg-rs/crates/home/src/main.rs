@@ -37,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
     let _config_watcher = Arc::new(config_watcher);
     // 4. 初始化事件总线与全局 ActivityActor
     let (global_to_activity_tx, global_to_activity_rx) = mpsc::channel::<GlobalEvent>(1024);
-    let (act_msg_tx, act_msg_rx) = mpsc::channel::<ActivityMessage>(1024);
+    let (_act_msg_tx, act_msg_rx) = mpsc::channel::<ActivityMessage>(1024);
     
     let event_bus = GlobalEventBus::new(global_to_activity_tx);
 

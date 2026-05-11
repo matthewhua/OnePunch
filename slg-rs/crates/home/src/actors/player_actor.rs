@@ -221,7 +221,7 @@ impl PlayerActor {
     /// `force_all` = true 时全量存盘（下线），否则仅存 dirty 模块。
     async fn do_save(&mut self, force_all: bool) {
         // 1. 存盘 p_lord（领主基础数据）
-        if (force_all || self.lord_dirty) {
+        if force_all || self.lord_dirty {
             if let Some(lord) = &self.lord {
                 if let Err(e) = self.dao.save_lord(lord).await {
                     error!(role_id = self.role_id, "Failed to save p_lord: {}", e);

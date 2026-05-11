@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use anyhow::Result;
 use crate::systems::activity::types::ActivityFormType;
-use crate::systems::activity::model::{PersonalForm, ActivityData};
+use crate::systems::activity::model::PersonalForm;
 
 /// 最强领主（分阶段排行）活动表单
 #[derive(Default, serde::Serialize, serde::Deserialize)]

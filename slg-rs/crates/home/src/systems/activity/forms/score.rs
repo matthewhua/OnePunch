@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use anyhow::Result;
 use crate::systems::activity::types::ActivityFormType;
-use crate::systems::activity::model::{PersonalForm, ActivityData};
+use crate::systems::activity::model::PersonalForm;
 
 /// 积分奖励类活动表单
 #[derive(Default, serde::Serialize, serde::Deserialize)]

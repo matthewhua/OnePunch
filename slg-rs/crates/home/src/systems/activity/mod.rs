@@ -83,7 +83,6 @@ impl PlayerSystem for ActivitySystem {
 impl crate::systems::ToFunctionClientBase for ActivitySystem {
     fn to_function_base_bytes(&self) -> Vec<u8> {
         use proto::slg::{ActivityFunction, ActivityDataPb};
-        use shared::msg::ToFunctionClientBaseBytes;
 
         // 构建全量活动数据 PB
         let mut activity_func = ActivityFunction::default();
@@ -116,7 +115,7 @@ impl EventHandler for ActivitySystem {
         }
     }
 
-    fn handle(&mut self, event: &GameEvent, ctx: &mut PlayerContext) {
+    fn handle(&mut self, event: &GameEvent, _ctx: &mut PlayerContext) {
         match event {
             GameEvent::Mission(mission_event) => self.on_mission_event(mission_event),
             GameEvent::ActivityTrigger(trigger_event) => self.on_activity_trigger(trigger_event),

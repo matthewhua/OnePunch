@@ -9,12 +9,12 @@ use tracing::info;
 
 pub struct HomeServiceImpl {
     db: MySqlPool,
-    manager: Arc<PlayerManager>,
+    _manager: Arc<PlayerManager>,
 }
 
 impl HomeServiceImpl {
     pub fn new(db: MySqlPool, manager: Arc<PlayerManager>) -> Self {
-        Self { db, manager }
+        Self { db, _manager: manager }
     }
 
     fn generate_random_name(&self, server_id: i32) -> String {

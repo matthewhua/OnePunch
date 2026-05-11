@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use anyhow::Result;
 use crate::systems::activity::types::ActivityFormType;
-use crate::systems::activity::model::{PersonalForm, ActivityData};
+use crate::systems::activity::model::PersonalForm;
 
 /// 单个活动任务的状态
 #[derive(Default, serde::Serialize, serde::Deserialize)]
