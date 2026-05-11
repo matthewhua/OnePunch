@@ -32,12 +32,17 @@ impl ActivitySystem {
     }
 
     /// 活动协议命令分发入口
-    pub fn handle_command(&mut self, cmd: u32, payload: &[u8]) -> Result<Vec<u8>> {
+    pub fn handle_command(
+        &mut self,
+        cmd: u32,
+        payload: &[u8],
+        _config: &std::sync::Arc<shared::static_config::StaticConfig>,
+    ) -> anyhow::Result<Vec<u8>> {
         match cmd {
             8001 => self.get_activity_func_data(),
             8007 => self.activity_sign(payload),
             // ... 后续根据玩法逐渐补充
-            _ => Err(anyhow!("未知的活动命令号: {}", cmd)),
+            _ => Err(anyhow::anyhow!("未知的活动命令号: {}", cmd)),
         }
     }
 
@@ -77,6 +82,25 @@ impl PlayerSystem for ActivitySystem {
 
     fn column_name(&self) -> &'static str {
         shared::persistence::col::ACTIVITY
+    }
+
+    fn handle_command(
+        &mut self,
+        cmd: u32,
+        payload: &[u8],
+        config: &std::sync::Arc<shared::static_config::StaticConfig>,
+    ) -> anyhow::Result<Vec<u8>> {
+        ActivitySystem::handle_command(self, cmd, payload, config)
+    }
+
+    fn handle_command_with_events(
+        &mut self,
+        cmd: u32,
+        payload: &[u8],
+        config: &std::sync::Arc<shared::static_config::StaticConfig>,
+    ) -> anyhow::Result<(Vec<u8>, Vec<shared::event::GameEvent>)> {
+        let resp = ActivitySystem::handle_command(self, cmd, payload, config)?;
+        Ok((resp, vec![]))
     }
 }
 

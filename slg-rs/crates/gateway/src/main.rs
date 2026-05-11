@@ -74,9 +74,16 @@ async fn handle_disconnect(notice: DisconnectNotice, home_addr: &str) {
             role_id,
             "Player offline, notifying Home Service"
         );
-        // TODO: 调用 HomeService::PlayerOffline gRPC 接口
-        // let mut client = HomeServiceClient::connect(home_addr).await?;
-        // client.player_offline(PlayerOfflineRq { role_id }).await?;
-        let _ = home_addr;
+        match proto::slg::home_service_client::HomeServiceClient::connect(home_addr.to_string()).await {
+            Ok(mut client) => {
+                let rq = proto::slg::PlayerOfflineRq { role_id };
+                if let Err(e) = client.player_offline(rq).await {
+                    warn!(role_id, "PlayerOffline gRPC failed: {}", e);
+                }
+            }
+            Err(e) => {
+                warn!(role_id, "Cannot connect to Home Service for offline notify: {}", e);
+            }
+        }
     }
 }

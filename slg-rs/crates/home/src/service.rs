@@ -1,11 +1,16 @@
 use tonic::{Request, Response, Status};
 use proto::slg::home_service_server::HomeService;
-use proto::slg::{BeginGameRq, BeginGameRs, CreateRoleRq, CreateRoleRs, RoleLoginRq, RoleLoginRs};
+use proto::slg::{
+    BeginGameRq, BeginGameRs, CreateRoleRq, CreateRoleRs, RoleLoginRq, RoleLoginRs,
+    DispatchRq, DispatchRs, PlayerOfflineRq, PlayerOfflineRs,
+};
 use sqlx::MySqlPool;
 use std::sync::Arc;
 use crate::managers::player_manager::PlayerManager;
+use crate::actors::player_actor::PlayerMessage;
 use rand::{distributions::Alphanumeric, Rng};
-use tracing::info;
+use tokio::sync::oneshot;
+use tracing::{info, warn};
 
 pub struct HomeServiceImpl {
     db: MySqlPool,
@@ -97,17 +102,13 @@ impl HomeService for HomeServiceImpl {
 
         info!(nick, server_id, "Creating role");
 
-        // 生成 role_id（Java 版格式：server_id * 10^9 + 自增序列）
-        // 简化：使用 p_lord 自增 + server_id 前缀
-        // 实际应从 p_server_config 读取 max_key 并原子递增
         let on_time = chrono::Utc::now().timestamp() as i32;
 
-        // 1. 插入 p_lord（role_id 由 Java 侧生成，这里用 server_id * 1e9 + 随机）
-        // TODO: 实现与 Java 版一致的 role_id 生成策略
+        // TODO: 实现与 Java 版一致的 role_id 生成策略（从 p_server_config 读取 max_key）
         let role_id: i64 = (server_id as i64) * 1_000_000_000
             + rand::thread_rng().gen_range(1..=999_999_999);
 
-        // 2. 插入 p_lord
+        // 插入 p_lord
         sqlx::query(
             "INSERT INTO p_lord (role_id, nick, diamond, gold, meat, stamina, \
              vip_level, vip_exp, camp_id, on_time, ol_time, off_time, \
@@ -122,7 +123,7 @@ impl HomeService for HomeServiceImpl {
         .await
         .map_err(|e| Status::internal(format!("Failed to create lord: {}", e)))?;
 
-        // 3. 插入 p_data（全列 NULL）
+        // 插入 p_data（全列 NULL）
         sqlx::query("INSERT IGNORE INTO p_data (role_id) VALUES (?)")
             .bind(role_id)
             .execute(&self.db)
@@ -140,12 +141,98 @@ impl HomeService for HomeServiceImpl {
     /// RoleLogin：玩家进入游戏，启动 PlayerActor
     async fn role_login(
         &self,
-        _request: Request<RoleLoginRq>,
+        request: Request<RoleLoginRq>,
     ) -> Result<Response<RoleLoginRs>, Status> {
-        // TODO: 从 gRPC Metadata 获取 account_id 和 role_id，启动 PlayerActor
-        Ok(Response::new(RoleLoginRs {
-            state: Some(1),
-            ..Default::default()
-        }))
+        // 从 gRPC Metadata 读取 account_id 和 role_id
+        let metadata = request.metadata();
+        let account_id = metadata
+            .get("x-account-id")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.parse::<i64>().ok())
+            .ok_or_else(|| Status::unauthenticated("Missing x-account-id metadata"))?;
+        let role_id = metadata
+            .get("x-role-id")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.parse::<i64>().ok())
+            .ok_or_else(|| Status::unauthenticated("Missing x-role-id metadata"))?;
+
+        info!(account_id, role_id, "RoleLogin: spawning PlayerActor");
+
+        // 启动（或复用）PlayerActor
+        let tx = self.manager.spawn_actor(account_id, role_id);
+
+        // 发送 RoleLogin 消息，等待 Actor 完成登录初始化
+        let (reply_tx, reply_rx) = oneshot::channel();
+        tx.send(PlayerMessage::RoleLogin(reply_tx))
+            .map_err(|_| Status::internal("PlayerActor channel closed"))?;
+
+        let rs = reply_rx.await
+            .map_err(|_| Status::internal("PlayerActor did not reply"))?
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(rs))
+    }
+
+    /// Dispatch：Gateway 转发业务命令到 PlayerActor 处理
+    ///
+    /// 流程：PlayerManager 查找 Actor sender → 发送 GameCommand → 等待 reply → 返回
+    async fn dispatch(
+        &self,
+        request: Request<DispatchRq>,
+    ) -> Result<Response<DispatchRs>, Status> {
+        let req = request.into_inner();
+        let role_id = req.role_id;
+        let cmd = req.cmd as u32;
+        let payload = req.payload;
+
+        // 查找 PlayerActor
+        let tx = self.manager.get_by_role(role_id).ok_or_else(|| {
+            warn!(role_id, cmd, "Dispatch: player not online");
+            Status::not_found(format!("Player {} not online", role_id))
+        })?;
+
+        // 发送命令，等待响应
+        let (reply_tx, reply_rx) = oneshot::channel();
+        tx.send(PlayerMessage::GameCommand {
+            cmd,
+            payload,
+            reply: reply_tx,
+        }).map_err(|_| Status::internal("PlayerActor channel closed"))?;
+
+        let result = reply_rx.await
+            .map_err(|_| Status::internal("PlayerActor did not reply"))?;
+
+        match result {
+            Ok(resp_payload) => Ok(Response::new(DispatchRs {
+                code: 0,
+                payload: resp_payload,
+            })),
+            Err(e) => {
+                warn!(role_id, cmd, "Dispatch error: {}", e);
+                Ok(Response::new(DispatchRs {
+                    code: 1,
+                    payload: vec![],
+                }))
+            }
+        }
+    }
+
+    /// PlayerOffline：Gateway 断线通知，触发 PlayerActor 存盘下线
+    async fn player_offline(
+        &self,
+        request: Request<PlayerOfflineRq>,
+    ) -> Result<Response<PlayerOfflineRs>, Status> {
+        let role_id = request.into_inner().role_id;
+
+        if let Some(tx) = self.manager.get_by_role(role_id) {
+            info!(role_id, "PlayerOffline: sending Shutdown to actor");
+            let _ = tx.send(PlayerMessage::Shutdown);
+            // 从管理器移除（account_id 未知，仅按 role_id 清理）
+            self.manager.remove_player(0, role_id);
+        } else {
+            warn!(role_id, "PlayerOffline: player not found (already offline?)");
+        }
+
+        Ok(Response::new(PlayerOfflineRs { code: 0 }))
     }
 }

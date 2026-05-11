@@ -272,6 +272,11 @@ fn build_function_base_bytes<T: Message>(func_type: i32, ext_tag: u32, data: &T)
     buf.to_vec()
 }
 
+/// 公开版本，供 home crate 的各 System 实现 ToFunctionClientBaseBytes 时使用
+pub fn build_function_base_bytes_pub<T: Message>(func_type: i32, ext_tag: u32, data: &T) -> Vec<u8> {
+    build_function_base_bytes(func_type, ext_tag, data)
+}
+
 impl ToFunctionClientBaseBytes for proto::slg::ActivityFunction {
     fn to_function_base_bytes(&self) -> Vec<u8> {
         build_function_base_bytes(func_type::ACTIVITY, func_tag::ACTIVITY, self)

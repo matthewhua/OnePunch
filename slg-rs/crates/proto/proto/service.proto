@@ -21,6 +21,35 @@ service HomeService {
     rpc BeginGame(BeginGameRq) returns (BeginGameRs);
     rpc CreateRole(CreateRoleRq) returns (CreateRoleRs);
     rpc RoleLogin(RoleLoginRq) returns (RoleLoginRs);
+
+    // Gateway 转发业务命令到 PlayerActor
+    rpc Dispatch(DispatchRq) returns (DispatchRs);
+
+    // 玩家断线通知，触发 PlayerActor 存盘下线
+    rpc PlayerOffline(PlayerOfflineRq) returns (PlayerOfflineRs);
+}
+
+// ── Dispatch ──────────────────────────────────────────────────────────────────
+
+message DispatchRq {
+    int64 role_id = 1;  // 玩家角色ID
+    int32 cmd     = 2;  // 业务命令号
+    bytes payload = 3;  // 原始 protobuf payload
+}
+
+message DispatchRs {
+    int32 code    = 1;  // 0=成功，非0=错误码
+    bytes payload = 2;  // 响应 protobuf payload
+}
+
+// ── PlayerOffline ─────────────────────────────────────────────────────────────
+
+message PlayerOfflineRq {
+    int64 role_id = 1;  // 玩家角色ID
+}
+
+message PlayerOfflineRs {
+    int32 code = 1;  // 0=成功
 }
 
 message JoinMapRequest {
