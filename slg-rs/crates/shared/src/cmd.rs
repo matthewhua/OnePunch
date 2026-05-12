@@ -29,13 +29,13 @@ impl GameCmdExt for GameCmd {
     ///
     /// 路由规则：
     /// - 1001-1108：登录认证，Gateway 直接处理或转发 Auth Service
-    /// - 2000-3999：世界地图/行军/战斗，转发 World Service
+    /// - 50001-50040、5121-5220：世界地图/行军/战斗，转发 World Service
     /// - 其余：玩家个人数据，转发 Home Service
     fn route(self) -> CmdRoute {
         let id = self as u32;
         match id {
             1001..=1108 => CmdRoute::Auth,
-            2000..=3999 => CmdRoute::World,
+            50001..=50040 | 5121..=5220 => CmdRoute::World,
             _ => CmdRoute::Home,
         }
     }
@@ -44,5 +44,23 @@ impl GameCmdExt for GameCmd {
     fn is_push(self) -> bool {
         let name = format!("{:?}", self);
         name.starts_with("Sync") && name.ends_with("Rs")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn routes_world_map_command_range_to_world_service() {
+        assert_eq!(GameCmd::from(50019).route(), CmdRoute::World);
+        assert_eq!(GameCmd::from(50040).route(), CmdRoute::World);
+        assert_eq!(GameCmd::from(5201).route(), CmdRoute::World);
+    }
+
+    #[test]
+    fn keeps_existing_home_and_auth_routes() {
+        assert_eq!(GameCmd::from(1101).route(), CmdRoute::Auth);
+        assert_eq!(GameCmd::from(8001).route(), CmdRoute::Home);
     }
 }
