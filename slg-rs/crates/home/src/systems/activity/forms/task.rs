@@ -7,10 +7,14 @@ use prost::Message;
 use crate::systems::activity::model::{ActivityData, PersonalForm};
 use crate::systems::activity::types::ActivityFormType;
 
+/// 任务进行中。
 pub const STATUS_UNDONE: i32 = 0;
+/// 任务已完成，可领取。
 pub const STATUS_AVAILABLE: i32 = 1;
+/// 任务奖励已领取。
 pub const STATUS_RECEIVED: i32 = 2;
 
+/// 单个活动任务的状态
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct ActivityTaskInfo {
     pub task_id: i32,
@@ -18,9 +22,11 @@ pub struct ActivityTaskInfo {
     pub progress: i64,
     pub target: i64,
     pub mission_type: i32,
+    /// 任务状态，取值见 STATUS_* 常量。
     pub status: i32,
 }
 
+/// 任务类活动表单
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct TaskForm {
     pub tasks: HashMap<i32, ActivityTaskInfo>,
@@ -106,6 +112,7 @@ impl PersonalForm for TaskForm {
 
         let mut buf = BytesMut::new();
         pb.encode(&mut buf)?;
+        // ActivityFormTaskPb 的 extension tag = 15。
         GameMessage::encode_extension(15, &ext, &mut buf);
         Ok(ActivityFormPb::decode(buf.as_ref())?)
     }

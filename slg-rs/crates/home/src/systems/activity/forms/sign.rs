@@ -5,10 +5,14 @@ use prost::Message;
 use crate::systems::activity::model::{ActivityData, PersonalForm};
 use crate::systems::activity::types::ActivityFormType;
 
+/// 签到玩法表单
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct SignForm {
+    /// 累计签到天数
     pub sign_days: i32,
+    /// 今日是否已签到
     pub signed_today: bool,
+    /// 上次签到时间戳
     pub last_sign_time: i64,
 }
 
@@ -60,8 +64,10 @@ impl PersonalForm for SignForm {
 
         let mut sign_ext = ActivityFormSignPb::default();
         for day in 1..=self.sign_days {
+            // v1=第几天, v2=签到状态(0-不可签, 2-可领奖, 3-已领奖)
             sign_ext.sign_info.push(IntLong { v1: day, v2: 3 });
         }
+        // 今日未签到则标记为可签。
         if !self.signed_today {
             sign_ext.sign_info.push(IntLong {
                 v1: self.sign_days + 1,
@@ -71,11 +77,13 @@ impl PersonalForm for SignForm {
 
         let mut buf = BytesMut::new();
         form_pb.encode(&mut buf)?;
+        // ActivityFormSignPb 的 extension tag = 11。
         GameMessage::encode_extension(11, &sign_ext, &mut buf);
         Ok(ActivityFormPb::decode(buf.as_ref())?)
     }
 
     fn on_daily_tick(&mut self, _activity: &ActivityData, _day_num: i32) {
+        // 跨天重置今日签到状态。
         self.signed_today = false;
     }
 }
