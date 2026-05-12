@@ -56,6 +56,10 @@ impl PlayerManager {
     ///
     /// 如果该 account_id 已有在线 Actor，先踢掉旧的。
     pub fn spawn_actor(&self, account_id: i64, role_id: i64) -> mpsc::UnboundedSender<PlayerMessage> {
+        if let Some(existing) = self.role_to_actor.get(&role_id) {
+            return existing.clone();
+        }
+
         // 踢掉旧 Actor（如果存在）
         if let Some(old_tx) = self.account_to_actor.get(&account_id) {
             warn!(account_id, "Kicking old actor for duplicate login");

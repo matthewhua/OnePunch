@@ -30,6 +30,19 @@ impl HomeServiceImpl {
             .collect();
         format!("Lord{}{}", server_id, suffix)
     }
+
+    async fn get_account_key_id_by_role(&self, role_id: i64) -> Result<i64, Status> {
+        let row: Option<(i64,)> = sqlx::query_as(
+            "SELECT account_key_id FROM p_account WHERE role_id = ? LIMIT 1"
+        )
+        .bind(role_id)
+        .fetch_optional(&self.db)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        row.map(|v| v.0)
+            .ok_or_else(|| Status::not_found(format!("account not found by role_id={}", role_id)))
+    }
 }
 
 #[tonic::async_trait]
@@ -73,6 +86,15 @@ impl HomeService for HomeServiceImpl {
                 res.state = Some(2); // 已创建角色
                 res.role_id = Some(role_id);
                 res.camp = lord.map(|(c,)| c).or(Some(0));
+
+                // 已有角色时，直接拉起在线 Actor，保证后续 Dispatch 可达。
+                let tx = self.manager.spawn_actor(account_key_id, role_id);
+                let (reply_tx, reply_rx) = oneshot::channel();
+                tx.send(PlayerMessage::RoleLogin(reply_tx))
+                    .map_err(|_| Status::internal("PlayerActor channel closed during begin_game"))?;
+                reply_rx.await
+                    .map_err(|_| Status::internal("PlayerActor did not reply during begin_game"))?
+                    .map_err(|e| Status::internal(e.to_string()))?;
             }
             None => {
                 res.state = Some(1); // 未创建角色
@@ -223,12 +245,12 @@ impl HomeService for HomeServiceImpl {
         request: Request<PlayerOfflineRq>,
     ) -> Result<Response<PlayerOfflineRs>, Status> {
         let role_id = request.into_inner().role_id;
+        let account_id = self.get_account_key_id_by_role(role_id).await.unwrap_or(0);
 
         if let Some(tx) = self.manager.get_by_role(role_id) {
             info!(role_id, "PlayerOffline: sending Shutdown to actor");
             let _ = tx.send(PlayerMessage::Shutdown);
-            // 从管理器移除（account_id 未知，仅按 role_id 清理）
-            self.manager.remove_player(0, role_id);
+            self.manager.remove_player(account_id, role_id);
         } else {
             warn!(role_id, "PlayerOffline: player not found (already offline?)");
         }

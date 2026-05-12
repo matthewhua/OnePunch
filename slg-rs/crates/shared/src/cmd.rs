@@ -28,14 +28,14 @@ impl GameCmdExt for GameCmd {
     /// 根据命令号判断路由目标
     ///
     /// 路由规则：
-    /// - 1001-1108：登录认证，Gateway 直接处理或转发 Auth Service
-    /// - 2000-3999：世界地图/行军/战斗，转发 World Service
+    /// - 100..=106：登录认证，Gateway 直接处理或转发 Auth Service
+    /// - 50000+：世界地图/行军/战斗，转发 World Service
     /// - 其余：玩家个人数据，转发 Home Service
     fn route(self) -> CmdRoute {
         let id = self as u32;
         match id {
-            1001..=1108 => CmdRoute::Auth,
-            2000..=3999 => CmdRoute::World,
+            103..=106 => CmdRoute::Auth,
+            50001..=59999 => CmdRoute::World,
             _ => CmdRoute::Home,
         }
     }

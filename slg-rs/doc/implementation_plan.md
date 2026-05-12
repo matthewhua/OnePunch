@@ -14,11 +14,11 @@ Step 3  玩家数据持久化 .......... ✅ 已完成
 Step 4  Auth 服务修复 ........... ✅ 已完成
 Step 5  Gateway 会话管理 ........ ✅ 已完成
 Step 6  端到端联调 .............. ⏸️ 暂跳过（家里电脑已做，待合并）
-Step 7  Home 核心系统骨架 ....... ✅ 已完成
+Step 7  Home 核心系统骨架 ....... ✅ 核心骨架初版完成
 Step 8  命令分发框架 ............ ✅ 已完成
-Step 9  gRPC Dispatch 接口 ...... ✅ 已完成
-Step 10 事件系统完善 ............ ✅ 已完成
-Step 11 核心系统命令填充 ........ ✅ 已完成
+Step 9  gRPC Dispatch 接口 ...... ⚠️ 已接通，主链待持续联调
+Step 10 事件系统完善 ............ ✅ 基础完成
+Step 11 核心系统命令填充 ........ ⚠️ 首轮填充完成，业务逻辑未完成
 Step 12 活动系统命令完善 ........ 🔜 下一步
 Step 13 World 核心系统 .......... 待执行
 Step 14 战斗引擎 ................ 待执行
@@ -91,7 +91,7 @@ Step 16 安全与上线准备 .......... 待执行
 
 家里电脑已做，待合并。
 
-### Step 7：Home 核心系统骨架 ✅
+### Step 7：Home 核心系统骨架 ✅（核心骨架初版完成）
 
 | 产出 | 文件 | p_data 列 |
 |------|------|-----------|
@@ -102,8 +102,41 @@ Step 16 安全与上线准备 .......... 待执行
 | MissionSystem | `crates/home/src/systems/mission.rs` | mission_func |
 | build_function_base_bytes_pub | `crates/shared/src/msg.rs` | — |
 
-每个系统已实现：PlayerSystem trait（load/save/dirty/column_name）、ToFunctionClientBaseBytes、handle_command 骨架。全部接入 PlayerActor 的 load/save/tick/dispatch 流程。
+每个系统已实现：PlayerSystem trait（load/save/dirty/column_name）、ToFunctionClientBaseBytes、handle_command 骨架。Hero / Backpack / Tech / Equip / Mission 已接入 PlayerActor 的 load/save/tick/dispatch 流程；Building / Skin / Activity 仍包含占位实现，后续继续补齐。
 
+### Step 8：命令分发框架 ✅
+
+PlayerActor 已接收 Gateway 转发的 `GameCommand`，并按 cmd 范围路由到对应系统处理。
+
+### Step 9：gRPC Dispatch 接口 ⚠️ 已接通，主链待持续联调
+
+`Dispatch` / `PlayerOffline` gRPC 接口已实现，Gateway 与 Home 间的业务消息转发链路已接通。
+
+当前状态说明：
+
+- 已有角色在 `BeginGame` 时会直接拉起 `PlayerActor`，保证后续 `Dispatch` 可达
+- 请求/响应已按 `Base + extension` 形式统一收发
+- 仍需持续补联调与错误码、边界命令、World 转发等场景验证
+
+### Step 10：事件系统完善 ✅（基础完成）
+
+事件枚举、任务/活动进度分发、基础 `MissionType` 映射已落地，可驱动核心个人事件。
+
+当前状态说明：
+
+- 个人事件链已可用
+- 全局事件总线框架已存在
+- 跨玩家 / 全服事件的实际业务接入仍需继续补充
+
+### Step 11：核心系统命令填充 ⚠️（首轮填充完成，业务逻辑未完成）
+
+Hero / Tech / Equip / Mission / Activity 已完成第一轮命令接线与部分响应逻辑，Backpack / Building 仍以骨架和占位逻辑为主。
+
+当前状态说明：
+
+- 已具备首轮命令入口与基础响应
+- 资源扣除、奖励发放、配置校验、跨系统协调、完整业务约束仍未补齐
+- 该步骤不应视为最终完成态，后续继续按子系统逐项验收
 ---
 
 ## 待执行步骤
