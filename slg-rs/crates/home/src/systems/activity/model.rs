@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::collections::HashMap;
 use anyhow::Result;
 use super::types::{ActivityFormType, ActivityStage};
@@ -21,7 +22,10 @@ pub struct GlobalActivityData {
 }
 
 /// 个人活动表单 trait（对应 Java PersonalActivityForm）
-pub trait PersonalForm: Send + Sync {
+pub trait PersonalForm: Send + Sync + Any {
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+
     fn form_type(&self) -> ActivityFormType;
     
     /// 从二进制数据加载
