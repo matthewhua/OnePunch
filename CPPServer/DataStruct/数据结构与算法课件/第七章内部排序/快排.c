@@ -1,6 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
-
 typedef int ELEMType;
 
 // 记录结构
@@ -35,18 +33,18 @@ int main()
     myRcd myarr;
     myarr.data = arr;
     myarr.currentNum = n;
-    
+
     printf("排序前：");
     for (int i = 0; i < n; i++)
         printf("%d ", arr[i]);
     printf("\n");
-    
+
     QuickSort(&myarr);
-    
+
     printf("排序后：");
     for (int i = 0; i < n; i++)
         printf("%d ", arr[i]);
     printf("\n");
-    
+
     return 0;
 }

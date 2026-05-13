@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
+
 
 #define MaxVtxNum 100
 #define TRUE 1
@@ -23,14 +22,14 @@ typedef struct {
 int CreateIndegrTable(MGraph g, IndegreeV *indegreeTable, int *first)
 {
     int i, j;
-    
+
     for (i = 0; i < g.numVertices; i++) {
         indegreeTable[i].indeg = 0;
         indegreeTable[i].ver = g.verticesList[i];
         for (j = 0; j < g.numVertices; j++)
             indegreeTable[i].indeg += g.AdjMatrix[j][i];
     }
-    
+
     *first = -1;
     for (j = 0; j < g.numVertices; j++) {
         if (indegreeTable[j].indeg == 0) {
@@ -38,6 +37,6 @@ int CreateIndegrTable(MGraph g, IndegreeV *indegreeTable, int *first)
             *first = j;
         }
     }
-    
+
     return TRUE;
 }

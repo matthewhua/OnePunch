@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 
 #define MaxVtxNum 100
 
@@ -22,12 +21,12 @@ typedef struct {
 void Topo(MGraph g, IndegreeV *indegreeTable, int first)
 {
     int i, temp;
-    
+
     while (first != -1) {
         printf("%c ", g.verticesList[first]);
         temp = first;
         first = indegreeTable[first].indeg;
-        
+
         for (i = 0; i < g.numVertices; i++) {
             if (g.AdjMatrix[temp][i] > 0) {
                 indegreeTable[i].indeg--;

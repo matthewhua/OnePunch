@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 
 typedef int ELEMType;
 
@@ -22,7 +21,7 @@ void swap(ELEMType *a, ELEMType *b)
 void ShiftDown(myRcd *myarr, int i, int n)  // 堆的调整算法
 {
     int child;
-    
+
     for (; i <= ((n / 2) - 1); i = child) {
         child = i * 2 + 1;
         if ((child != (n - 1)) && (myarr->data[child + 1] > myarr->data[child]))
@@ -35,10 +34,10 @@ void ShiftDown(myRcd *myarr, int i, int n)  // 堆的调整算法
 void HeapSort(myRcd *myarr)  // 堆排序算法
 {
     int i;
-    
+
     for (i = (myarr->currentNum / 2 - 1); i >= 0; i--)
         ShiftDown(myarr, i, myarr->currentNum);
-    
+
     for (i = myarr->currentNum - 1; i >= 1; i--) {
         swap(&myarr->data[0], &myarr->data[i]);
         ShiftDown(myarr, 0, i);
@@ -52,18 +51,18 @@ int main()
     myRcd myarr;
     myarr.data = arr;
     myarr.currentNum = n;
-    
+
     printf("排序前：");
     for (int i = 0; i < n; i++)
         printf("%d ", arr[i]);
     printf("\n");
-    
+
     HeapSort(&myarr);
-    
+
     printf("排序后：");
     for (int i = 0; i < n; i++)
         printf("%d ", arr[i]);
     printf("\n");
-    
+
     return 0;
 }

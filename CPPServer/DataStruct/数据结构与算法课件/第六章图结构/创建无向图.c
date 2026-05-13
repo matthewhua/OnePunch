@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <stdlib.h>
+
 
 #define MaxVtxNum 100
 #define NB 9999  // 表示不相邻
@@ -23,19 +23,19 @@ void CreateGraph1(MGraph *g)  // 创建无向图
 {
     int i, j, k, w;
     VType u, v, temp;
-    
+
     printf("请输入图的顶点数及边数:");
     scanf("%d %d", &g->numVertices, &g->numEdges);
     printf("请输入图的顶点信息\n");
     scanf("%c", &temp);
-    
+
     for (i = 0; i < getNumVertices(*g); i++)
         scanf("%c", &g->verticesList[i]);
-    
+
     for (i = 0; i < getNumVertices(*g); i++)
         for (j = 0; j < getNumVertices(*g); j++)
             g->AdjMatrix[i][j] = 0;
-    
+
     printf("请输入图的边信息，顶点1 顶点2：\n");
     for (k = 0; k < getNumEdges(*g); k++) {
         scanf("%c", &temp);

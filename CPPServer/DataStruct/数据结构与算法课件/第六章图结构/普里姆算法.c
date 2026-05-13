@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <stdlib.h>
+
 
 #define MaxVtxNum 100
 #define NB 9999  // 表示不相邻
@@ -42,15 +42,15 @@ int Prim(MGraph g, int u, ClosEdge closedge[], MinST *T)
     int i, j, w, k, count = 0;
     int n = g.numVertices;  // 结点个数
     T->totalcost = 0;
-    
+
     for (i = 0; i < n; i++)  // 辅助数组初始化
         if (i != u) {
             closedge[i].vex = NumToVer(g, u);
             closedge[i].lowcost = g.AdjMatrix[u][i];
         }
-    
+
     closedge[u].lowcost = 0;  // 初始，U={u}
-    
+
     for (i = 0; i < n - 1; i++) {  // 选择其余的n-1个顶点
         w = NB;
         for (j = 0; j < n; j++)  // 在辅助数组closedge中选择权值最小的顶点
@@ -58,24 +58,24 @@ int Prim(MGraph g, int u, ClosEdge closedge[], MinST *T)
                 w = closedge[j].lowcost;
                 k = j;
             }  // 找到生成树的下一个顶点k
-        
+
         closedge[k].lowcost = 0;  // 第k顶点并入U集
         T->edgeArray[count].ver1 = NumToVer(g, k);
         T->edgeArray[count].ver2 = closedge[k].vex;
         T->edgeArray[count].key = w;
         T->totalcost += w;
         count++;
-        
+
         for (j = 0; j < n; j++)  // 新顶点k并入U后，修改辅助数组
             if (g.AdjMatrix[k][j] < closedge[j].lowcost) {
                 closedge[j].vex = NumToVer(g, k);
                 closedge[j].lowcost = g.AdjMatrix[k][j];
             }
     }
-    
+
     for (i = 0; i < n - 1; i++)
         printf("%c  %c  %d\n", T->edgeArray[i].ver1, T->edgeArray[i].ver2, T->edgeArray[i].key);
     printf("MST = %d\n", T->totalcost);
-    
+
     return T->totalcost;
 }
