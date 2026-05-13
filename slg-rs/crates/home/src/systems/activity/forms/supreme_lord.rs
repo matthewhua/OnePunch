@@ -7,13 +7,20 @@ use prost::Message;
 use crate::systems::activity::model::{ActivityData, PersonalForm};
 use crate::systems::activity::types::ActivityFormType;
 
+/// 最强领主（分阶段排行）活动表单
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct SupremeLordForm {
+    /// 当前阶段
     pub now_stage: i32,
+    /// 各个阶段的积分详情：stageIdx -> score
     pub stage_scores: HashMap<i32, i64>,
+    /// 总积分
     pub total_score: i64,
+    /// 积分档位领取状态：stageIdx -> awardIds
     pub claimed_score_awards: HashMap<i32, Vec<i32>>,
+    /// 各阶段排名：stageIdx -> rank
     pub stage_ranks: HashMap<i32, i32>,
+    /// 总排名
     pub total_rank: i32,
 }
 
@@ -91,6 +98,7 @@ impl PersonalForm for SupremeLordForm {
 
         let mut buf = BytesMut::new();
         pb.encode(&mut buf)?;
+        // ActivityFormSupremeLordPb 的 extension tag = 23。
         GameMessage::encode_extension(23, &ext, &mut buf);
         Ok(ActivityFormPb::decode(buf.as_ref())?)
     }

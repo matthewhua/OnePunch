@@ -384,7 +384,30 @@ impl PlayerActor {
             function_base.push(f_base);
         }
 
-        // TODO: 其他系统的 FunctionClientBase 数据
+        let hero_bytes = self.hero_system.to_function_base_bytes();
+        if let Ok(f_base) = FunctionClientBase::decode(hero_bytes.as_slice()) {
+            function_base.push(f_base);
+        }
+
+        let backpack_bytes = self.backpack_system.to_function_base_bytes();
+        if let Ok(f_base) = FunctionClientBase::decode(backpack_bytes.as_slice()) {
+            function_base.push(f_base);
+        }
+
+        let tech_bytes = self.tech_system.to_function_base_bytes();
+        if let Ok(f_base) = FunctionClientBase::decode(tech_bytes.as_slice()) {
+            function_base.push(f_base);
+        }
+
+        let equip_bytes = self.equip_system.to_function_base_bytes();
+        if let Ok(f_base) = FunctionClientBase::decode(equip_bytes.as_slice()) {
+            function_base.push(f_base);
+        }
+
+        let mission_bytes = self.mission_system.to_function_base_bytes();
+        if let Ok(f_base) = FunctionClientBase::decode(mission_bytes.as_slice()) {
+            function_base.push(f_base);
+        }
 
         let rs = GetRoleDataRs { function_base, ..Default::default() };
         let _ = tx.send(Ok(rs));
@@ -407,6 +430,15 @@ impl PlayerActor {
     ) -> anyhow::Result<Vec<u8>> {
         use crate::systems::PlayerSystem;
         let config = self.current_config.clone();
+        let payload = if let Ok(msg) = shared::msg::GameMessage::decode(payload.clone()) {
+            if msg.base.cmd == cmd as i32 {
+                msg.get_payload_bytes().unwrap_or(payload)
+            } else {
+                payload
+            }
+        } else {
+            payload
+        };
 
         // 调用对应系统，获取响应 payload 和需要分发的事件
         let (resp, events) = match cmd {
@@ -428,6 +460,6 @@ impl PlayerActor {
             self.dispatch_event(&event);
         }
 
-        Ok(resp)
+        shared::msg::GameMessage::build_response_from_raw(cmd as i32 + 1, &resp)
     }
 }

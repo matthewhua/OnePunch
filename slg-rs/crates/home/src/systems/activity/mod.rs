@@ -18,9 +18,13 @@ use forms::{score::ScoreForm, sign::SignForm, supreme_lord::SupremeLordForm, tas
 use model::{ActivityPersistent, PersonalActivity, PersonalForm};
 use types::ActivityFormType;
 
+/// 玩家活动系统（对应 Java ActivityFunction）
 pub struct ActivitySystem {
+    /// 玩家当前参与的所有活动数据：activityId -> PersonalActivity
     pub activities: HashMap<i32, PersonalActivity>,
+    /// 跨赛季持久化数据
     pub persistent: ActivityPersistent,
+    /// 脏数据标记
     pub dirty: bool,
 }
 
@@ -39,6 +43,7 @@ impl ActivitySystem {
         payload: &[u8],
         config: &Arc<StaticConfig>,
     ) -> Result<Vec<u8>> {
+        // 活动协议命令分发入口。
         match cmd {
             8001 => self.get_activity_func_data(),
             8007 => self.activity_sign(payload),
@@ -67,6 +72,7 @@ impl ActivitySystem {
     }
 
     fn get_activity_func_data(&mut self) -> Result<Vec<u8>> {
+        // 构建全量活动数据 PB。
         let mut activity_func = proto::slg::ActivityFunction::default();
         for (activity_id, personal) in &self.activities {
             let mut data_pb = proto::slg::ActivityDataPb::default();
@@ -263,11 +269,13 @@ impl PlayerSystem for ActivitySystem {
 
 impl crate::systems::ToFunctionClientBase for ActivitySystem {
     fn to_function_base_bytes(&self) -> Vec<u8> {
+        // 构建全量活动数据 PB。
         let mut activity_func = proto::slg::ActivityFunction::default();
         for (activity_id, personal) in &self.activities {
             let mut data_pb = proto::slg::ActivityDataPb::default();
             data_pb.activity_id = *activity_id;
             data_pb.open_times = Some(personal.open_times);
+            // 填充表单。
             for (form_id, form) in &personal.forms {
                 match form.to_pb(*activity_id, *form_id) {
                     Ok(f_pb) => data_pb.form.push(f_pb),
@@ -277,6 +285,7 @@ impl crate::systems::ToFunctionClientBase for ActivitySystem {
             activity_func.activity.push(data_pb);
         }
 
+        // 使用 shared::msg 中统一的 ToFunctionClientBaseBytes 实现。
         activity_func.to_function_base_bytes()
     }
 }
@@ -342,6 +351,7 @@ impl ActivitySystem {
         }
     }
 
+    /// 外层封装调用
     pub fn handle_event(&mut self, event: &GameEvent, ctx: &mut PlayerContext) {
         if self.interested_in(event) {
             self.handle(event, ctx);
@@ -350,6 +360,7 @@ impl ActivitySystem {
 }
 
 #[allow(dead_code)]
+/// 辅助函数：由于 proto2 extension 不被 prost 直接支持，此函数用于手动分发 Extension 字段编解码
 fn decode_form_extension(form_type: ActivityFormType, raw_bytes: &[u8]) -> Result<Box<dyn PersonalForm>> {
     let mut form: Box<dyn PersonalForm> = match form_type {
         ActivityFormType::Sign => Box::new(SignForm::default()),

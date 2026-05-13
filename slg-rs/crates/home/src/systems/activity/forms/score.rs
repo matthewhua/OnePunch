@@ -7,10 +7,14 @@ use prost::Message;
 use crate::systems::activity::model::{ActivityData, PersonalForm};
 use crate::systems::activity::types::ActivityFormType;
 
+/// 积分奖励类活动表单
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct ScoreForm {
+    /// 当前累计积分
     pub current_score: i64,
+    /// 已领取的普通积分档位 ID
     pub claimed_normal_goals: HashSet<i32>,
+    /// 已领取的高级积分档位 ID
     pub claimed_advance_goals: HashSet<i32>,
 }
 
@@ -76,6 +80,7 @@ impl PersonalForm for ScoreForm {
 
         let mut buf = BytesMut::new();
         pb.encode(&mut buf)?;
+        // ActivityFormScoreAwardPb 的 extension tag = 18。
         GameMessage::encode_extension(18, &ext, &mut buf);
         Ok(ActivityFormPb::decode(buf.as_ref())?)
     }

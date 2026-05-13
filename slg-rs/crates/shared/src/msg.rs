@@ -53,9 +53,20 @@ impl GameMessage {
         extract_extension_payload(&self.raw_data, target_tag)
     }
 
+    /// 提取当前 cmd 对应 extension 的原始 protobuf bytes
+    pub fn get_payload_bytes(&self) -> Result<Vec<u8>> {
+        let target_tag = self.base.cmd as u32;
+        extract_extension_bytes(&self.raw_data, target_tag)
+    }
+
     /// 从原始字节中提取指定 field_number 的 extension（用于嵌套 extension）
     pub fn get_extension_from_bytes<T: Message + Default>(data: &[u8], field_number: u32) -> Result<T> {
         extract_extension_payload(data, field_number)
+    }
+
+    /// 从原始字节中提取指定 field_number 的原始 extension bytes
+    pub fn get_extension_bytes(data: &[u8], field_number: u32) -> Result<Vec<u8>> {
+        extract_extension_bytes(data, field_number)
     }
 
     /// 构建响应消息：Base 基础字段 + 手动编码的 Extension 字段
@@ -75,6 +86,20 @@ impl GameMessage {
         // 2. 手动追加 Extension 字段（tag = cmd，wire type = LengthDelimited）
         encode_extension_field(cmd as u32, payload, &mut buf);
 
+        Ok(buf.to_vec())
+    }
+
+    /// 构建响应消息：Base 基础字段 + 已编码好的 extension 原始字节
+    pub fn build_response_from_raw(cmd: i32, payload: &[u8]) -> Result<Vec<u8>> {
+        let mut base = Base::default();
+        base.cmd = cmd;
+        base.code = Some(0);
+
+        let mut buf = BytesMut::new();
+        base.encode(&mut buf)
+            .context("Failed to encode Base message")?;
+
+        encode_extension_raw_field(cmd as u32, payload, &mut buf);
         Ok(buf.to_vec())
     }
 
@@ -111,6 +136,13 @@ impl GameMessage {
 
 /// 在 protobuf wire-format 字节流中扫描并提取指定 field_number 的 LengthDelimited 字段
 fn extract_extension_payload<T: Message + Default>(data: &[u8], target_tag: u32) -> Result<T> {
+    let payload = extract_extension_bytes(data, target_tag)?;
+    T::decode(payload.as_slice())
+        .with_context(|| format!("Failed to decode extension payload for field {}", target_tag))
+}
+
+/// 在 protobuf wire-format 字节流中扫描并提取指定 field_number 的 LengthDelimited 原始字节
+fn extract_extension_bytes(data: &[u8], target_tag: u32) -> Result<Vec<u8>> {
     let mut buf = data;
 
     while buf.has_remaining() {
@@ -133,8 +165,7 @@ fn extract_extension_payload<T: Message + Default>(data: &[u8], target_tag: u32)
                 ));
             }
             let payload_data = &buf[..len];
-            return T::decode(payload_data)
-                .with_context(|| format!("Failed to decode extension payload for field {}", target_tag));
+            return Ok(payload_data.to_vec());
         } else {
             // 跳过非目标字段
             prost::encoding::skip_field(
@@ -160,6 +191,12 @@ fn encode_extension_field<T: Message, B: BufMut>(tag: u32, msg: &T, buf: &mut B)
     prost::encoding::encode_key(tag, WireType::LengthDelimited, buf);
     prost::encoding::encode_varint(payload_len as u64, buf);
     msg.encode_raw(buf);
+}
+
+fn encode_extension_raw_field<B: BufMut>(tag: u32, payload: &[u8], buf: &mut B) {
+    prost::encoding::encode_key(tag, WireType::LengthDelimited, buf);
+    prost::encoding::encode_varint(payload.len() as u64, buf);
+    buf.put_slice(payload);
 }
 
 // ─── FunctionClientBase 模块 tag 常量 ────────────────────────────────────────
@@ -419,6 +456,22 @@ mod tests {
         let msg = GameMessage::decode(payload).expect("decode failed");
         assert_eq!(msg.base.cmd, 1102);
         assert_eq!(msg.base.code, Some(101));
+    }
+
+    #[test]
+    fn test_raw_extension_roundtrip() {
+        let rq = BeginGameRq {
+            server_id: 7,
+            token: "raw".to_string(),
+            ..Default::default()
+        };
+        let raw = rq.encode_to_vec();
+
+        let payload = GameMessage::build_response_from_raw(1101, &raw)
+            .expect("build_response_from_raw failed");
+        let msg = GameMessage::decode(payload).expect("decode failed");
+        let ext = msg.get_payload_bytes().expect("get_payload_bytes failed");
+        assert_eq!(ext, raw);
     }
 
     #[test]
