@@ -175,7 +175,7 @@ pub enum GameEvent {
     // ── 资源 ──────────────────────────────────────────────────────────────────
     DiamondConsume { role_id: i64, amount: i64 },
     GoldConsume    { role_id: i64, amount: i64 },
-    ResourceChange { resource_type: i32, delta: i64 },
+    ResourceChange { role_id: i64, resource_type: i32, delta: i64 },
 
     // ── 战斗 ──────────────────────────────────────────────────────────────────
     BattleEnd { role_id: i64, win: bool, enemy_power: i64 },
@@ -230,6 +230,13 @@ impl GameEvent {
 
             GameEvent::GoldConsume { role_id, amount } =>
                 Some(MissionEvent::single(*role_id, MissionType::GoldConsume, *amount)),
+
+            GameEvent::ResourceChange { role_id, resource_type, delta } if *delta < 0 => {
+                match *resource_type {
+                    3 => Some(MissionEvent::single(*role_id, MissionType::MeatConsume, -*delta)),
+                    _ => None,
+                }
+            }
 
             GameEvent::TroopTrain { role_id, count } =>
                 Some(MissionEvent::single(*role_id, MissionType::TroopTrain, *count as i64)),
@@ -308,5 +315,37 @@ impl EventDispatcher {
                 handler.handle(event, ctx);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resource_change_maps_meat_consumption_only() {
+        let consume_meat = GameEvent::ResourceChange {
+            role_id: 42,
+            resource_type: 3,
+            delta: -7,
+        };
+        let mission = consume_meat.to_mission_event().expect("meat consumption event");
+        assert_eq!(mission.role_id, 42);
+        assert_eq!(mission.mission_type, MissionType::MeatConsume);
+        assert_eq!(mission.params, vec![7]);
+
+        let gain_meat = GameEvent::ResourceChange {
+            role_id: 42,
+            resource_type: 3,
+            delta: 7,
+        };
+        assert!(gain_meat.to_mission_event().is_none());
+
+        let consume_other = GameEvent::ResourceChange {
+            role_id: 42,
+            resource_type: 6,
+            delta: -7,
+        };
+        assert!(consume_other.to_mission_event().is_none());
     }
 }
