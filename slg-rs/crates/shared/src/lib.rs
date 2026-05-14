@@ -7,5 +7,6 @@ pub mod event;
 pub mod static_config;
 pub mod registry;
 pub mod persistence;
+pub mod battle;
 
 pub use error::GameError;
