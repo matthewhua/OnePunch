@@ -40,6 +40,10 @@ use proto::slg::home_service_client::HomeServiceClient;
 const HEARTBEAT_TIMEOUT_SECS: u64 = 60;
 /// 最大帧大小（64KB）
 const MAX_FRAME_SIZE: usize = 65536;
+// World commands cannot yet be translated into `WorldService::Call(RpcMsg)`.
+// `RpcMsg` only has proto2 extension space for 10001..=40000, while World command ids
+// start at 50001 and the Gateway only holds raw `GameMessage` bytes.
+const WORLD_ROUTE_UNIMPLEMENTED_CODE: i32 = 501;
 
 /// 连接处理器
 ///
@@ -361,8 +365,13 @@ impl ConnectionHandler {
                 self.forward_to_home(conn_id, packet, framed).await
             }
             CmdRoute::World => {
-                // TODO: 转发到 World Service
-                debug!(conn_id, cmd = ?cmd, "World cmd (not yet implemented)");
+                let response = build_world_unimplemented_response(cmd)?;
+                warn!(
+                    conn_id,
+                    cmd = ?cmd,
+                    "World cmd reached Gateway, but raw packet cannot be forwarded to WorldService::Call yet"
+                );
+                framed.send(response).await?;
                 Ok(())
             }
         }
@@ -433,5 +442,31 @@ impl ConnectionHandler {
         framed.send(GamePacket::new(rs_cmd, rs.payload)).await?;
 
         Ok(())
+    }
+}
+
+fn build_world_unimplemented_response(cmd: GameCmd) -> Result<GamePacket> {
+    let rs_cmd = GameCmd::from(cmd as u32 + 1);
+    let err_payload = shared::msg::GameMessage::build_error(
+        rs_cmd as i32,
+        WORLD_ROUTE_UNIMPLEMENTED_CODE,
+    )?;
+    Ok(GamePacket::new(rs_cmd, err_payload))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn world_boundary_returns_wrapped_error_response() {
+        let packet = build_world_unimplemented_response(GameCmd::DispatchTroopRq)
+            .expect("world boundary error packet");
+
+        assert_eq!(packet.cmd, GameCmd::DispatchTroopRs);
+
+        let message = packet.to_message().expect("decode wrapped error");
+        assert_eq!(message.base.cmd, GameCmd::DispatchTroopRs as i32);
+        assert_eq!(message.base.code, Some(WORLD_ROUTE_UNIMPLEMENTED_CODE));
     }
 }

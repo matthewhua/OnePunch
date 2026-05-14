@@ -81,3 +81,9 @@ impl PlayerSystem for BuildingSystem {
         Ok((resp, vec![]))
     }
 }
+
+impl shared::msg::ToFunctionClientBaseBytes for BuildingSystem {
+    fn to_function_base_bytes(&self) -> Vec<u8> {
+        proto::slg::SimDataFunction::default().to_function_base_bytes()
+    }
+}

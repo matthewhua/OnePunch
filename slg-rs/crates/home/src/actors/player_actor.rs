@@ -1,8 +1,9 @@
 use tokio::sync::{mpsc, oneshot, watch};
 use std::sync::Arc;
 use std::time::Duration;
+use prost::Message;
 use tracing::{info, warn, error};
-use proto::slg::{RoleLoginRs, GetRoleDataRs};
+use proto::slg::{FunctionClientBase, GetRoleDataRs, RoleLoginRs};
 use shared::static_config::StaticConfig;
 use shared::persistence::{PlayerDao, LordRow, SaveEntry};
 
@@ -373,41 +374,18 @@ impl PlayerActor {
     }
 
     async fn handle_get_role_data(&mut self, tx: oneshot::Sender<anyhow::Result<GetRoleDataRs>>) {
-        use proto::slg::FunctionClientBase;
-        use prost::Message;
-        use shared::msg::ToFunctionClientBaseBytes;
-
-        let mut function_base = Vec::new();
-
-        let act_bytes = self.activity_system.to_function_base_bytes();
-        if let Ok(f_base) = FunctionClientBase::decode(act_bytes.as_slice()) {
-            function_base.push(f_base);
-        }
-
-        let hero_bytes = self.hero_system.to_function_base_bytes();
-        if let Ok(f_base) = FunctionClientBase::decode(hero_bytes.as_slice()) {
-            function_base.push(f_base);
-        }
-
-        let backpack_bytes = self.backpack_system.to_function_base_bytes();
-        if let Ok(f_base) = FunctionClientBase::decode(backpack_bytes.as_slice()) {
-            function_base.push(f_base);
-        }
-
-        let tech_bytes = self.tech_system.to_function_base_bytes();
-        if let Ok(f_base) = FunctionClientBase::decode(tech_bytes.as_slice()) {
-            function_base.push(f_base);
-        }
-
-        let equip_bytes = self.equip_system.to_function_base_bytes();
-        if let Ok(f_base) = FunctionClientBase::decode(equip_bytes.as_slice()) {
-            function_base.push(f_base);
-        }
-
-        let mission_bytes = self.mission_system.to_function_base_bytes();
-        if let Ok(f_base) = FunctionClientBase::decode(mission_bytes.as_slice()) {
-            function_base.push(f_base);
-        }
+        let function_base = collect_get_role_data_function_base(
+            self.role_id,
+            self.lord.as_ref(),
+            &self.activity_system,
+            &self.hero_system,
+            &self.backpack_system,
+            &self.building_system,
+            &self.tech_system,
+            &self.equip_system,
+            &self.mission_system,
+            &self.skin_system,
+        );
 
         let rs = GetRoleDataRs { function_base, ..Default::default() };
         let _ = tx.send(Ok(rs));
@@ -461,5 +439,239 @@ impl PlayerActor {
         }
 
         shared::msg::GameMessage::build_response_from_raw(cmd as i32 + 1, &resp)
+    }
+}
+
+fn push_function_base(
+    function_base: &mut Vec<FunctionClientBase>,
+    role_id: i64,
+    module: &'static str,
+    bytes: Vec<u8>,
+) {
+    match FunctionClientBase::decode(bytes.as_slice()) {
+        Ok(f_base) => function_base.push(f_base),
+        Err(e) => {
+            warn!(role_id = role_id, module, "Failed to decode FunctionClientBase: {}", e);
+        }
+    }
+}
+
+fn collect_get_role_data_function_base(
+    role_id: i64,
+    lord: Option<&LordRow>,
+    activity_system: &ActivitySystem,
+    hero_system: &HeroSystem,
+    backpack_system: &BackpackSystem,
+    building_system: &BuildingSystem,
+    tech_system: &TechSystem,
+    equip_system: &EquipSystem,
+    mission_system: &MissionSystem,
+    skin_system: &SkinSystem,
+) -> Vec<FunctionClientBase> {
+    use shared::msg::ToFunctionClientBaseBytes;
+
+    let mut function_base = Vec::new();
+
+    if let Some(lord) = lord {
+        push_function_base(
+            &mut function_base,
+            role_id,
+            "lord",
+            build_lord_function(lord).to_function_base_bytes(),
+        );
+    }
+    push_function_base(
+        &mut function_base,
+        role_id,
+        "activity",
+        activity_system.to_function_base_bytes(),
+    );
+    push_function_base(
+        &mut function_base,
+        role_id,
+        "hero",
+        hero_system.to_function_base_bytes(),
+    );
+    push_function_base(
+        &mut function_base,
+        role_id,
+        "backpack",
+        backpack_system.to_function_base_bytes(),
+    );
+    push_function_base(
+        &mut function_base,
+        role_id,
+        "building",
+        building_system.to_function_base_bytes(),
+    );
+    push_function_base(
+        &mut function_base,
+        role_id,
+        "tech",
+        tech_system.to_function_base_bytes(),
+    );
+    push_function_base(
+        &mut function_base,
+        role_id,
+        "equip",
+        equip_system.to_function_base_bytes(),
+    );
+    push_function_base(
+        &mut function_base,
+        role_id,
+        "mission",
+        mission_system.to_function_base_bytes(),
+    );
+    push_function_base(
+        &mut function_base,
+        role_id,
+        "skin",
+        skin_system.to_function_base_bytes(),
+    );
+
+    function_base
+}
+
+fn build_lord_function(lord: &LordRow) -> proto::slg::LordDataFunction {
+    proto::slg::LordDataFunction {
+        nick_name: lord.nick.clone(),
+        portrait: lord.portrait.as_ref().and_then(|value| value.parse::<i32>().ok()),
+        diamond: lord.diamond,
+        battle_fight: lord.battle_fight,
+        guide_index: lord.guide_id,
+        title: lord.title,
+        portrait_frame: lord.portrait_frame,
+        role_status: None,
+        server_open_time: None,
+        role_create_time: None,
+        off_time: lord.off_time,
+        meat: lord.meat,
+        fame: lord.fame,
+        gold: lord.gold,
+        search_survivor_time: lord.search_survivor_time,
+        stamina: lord.stamina.and_then(i64_to_i32),
+        kill_enemy_count: None,
+        union_id: lord.camp_id,
+        total_login: lord.total_login,
+        current_streak: lord.current_streak,
+        vip_level: lord.vip_level,
+        vip_exp: lord.vip_exp,
+        setting: Vec::new(),
+    }
+}
+
+fn i64_to_i32(value: i64) -> Option<i32> {
+    i32::try_from(value).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use shared::msg::func_type;
+
+    #[test]
+    fn collect_get_role_data_function_base_includes_building_and_skin() {
+        let function_base = collect_get_role_data_function_base(
+            42,
+            None,
+            &ActivitySystem::new(),
+            &HeroSystem::new(),
+            &BackpackSystem::new(),
+            &BuildingSystem::new(),
+            &TechSystem::new(),
+            &EquipSystem::new(),
+            &MissionSystem::new(),
+            &SkinSystem::new(),
+        );
+
+        let types: Vec<i32> = function_base
+            .iter()
+            .map(|base| base.r#type.expect("function base missing type"))
+            .collect();
+
+        assert_eq!(
+            types,
+            vec![
+                func_type::ACTIVITY,
+                func_type::HERO,
+                func_type::BAG,
+                func_type::SIM,
+                func_type::TECHNOLOGY,
+                func_type::EQUIP,
+                func_type::MISSION,
+                func_type::SKIN,
+            ]
+        );
+    }
+
+    #[test]
+    fn push_function_base_skips_invalid_payload() {
+        let mut function_base = Vec::new();
+
+        push_function_base(&mut function_base, 42, "bad", vec![0xff, 0x01]);
+
+        assert!(function_base.is_empty());
+    }
+
+    #[test]
+    fn collect_get_role_data_function_base_includes_lord_when_loaded() {
+        let lord = LordRow {
+            role_id: 42,
+            nick: Some("tester".to_string()),
+            portrait: Some("7".to_string()),
+            portrait_frame: Some(8),
+            top_up: None,
+            diamond: Some(100),
+            diamond_cost: None,
+            guide_id: Some(3),
+            on_time: None,
+            ol_time: None,
+            off_time: Some(11),
+            ol_month: None,
+            title: Some(2),
+            max_key: None,
+            role_status: None,
+            across_day_deal_time: None,
+            battle_fight: Some(9000),
+            meat: Some(200),
+            fame: Some(12),
+            gold: Some(300),
+            search_survivor_time: Some(44),
+            stamina: Some(50),
+            start_ad_time: None,
+            start_ad_id: None,
+            is_add_login: None,
+            total_login: Some(5),
+            current_streak: Some(2),
+            vip_level: Some(1),
+            vip_exp: Some(10),
+            camp_id: Some(6),
+            last_periodic_task_time: None,
+            lord_system_setting: None,
+            pay_amount: None,
+            language: None,
+            push_switch: None,
+        };
+
+        let function_base = collect_get_role_data_function_base(
+            42,
+            Some(&lord),
+            &ActivitySystem::new(),
+            &HeroSystem::new(),
+            &BackpackSystem::new(),
+            &BuildingSystem::new(),
+            &TechSystem::new(),
+            &EquipSystem::new(),
+            &MissionSystem::new(),
+            &SkinSystem::new(),
+        );
+
+        assert_eq!(function_base[0].r#type, Some(func_type::LORD));
+
+        let lord_func = build_lord_function(&lord);
+        assert_eq!(lord_func.nick_name.as_deref(), Some("tester"));
+        assert_eq!(lord_func.portrait, Some(7));
+        assert_eq!(lord_func.diamond, Some(100));
+        assert_eq!(lord_func.union_id, Some(6));
     }
 }

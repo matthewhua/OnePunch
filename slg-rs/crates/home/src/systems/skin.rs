@@ -34,3 +34,9 @@ impl PlayerSystem for SkinSystem {
         shared::persistence::col::SKIN
     }
 }
+
+impl shared::msg::ToFunctionClientBaseBytes for SkinSystem {
+    fn to_function_base_bytes(&self) -> Vec<u8> {
+        proto::slg::SkinDataFunction::default().to_function_base_bytes()
+    }
+}

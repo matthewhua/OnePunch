@@ -15,8 +15,10 @@ impl WorldServiceImpl {
 #[tonic::async_trait]
 impl WorldService for WorldServiceImpl {
     async fn call(&self, _request: Request<RpcMsg>) -> Result<Response<RpcMsg>, Status> {
-        // 通用 RPC 入口实现
-        Err(Status::unimplemented("Not yet implemented"))
+        // 这个通用入口会在 Gateway 能把 World 命令转成 RpcMsg 之后再启用。
+        // 目前 Gateway 只有 raw GameMessage bytes，而 World 命令号在 50001+，
+        // 不在 RpcMsg 的 extension 范围内，因此这里保留明确的 unimplemented 边界。
+        Err(Status::unimplemented("World generic call is not wired yet"))
     }
 
     async fn join_map(
