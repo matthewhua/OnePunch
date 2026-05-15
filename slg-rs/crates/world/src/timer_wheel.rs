@@ -60,11 +60,9 @@ impl<T> TimerWheel<T> {
     pub fn advance(&mut self) -> Vec<T> {
         self.current_tick += 1;
         let tick_idx = (self.current_tick % 10) as usize;
-        
-        // 1. 获取当前 tick 的所有事件
-        let mut expired = std::mem::take(&mut self.ticks[tick_idx]);
 
-        // 2. 如果当前刻度是一秒的开始，从 seconds 轮下沉数据
+        // 1. 如果当前刻度是一秒的开始，从 seconds/overflow 下沉数据。
+        // 必须先下沉再读取当前 tick；否则刚下沉到当前 tick 的到期任务会被延后一轮。
         if tick_idx == 0 {
             let sec_idx = ((self.current_tick / 10) % 60) as usize;
             let entries = std::mem::take(&mut self.seconds[sec_idx]);
@@ -96,7 +94,8 @@ impl<T> TimerWheel<T> {
             }
         }
 
-        expired
+        // 2. 获取当前 tick 的所有事件
+        std::mem::take(&mut self.ticks[tick_idx])
     }
 
     fn schedule_entry(&mut self, entry: TimerEntry<T>) {
@@ -111,9 +110,9 @@ mod tests {
     #[test]
     fn test_timer_wheel() {
         let base_time = 1000000;
-        let mut wheel = TimerWheel::new(base_time);
 
         // 1. 测试短延时 (300ms)
+        let mut wheel = TimerWheel::new(base_time);
         wheel.schedule(base_time + 300, 1);
         
         // Advance 100ms
@@ -123,14 +122,33 @@ mod tests {
         assert_eq!(results, vec![1]);
 
         // 2. 测试跨秒延时 (1500ms)
+        let mut wheel = TimerWheel::new(base_time);
         wheel.schedule(base_time + 1500, 2);
-        for _ in 0..11 { wheel.advance(); } // Up to 1400ms
+        for _ in 0..14 { wheel.advance(); } // Up to 1400ms
         let results = wheel.advance();      // 1500ms
         assert_eq!(results, vec![2]);
 
         // 3. 测试跨分钟延时 (65s)
+        let mut wheel = TimerWheel::new(base_time);
         wheel.schedule(base_time + 65000, 3);
         for _ in 0..649 { wheel.advance(); } 
+        let results = wheel.advance();
+        assert_eq!(results, vec![3]);
+    }
+
+    #[test]
+    fn overflow_entry_scheduled_after_elapsed_time_expires_at_deadline() {
+        let base_time = 1000000;
+        let mut wheel = TimerWheel::new(base_time);
+
+        for _ in 0..15 {
+            assert!(wheel.advance().is_empty());
+        }
+        wheel.schedule(base_time + 65000, 3);
+
+        for _ in 0..634 {
+            assert!(wheel.advance().is_empty());
+        }
         let results = wheel.advance();
         assert_eq!(results, vec![3]);
     }

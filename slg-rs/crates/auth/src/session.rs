@@ -1,8 +1,8 @@
-use deadpool_redis::Pool;
+use anyhow::{Context, Result};
 use deadpool_redis::redis::AsyncCommands;
-use uuid::Uuid;
-use anyhow::{Result, Context};
+use deadpool_redis::Pool;
 use tracing::debug;
+use uuid::Uuid;
 
 /// Session 管理器
 ///
@@ -14,6 +14,7 @@ pub struct SessionManager {
     ttl_seconds: u64,
 }
 
+#[allow(dead_code)]
 impl SessionManager {
     pub fn new(redis: Pool, ttl_seconds: u64) -> Self {
         Self { redis, ttl_seconds }
@@ -24,11 +25,15 @@ impl SessionManager {
         let token = Uuid::new_v4().to_string();
         let key = format!("session:{}", token);
 
-        let mut conn = self.redis.get().await
+        let mut conn = self
+            .redis
+            .get()
+            .await
             .context("Failed to get Redis connection")?;
 
         // SET key value EX ttl
-        conn.set_ex::<_, _, ()>(&key, account_key_id, self.ttl_seconds).await
+        conn.set_ex::<_, _, ()>(&key, account_key_id, self.ttl_seconds)
+            .await
             .context("Failed to set session in Redis")?;
 
         debug!(account_key_id, token = %token, ttl = self.ttl_seconds, "Session created");
@@ -39,10 +44,15 @@ impl SessionManager {
     pub async fn validate_session(&self, token: &str) -> Result<Option<i64>> {
         let key = format!("session:{}", token);
 
-        let mut conn = self.redis.get().await
+        let mut conn = self
+            .redis
+            .get()
+            .await
             .context("Failed to get Redis connection")?;
 
-        let account_key_id: Option<i64> = conn.get(&key).await
+        let account_key_id: Option<i64> = conn
+            .get(&key)
+            .await
             .context("Failed to get session from Redis")?;
 
         Ok(account_key_id)
@@ -52,10 +62,14 @@ impl SessionManager {
     pub async fn delete_session(&self, token: &str) -> Result<()> {
         let key = format!("session:{}", token);
 
-        let mut conn = self.redis.get().await
+        let mut conn = self
+            .redis
+            .get()
+            .await
             .context("Failed to get Redis connection")?;
 
-        conn.del::<_, ()>(&key).await
+        conn.del::<_, ()>(&key)
+            .await
             .context("Failed to delete session from Redis")?;
 
         Ok(())
@@ -65,10 +79,15 @@ impl SessionManager {
     pub async fn refresh_session(&self, token: &str) -> Result<bool> {
         let key = format!("session:{}", token);
 
-        let mut conn = self.redis.get().await
+        let mut conn = self
+            .redis
+            .get()
+            .await
             .context("Failed to get Redis connection")?;
 
-        let refreshed: bool = conn.expire(&key, self.ttl_seconds as i64).await
+        let refreshed: bool = conn
+            .expire(&key, self.ttl_seconds as i64)
+            .await
             .context("Failed to refresh session TTL")?;
 
         Ok(refreshed)

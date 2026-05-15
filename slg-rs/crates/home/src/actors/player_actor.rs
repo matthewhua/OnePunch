@@ -8,7 +8,12 @@ use shared::persistence::{PlayerDao, LordRow, SaveEntry};
 
 use crate::systems::PlayerSystem;
 use crate::systems::activity::ActivitySystem;
+use crate::systems::hero::HeroSystem;
+use crate::systems::backpack::BackpackSystem;
 use crate::systems::building::BuildingSystem;
+use crate::systems::tech::TechSystem;
+use crate::systems::equip::EquipSystem;
+use crate::systems::mission::MissionSystem;
 use crate::systems::skin::SkinSystem;
 use shared::event::{EventDispatcher, PlayerContext, GameEvent};
 use crate::actors::global_event_bus::GlobalEventBus;
@@ -40,6 +45,12 @@ pub enum PlayerMessage {
     DispatchGameEvent(GameEvent),
     /// 立即存盘（充值等关键操作后触发）
     ForceSave,
+    /// Gateway 转发的业务命令
+    GameCommand {
+        cmd: u32,
+        payload: Vec<u8>,
+        reply: oneshot::Sender<anyhow::Result<Vec<u8>>>,
+    },
 }
 
 pub struct PlayerActor {
@@ -56,7 +67,12 @@ pub struct PlayerActor {
 
     // ── 功能系统模块（p_data，blob 列）──
     pub activity_system: ActivitySystem,
+    pub hero_system: HeroSystem,
+    pub backpack_system: BackpackSystem,
     pub building_system: BuildingSystem,
+    pub tech_system: TechSystem,
+    pub equip_system: EquipSystem,
+    pub mission_system: MissionSystem,
     pub skin_system: SkinSystem,
 
     // ── 事件 ──
@@ -94,7 +110,12 @@ impl PlayerActor {
             lord: None,
             lord_dirty: false,
             activity_system: ActivitySystem::new(),
+            hero_system: HeroSystem::new(),
+            backpack_system: BackpackSystem::new(),
             building_system: BuildingSystem::new(),
+            tech_system: TechSystem::new(),
+            equip_system: EquipSystem::new(),
+            mission_system: MissionSystem::new(),
             skin_system: SkinSystem::new(),
             event_dispatcher: EventDispatcher::new(),
             ctx: PlayerContext { role_id, account_id },
@@ -128,9 +149,14 @@ impl PlayerActor {
     /// 将 PlayerDataRow 中的各列分发到对应系统
     fn load_system_from_row(&mut self, row: &shared::persistence::PlayerDataRow) {
         let systems: Vec<(&mut dyn PlayerSystem, Option<&Vec<u8>>)> = vec![
-            (&mut self.activity_system, row.activity_func.as_ref()),
-            (&mut self.building_system, row.sim_func.as_ref()),
-            (&mut self.skin_system,     row.skin_func.as_ref()),
+            (&mut self.activity_system,  row.activity_func.as_ref()),
+            (&mut self.hero_system,      row.hero_func.as_ref()),
+            (&mut self.backpack_system,  row.backpack_func.as_ref()),
+            (&mut self.building_system,  row.sim_func.as_ref()),
+            (&mut self.tech_system,      row.technology_func.as_ref()),
+            (&mut self.equip_system,     row.equip_func.as_ref()),
+            (&mut self.mission_system,   row.mission_func.as_ref()),
+            (&mut self.skin_system,      row.skin_func.as_ref()),
         ];
 
         for (system, data_opt) in systems {
@@ -159,7 +185,12 @@ impl PlayerActor {
 
         // 触发各系统 on_login
         self.activity_system.on_login();
+        self.hero_system.on_login();
+        self.backpack_system.on_login();
         self.building_system.on_login();
+        self.tech_system.on_login();
+        self.equip_system.on_login();
+        self.mission_system.on_login();
         self.skin_system.on_login();
 
         let mut save_interval = tokio::time::interval(Duration::from_secs(SAVE_INTERVAL_SECS));
@@ -195,6 +226,10 @@ impl PlayerActor {
                         PlayerMessage::ForceSave => {
                             self.do_save(false).await;
                         }
+                        PlayerMessage::GameCommand { cmd, payload, reply } => {
+                            let result = self.handle_game_command(cmd, payload).await;
+                            let _ = reply.send(result);
+                        }
                     }
                 }
                 _ = save_interval.tick() => {
@@ -212,8 +247,16 @@ impl PlayerActor {
 
     fn on_tick(&mut self) {
         self.activity_system.tick();
+        self.hero_system.tick();
         self.building_system.tick();
         self.skin_system.tick();
+
+        // 科技研究完成检测
+        let now = chrono::Utc::now().timestamp();
+        let tech_events = self.tech_system.check_research_complete(self.role_id, now);
+        for event in tech_events {
+            self.dispatch_event(&event);
+        }
     }
 
     /// 执行存盘
@@ -236,7 +279,12 @@ impl PlayerActor {
 
         let systems: Vec<&mut dyn PlayerSystem> = vec![
             &mut self.activity_system,
+            &mut self.hero_system,
+            &mut self.backpack_system,
             &mut self.building_system,
+            &mut self.tech_system,
+            &mut self.equip_system,
+            &mut self.mission_system,
             &mut self.skin_system,
         ];
 
@@ -309,7 +357,18 @@ impl PlayerActor {
     }
 
     pub fn dispatch_event(&mut self, event: &GameEvent) {
+        // 1. 将语义事件自动转换为 MissionEvent，驱动任务/活动进度
+        if let Some(mission_event) = event.to_mission_event() {
+            let me = GameEvent::Mission(mission_event);
+            self.activity_system.handle_event(&me, &mut self.ctx);
+            // 带 config 的任务进度更新（能查 s_task 配置）
+            self.mission_system.handle_event_with_config(&me, &self.current_config, &mut self.ctx);
+            self.event_dispatcher.dispatch(&me, &mut self.ctx);
+        }
+
+        // 2. 原始事件也分发一遍（部分 handler 需要原始语义）
         self.activity_system.handle_event(event, &mut self.ctx);
+        self.mission_system.handle_event(event, &mut self.ctx);
         self.event_dispatcher.dispatch(event, &mut self.ctx);
     }
 
@@ -325,9 +384,82 @@ impl PlayerActor {
             function_base.push(f_base);
         }
 
-        // TODO: 其他系统的 FunctionClientBase 数据
+        let hero_bytes = self.hero_system.to_function_base_bytes();
+        if let Ok(f_base) = FunctionClientBase::decode(hero_bytes.as_slice()) {
+            function_base.push(f_base);
+        }
+
+        let backpack_bytes = self.backpack_system.to_function_base_bytes();
+        if let Ok(f_base) = FunctionClientBase::decode(backpack_bytes.as_slice()) {
+            function_base.push(f_base);
+        }
+
+        let tech_bytes = self.tech_system.to_function_base_bytes();
+        if let Ok(f_base) = FunctionClientBase::decode(tech_bytes.as_slice()) {
+            function_base.push(f_base);
+        }
+
+        let equip_bytes = self.equip_system.to_function_base_bytes();
+        if let Ok(f_base) = FunctionClientBase::decode(equip_bytes.as_slice()) {
+            function_base.push(f_base);
+        }
+
+        let mission_bytes = self.mission_system.to_function_base_bytes();
+        if let Ok(f_base) = FunctionClientBase::decode(mission_bytes.as_slice()) {
+            function_base.push(f_base);
+        }
 
         let rs = GetRoleDataRs { function_base, ..Default::default() };
         let _ = tx.send(Ok(rs));
+    }
+
+    /// 按 cmd 范围将业务命令路由到对应系统处理，返回序列化后的响应 payload。
+    ///
+    /// cmd 范围对应关系（与 proto 文件保持一致）：
+    /// - 1101-1200  Game（登录/任务相关）→ mission_system
+    /// - 1501-1603  Simulate（建筑/模拟经营）→ building_system
+    /// - 2001-2500  Hero（将领）→ hero_system
+    /// - 4001-4004  Bag（背包）→ backpack_system
+    /// - 4201-4208  Technology（科技）→ tech_system
+    /// - 4801-5100  Equip（装备）→ equip_system
+    /// - 8001-10000 Activity（活动）→ activity_system
+    pub async fn handle_game_command(
+        &mut self,
+        cmd: u32,
+        payload: Vec<u8>,
+    ) -> anyhow::Result<Vec<u8>> {
+        use crate::systems::PlayerSystem;
+        let config = self.current_config.clone();
+        let payload = if let Ok(msg) = shared::msg::GameMessage::decode(payload.clone()) {
+            if msg.base.cmd == cmd as i32 {
+                msg.get_payload_bytes().unwrap_or(payload)
+            } else {
+                payload
+            }
+        } else {
+            payload
+        };
+
+        // 调用对应系统，获取响应 payload 和需要分发的事件
+        let (resp, events) = match cmd {
+            1101..=1200 => self.mission_system.handle_command_with_events(cmd, &payload, &config),
+            1501..=1603 => self.building_system.handle_command_with_events(cmd, &payload, &config),
+            2001..=2500 => self.hero_system.handle_command_with_events(cmd, &payload, &config),
+            4001..=4004 => self.backpack_system.handle_command_with_events(cmd, &payload, &config),
+            4201..=4208 => self.tech_system.handle_command_with_events(cmd, &payload, &config),
+            4801..=5100 => self.equip_system.handle_command_with_events(cmd, &payload, &config),
+            8001..=10000 => self.activity_system.handle_command_with_events(cmd, &payload, &config),
+            _ => {
+                warn!(role_id = self.role_id, cmd, "Unhandled cmd, no system matched");
+                return Err(anyhow::anyhow!("Unknown cmd: {}", cmd));
+            }
+        }?;
+
+        // 分发系统产生的游戏事件（驱动任务/活动进度）
+        for event in events {
+            self.dispatch_event(&event);
+        }
+
+        shared::msg::GameMessage::build_response_from_raw(cmd as i32 + 1, &resp)
     }
 }

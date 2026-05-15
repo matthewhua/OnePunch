@@ -382,24 +382,56 @@ impl ConnectionHandler {
         Ok(())
     }
 
-    /// 转发消息到 Home Service
+    /// 转发消息到 Home Service（gRPC Dispatch）
     ///
-    /// 当前实现：将原始 payload 透传给 Home Service 的 gRPC Dispatch 接口。
-    /// TODO: 实现完整的 gRPC Dispatch 协议
+    /// 流程：
+    /// 1. 从 session 取 role_id
+    /// 2. 调用 HomeService::Dispatch(DispatchRq { role_id, cmd, payload })
+    /// 3. 将响应 payload 封装为 GamePacket 发回客户端
     async fn forward_to_home(
         &self,
         conn_id: u64,
         packet: GamePacket,
         framed: &mut Framed<TcpStream, GameCodec>,
     ) -> Result<()> {
-        let role_id = self.sessions.get_role_id(conn_id).unwrap_or(0);
-        let account_key_id = self.sessions.get_account_key_id(conn_id).unwrap_or(0);
+        let role_id = self.sessions.get_role_id(conn_id)
+            .filter(|&id| id > 0)
+            .ok_or_else(|| anyhow!("No role_id in session for conn {}", conn_id))?;
 
-        debug!(conn_id, role_id, account_key_id, cmd = ?packet.cmd, "Forward to Home");
+        let cmd = packet.cmd;
+        let payload = packet.payload.clone();
 
-        // TODO: 调用 HomeService::Dispatch gRPC 接口
-        // 当前占位：直接返回空响应
-        let _ = (role_id, account_key_id, framed);
+        debug!(conn_id, role_id, cmd = ?cmd, "Forward to Home via gRPC Dispatch");
+
+        // 建立 gRPC 连接（TODO: 连接池复用）
+        let mut home_client = HomeServiceClient::connect(self.home_addr.clone()).await
+            .map_err(|e| anyhow!("Home service unavailable: {}", e))?;
+
+        let dispatch_rq = proto::slg::DispatchRq {
+            role_id,
+            cmd: cmd as i32,
+            payload,
+        };
+
+        let rs = home_client.dispatch(dispatch_rq).await
+            .map_err(|s| anyhow!("Dispatch gRPC error: {}", s))?
+            .into_inner();
+
+        if rs.code != 0 {
+            warn!(conn_id, role_id, cmd = ?cmd, code = rs.code, "Dispatch returned error code");
+            // 将错误码封装为 GameMessage 错误包发回客户端
+            let err_payload = shared::msg::GameMessage::build_error(cmd as i32, rs.code)?;
+            // 响应 cmd = 请求 cmd + 1（约定：Rq 为奇数，Rs 为偶数）
+            let rs_cmd = GameCmd::from(cmd as u32 + 1);
+            framed.send(GamePacket::new(rs_cmd, err_payload)).await?;
+            return Ok(());
+        }
+
+        // 将响应 payload 直接封装为 GamePacket 发回客户端
+        // 响应 cmd = 请求 cmd + 1
+        let rs_cmd = GameCmd::from(cmd as u32 + 1);
+        framed.send(GamePacket::new(rs_cmd, rs.payload)).await?;
+
         Ok(())
     }
 }

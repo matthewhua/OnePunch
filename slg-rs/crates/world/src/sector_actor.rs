@@ -6,10 +6,11 @@ use crate::timer_wheel::TimerWheel;
 use crate::supervisor::ActorId;
 use crate::health::HealthChecker;
 use crate::map::aoi::{AoiManager, AoiEvent};
+use crate::march::{arrival_action_for_troop, ArrivalAction};
 use crate::wal::{WriteAheadLog, WalEntry};
 use proto::slg::{BaseEntity, BaseTroop};
 use anyhow::Result;
-use tracing::{info, warn, error};
+use tracing::{info, error};
 use bytes::Bytes;
 
 pub struct MapSectorActor {
@@ -164,9 +165,9 @@ impl MapSectorActor {
         
         // AOI
         let pos = troop.origin.unwrap_or(0);
-        self.aoi_manager.broadcast_area(pos, AoiEvent::EntityEnter { 
-            entity: BaseEntity { pos, ..Default::default() } 
-        }).await;
+        self.aoi_manager
+            .broadcast_area(pos, AoiEvent::MarchStart { troop })
+            .await;
         
         Ok(())
     }
@@ -177,12 +178,50 @@ impl MapSectorActor {
             if let Some(troop) = self.marching_troops.remove(&key) {
                 let goal_pos = troop.goal.unwrap_or(0);
                 if crate::map::grid::pos_to_sector_id(goal_pos) == self.sector_id {
-                    info!("Troop {} arrived at destination {}", key, goal_pos);
+                    self.handle_arrival(troop).await;
                 } else {
                     self.transfer_to_neighbor(troop).await;
                 }
             }
         }
+    }
+
+    async fn handle_arrival(&mut self, mut troop: BaseTroop) {
+        let key = troop.key;
+        let goal_pos = troop.goal.unwrap_or(0);
+        troop.status = Some(crate::march::MARCH_STATUS_ARRIVAL);
+
+        let action = arrival_action_for_troop(&troop);
+        match action {
+            ArrivalAction::Battle => {
+                let target = self.entities.get(&goal_pos);
+                info!(
+                    troop_key = key,
+                    goal_pos,
+                    target_exists = target.is_some(),
+                    "Troop arrived and queued battle trigger"
+                );
+            }
+            ArrivalAction::Collect => {
+                info!(troop_key = key, goal_pos, "Troop arrived and started collect trigger");
+            }
+            ArrivalAction::Scout => {
+                info!(troop_key = key, goal_pos, "Troop arrived and queued scout trigger");
+            }
+            ArrivalAction::Garrison => {
+                info!(troop_key = key, goal_pos, "Troop arrived and queued garrison trigger");
+            }
+            ArrivalAction::Return => {
+                info!(troop_key = key, goal_pos, "Troop returned to origin");
+            }
+            ArrivalAction::None => {
+                info!(troop_key = key, goal_pos, "Troop arrived with no trigger action");
+            }
+        }
+
+        self.aoi_manager
+            .broadcast_area(goal_pos, AoiEvent::MarchArrive { troop_key: key, pos: goal_pos })
+            .await;
     }
 
     async fn transfer_to_neighbor(&mut self, troop: BaseTroop) {
