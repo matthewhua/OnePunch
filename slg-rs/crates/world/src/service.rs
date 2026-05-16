@@ -277,6 +277,32 @@ impl WorldService for WorldServiceImpl {
                     .await?;
                 self.response(50020, &proto::slg::DispatchTroopRs::default())
             }
+            50023 => {
+                let rq: proto::slg::DeclareFightRq = self.decode_payload(req.cmd, req.payload)?;
+                if !crate::map::grid::is_valid_pos(rq.pos) {
+                    return Err(Status::invalid_argument(format!(
+                        "invalid world fight position: {}",
+                        rq.pos
+                    )));
+                }
+                Err(Status::failed_precondition(format!(
+                    "declare fight is unavailable until battle service is integrated: pos={}, fight_type={:?}",
+                    rq.pos, rq.fight_type
+                )))
+            }
+            50025 => {
+                let rq: proto::slg::JoinTheFightRq = self.decode_payload(req.cmd, req.payload)?;
+                if rq.fight_id <= 0 {
+                    return Err(Status::invalid_argument(format!(
+                        "invalid world fight id: {}",
+                        rq.fight_id
+                    )));
+                }
+                Err(Status::failed_precondition(format!(
+                    "join fight is unavailable until battle service is integrated: fight_id={}",
+                    rq.fight_id
+                )))
+            }
             50027 => {
                 let rq: TroopBackCommandRq = self.decode_payload(req.cmd, req.payload)?;
                 let troop = self
@@ -638,6 +664,30 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn fight_commands_decode_and_report_battle_integration_gap() {
+        let svc = service();
+
+        let declare = proto::slg::DeclareFightRq {
+            pos: crate::map::grid::xy_to_pos(10, 10),
+            fight_type: Some(1),
+        };
+        let err = svc
+            .dispatch(Request::new(request(50023, 42, &declare)))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(err.message().contains("battle service"));
+
+        let join = proto::slg::JoinTheFightRq { fight_id: 1 };
+        let err = svc
+            .dispatch(Request::new(request(50025, 42, &join)))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(err.message().contains("battle service"));
     }
 
     #[tokio::test]
