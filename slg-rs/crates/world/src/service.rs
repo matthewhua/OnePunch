@@ -240,11 +240,11 @@ impl WorldService for WorldServiceImpl {
             }
             50005 => self.response(50006, &LeaveWorldMapRs::default()),
             50007 => {
-                let _rq: GetAreaDetailsRq = self.decode_payload(req.cmd, req.payload)?;
+                let rq: GetAreaDetailsRq = self.decode_payload(req.cmd, req.payload)?;
                 self.response(
                     50008,
                     &GetAreaDetailsRs {
-                        entity: self.grid.all_entities(),
+                        entity: self.grid.entities_in_area(rq.area),
                     },
                 )
             }
@@ -253,7 +253,7 @@ impl WorldService for WorldServiceImpl {
                 self.response(
                     50010,
                     &GetBlockDetailsRs {
-                        entity: self.grid.all_entities(),
+                        entity: self.grid.entities_in_blocks(&rq.block),
                         block: rq.block,
                     },
                 )
@@ -906,6 +906,76 @@ mod tests {
         assert!(report.expired.is_empty());
         assert!(report.spawned.is_empty());
         assert_eq!(after, before);
+    }
+
+    #[tokio::test]
+    async fn area_and_block_details_filter_entities() {
+        let svc = service();
+        let target = BaseEntity {
+            pos: crate::map::grid::xy_to_pos(400, 400),
+            entity_type: Some(WorldEntityTypeDefine::EntityTypeMine as i32),
+            key_id: Some(9001),
+            ..Default::default()
+        };
+        let same_area_other_block = BaseEntity {
+            pos: crate::map::grid::xy_to_pos(460, 400),
+            entity_type: Some(WorldEntityTypeDefine::EntityTypeMine as i32),
+            key_id: Some(9002),
+            ..Default::default()
+        };
+        let other_area = BaseEntity {
+            pos: crate::map::grid::xy_to_pos(900, 900),
+            entity_type: Some(WorldEntityTypeDefine::EntityTypeBandit as i32),
+            key_id: Some(9003),
+            ..Default::default()
+        };
+        svc.grid.upsert_entity(other_area).unwrap();
+        svc.grid
+            .upsert_entity(same_area_other_block.clone())
+            .unwrap();
+        svc.grid.upsert_entity(target.clone()).unwrap();
+
+        let area: GetAreaDetailsRs = dispatch_body(
+            &svc,
+            50007,
+            50008,
+            &GetAreaDetailsRq {
+                map: 1,
+                area: Some(crate::map::grid::pos_to_sector_id(target.pos)),
+            },
+        )
+        .await;
+        assert_eq!(area.entity, vec![target.clone(), same_area_other_block]);
+
+        let block: GetBlockDetailsRs = dispatch_body(
+            &svc,
+            50009,
+            50010,
+            &GetBlockDetailsRq {
+                map: 1,
+                block: vec![crate::map::grid::pos_to_grid(target.pos)],
+            },
+        )
+        .await;
+        assert_eq!(block.entity, vec![target]);
+        assert_eq!(
+            block.block,
+            vec![crate::map::grid::pos_to_grid(crate::map::grid::xy_to_pos(
+                400, 400
+            ))]
+        );
+
+        let all_blocks: GetBlockDetailsRs = dispatch_body(
+            &svc,
+            50009,
+            50010,
+            &GetBlockDetailsRq {
+                map: 1,
+                block: Vec::new(),
+            },
+        )
+        .await;
+        assert_eq!(all_blocks.entity.len(), svc.grid.all_entities().len());
     }
 
     #[tokio::test]

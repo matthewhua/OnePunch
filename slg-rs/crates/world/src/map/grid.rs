@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use dashmap::DashMap;
 use proto::slg::BaseEntity;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 pub const MAP_WIDTH: i32 = 1300;
 pub const MAP_HEIGHT: i32 = 1300;
@@ -163,11 +163,34 @@ impl MapGrid {
         entities
     }
 
+    pub fn entities_in_area(&self, area: Option<i32>) -> Vec<BaseEntity> {
+        match area {
+            Some(area_id) => {
+                self.entities_matching(|entity| pos_to_sector_id(entity.pos) == area_id)
+            }
+            None => self.all_entities(),
+        }
+    }
+
+    pub fn entities_in_blocks(&self, blocks: &[i32]) -> Vec<BaseEntity> {
+        if blocks.is_empty() {
+            return self.all_entities();
+        }
+
+        let blocks: BTreeSet<i32> = blocks.iter().copied().collect();
+        self.entities_matching(|entity| blocks.contains(&pos_to_grid(entity.pos)))
+    }
+
     pub fn all_entities(&self) -> Vec<BaseEntity> {
+        self.entities_matching(|_| true)
+    }
+
+    fn entities_matching(&self, predicate: impl Fn(&BaseEntity) -> bool + Copy) -> Vec<BaseEntity> {
         let mut entities: Vec<BaseEntity> = self
             .sectors
             .iter()
             .flat_map(|sector| sector.value().values().cloned().collect::<Vec<_>>())
+            .filter(predicate)
             .collect();
         entities.sort_by_key(|entity| entity.pos);
         entities
@@ -283,5 +306,26 @@ mod tests {
         assert_eq!(moved.pos, to);
         assert!(grid.get_entity(from).is_none());
         assert_eq!(grid.get_entity(to).map(|e| e.pos), Some(to));
+    }
+
+    #[test]
+    fn filters_entities_by_area_and_block() {
+        let grid = MapGrid::new();
+        let first = entity(xy_to_pos(10, 10), 3, 1);
+        let same_area_other_block = entity(xy_to_pos(80, 10), 3, 2);
+        let other_area = entity(xy_to_pos(400, 400), 4, 3);
+        grid.upsert_entity(other_area.clone()).unwrap();
+        grid.upsert_entity(same_area_other_block.clone()).unwrap();
+        grid.upsert_entity(first.clone()).unwrap();
+
+        assert_eq!(
+            grid.entities_in_area(Some(pos_to_sector_id(first.pos))),
+            vec![first.clone(), same_area_other_block]
+        );
+        assert_eq!(
+            grid.entities_in_blocks(&[pos_to_grid(first.pos)]),
+            vec![first]
+        );
+        assert_eq!(grid.entities_in_area(Some(9999)), Vec::<BaseEntity>::new());
     }
 }
