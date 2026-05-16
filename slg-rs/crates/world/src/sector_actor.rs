@@ -8,7 +8,7 @@ use crate::outbound::{
 };
 use crate::supervisor::ActorId;
 use crate::timer_wheel::TimerWheel;
-use crate::wal::{WalEntry, WalReplayState, WalTroop, WriteAheadLog};
+use crate::wal::{WalEntity, WalEntry, WalReplayState, WalTroop, WriteAheadLog};
 use anyhow::Result;
 use bytes::Bytes;
 use dashmap::DashMap;
@@ -42,6 +42,7 @@ pub struct MapSectorActor {
     /// 关闭信号
     shutdown_rx: broadcast::Receiver<()>,
     tracked_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
+    tracked_entities: Arc<DashMap<i32, Vec<BaseEntity>>>,
 }
 
 impl MapSectorActor {
@@ -56,6 +57,7 @@ impl MapSectorActor {
         wal: WriteAheadLog,
         shutdown_rx: broadcast::Receiver<()>,
         tracked_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
+        tracked_entities: Arc<DashMap<i32, Vec<BaseEntity>>>,
     ) -> Self {
         Self::new_with_outbound(
             sector_id,
@@ -69,6 +71,7 @@ impl MapSectorActor {
             wal,
             shutdown_rx,
             tracked_troops,
+            tracked_entities,
         )
     }
 
@@ -84,6 +87,7 @@ impl MapSectorActor {
         wal: WriteAheadLog,
         shutdown_rx: broadcast::Receiver<()>,
         tracked_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
+        tracked_entities: Arc<DashMap<i32, Vec<BaseEntity>>>,
     ) -> Self {
         Self {
             sector_id,
@@ -100,6 +104,7 @@ impl MapSectorActor {
             wal,
             shutdown_rx,
             tracked_troops,
+            tracked_entities,
         }
     }
 
@@ -108,6 +113,7 @@ impl MapSectorActor {
         let entries = self.wal.recover().await?;
         let state = WalReplayState::from_entries(&entries);
         self.entities = state.entities;
+        self.track_entities_snapshot();
 
         for (key, troop) in state.troops {
             if troop.status == Some(MARCH_STATUS_ARRIVAL) {
@@ -177,6 +183,12 @@ impl MapSectorActor {
             }
             SectorMessage::RemoveTroop { troop_key } => {
                 self.remove_troop(troop_key);
+            }
+            SectorMessage::UpsertEntity { entity_data } => {
+                self.upsert_entity(entity_data).await?;
+            }
+            SectorMessage::RemoveEntity { pos } => {
+                self.remove_entity(pos).await?;
             }
             SectorMessage::Tick => {
                 self.tick().await;
@@ -250,6 +262,24 @@ impl MapSectorActor {
     fn remove_troop(&mut self, troop_key: i32) {
         self.marching_troops.remove(&troop_key);
         self.untrack_troop(troop_key);
+    }
+
+    async fn upsert_entity(&mut self, entity: BaseEntity) -> Result<()> {
+        self.wal
+            .append(&WalEntry::EntityUpsert {
+                entity: WalEntity::from(&entity),
+            })
+            .await?;
+        self.entities.insert(entity.pos, entity);
+        self.track_entities_snapshot();
+        Ok(())
+    }
+
+    async fn remove_entity(&mut self, pos: i32) -> Result<()> {
+        self.wal.append(&WalEntry::EntityRemove { pos }).await?;
+        self.entities.remove(&pos);
+        self.track_entities_snapshot();
+        Ok(())
     }
 
     async fn tick(&mut self) {
@@ -413,6 +443,12 @@ impl MapSectorActor {
         }
     }
 
+    fn track_entities_snapshot(&self) {
+        let mut entities: Vec<BaseEntity> = self.entities.values().cloned().collect();
+        entities.sort_by_key(|entity| entity.pos);
+        self.tracked_entities.insert(self.sector_id, entities);
+    }
+
     async fn save_and_clean_wal(&mut self) -> Result<()> {
         info!(
             "Sector {} saving data and truncating WAL...",
@@ -448,6 +484,7 @@ mod tests {
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let _shutdown_tx = shutdown_tx;
         let tracked_troops = Arc::new(DashMap::new());
+        let tracked_entities = Arc::new(DashMap::new());
         let garrison_state = Arc::new(crate::garrison::GarrisonState::new());
         let wal_path = std::env::temp_dir().join(format!(
             "sector-arrival-outbound-test-{}-{}.wal",
@@ -471,6 +508,7 @@ mod tests {
             wal,
             shutdown_rx,
             tracked_troops,
+            tracked_entities,
         );
         (actor, garrison_state, wal_path)
     }

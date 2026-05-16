@@ -50,6 +50,9 @@ impl WorldServiceImpl {
         };
         svc.refresh_default_entities_at(DEFAULT_ENTITY_REFRESH_TIME_MS)
             .expect("default world entity spawn rules must be valid");
+        svc.runtime
+            .sync_entity_snapshot_now(svc.grid.all_entities())
+            .expect("default world entities must sync into sectors");
         svc
     }
 
@@ -85,9 +88,24 @@ impl WorldServiceImpl {
             .entity_lifecycle
             .lock()
             .map_err(|_| Status::internal("world entity lifecycle lock poisoned"))?;
-        lifecycle
+        let report = lifecycle
             .refresh_at(&self.grid, &rules, now_ms)
-            .map_err(|e| Status::internal(format!("refresh default world entities failed: {}", e)))
+            .map_err(|e| {
+                Status::internal(format!("refresh default world entities failed: {}", e))
+            })?;
+        for entity in &report.spawned {
+            self.runtime
+                .sync_entity_upsert_now(entity.clone())
+                .map_err(|e| Status::internal(format!("sync world entity failed: {}", e)))?;
+        }
+        for entity in &report.expired {
+            self.runtime
+                .sync_entity_remove_now(entity.pos)
+                .map_err(|e| {
+                    Status::internal(format!("sync world entity removal failed: {}", e))
+                })?;
+        }
+        Ok(report)
     }
 
     async fn dispatch_troop(
@@ -174,6 +192,12 @@ impl WorldServiceImpl {
     fn sector_troop_keys(&self, pos: i32) -> Vec<i32> {
         self.runtime
             .sector_troop_keys(crate::runtime::WorldRuntime::sector_id_for_pos(pos))
+    }
+
+    #[cfg(test)]
+    fn sector_entity_positions(&self, pos: i32) -> Vec<i32> {
+        self.runtime
+            .sector_entity_positions(crate::runtime::WorldRuntime::sector_id_for_pos(pos))
     }
 }
 
@@ -568,6 +592,26 @@ mod tests {
         }
     }
 
+    async fn wait_for_sector_entity_positions(
+        svc: &WorldServiceImpl,
+        pos: i32,
+        expected: Vec<i32>,
+    ) {
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(1);
+        loop {
+            if svc.sector_entity_positions(pos) == expected {
+                return;
+            }
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "sector entity positions did not reach {:?} for pos {}",
+                expected,
+                pos
+            );
+            tokio::task::yield_now().await;
+        }
+    }
+
     #[tokio::test]
     async fn dispatch_troop_starts_march_and_returns_success() {
         let svc = service();
@@ -839,6 +883,16 @@ mod tests {
             .entity
             .iter()
             .any(|entity| entity.conf_id == Some(DEFAULT_MINE_CONF_ID)));
+
+        wait_for_sector_entity_positions(
+            &svc,
+            crate::map::grid::xy_to_pos(100, 100),
+            vec![
+                crate::map::grid::xy_to_pos(100, 100),
+                crate::map::grid::xy_to_pos(101, 100),
+            ],
+        )
+        .await;
     }
 
     #[tokio::test]

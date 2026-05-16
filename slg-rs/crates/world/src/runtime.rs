@@ -3,7 +3,7 @@ use crate::sector_actor::MapSectorActor;
 use crate::{health::HealthChecker, map::aoi::AoiManager, map::grid, wal::WriteAheadLog};
 use anyhow::{anyhow, Result};
 use dashmap::DashMap;
-use proto::slg::BaseTroop;
+use proto::slg::{BaseEntity, BaseTroop};
 use std::collections::{BTreeSet, HashMap};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -17,6 +17,7 @@ pub struct WorldRuntime {
     sector_senders: HashMap<i32, mpsc::Sender<SectorMessage>>,
     shutdown_txs: Vec<broadcast::Sender<()>>,
     sector_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
+    sector_entities: Arc<DashMap<i32, Vec<BaseEntity>>>,
     garrison_state: Arc<crate::garrison::GarrisonState>,
     assembly_state: Arc<crate::assembly::AssemblyState>,
 }
@@ -27,6 +28,7 @@ impl WorldRuntime {
         let aoi = Arc::new(AoiManager::new());
         let health = Arc::new(HealthChecker::new(std::time::Duration::from_secs(30)));
         let sector_troops = Arc::new(DashMap::new());
+        let sector_entities = Arc::new(DashMap::new());
         let garrison_state = Arc::new(crate::garrison::GarrisonState::new());
         let assembly_state = Arc::new(crate::assembly::AssemblyState::new());
         let mut sector_senders = HashMap::new();
@@ -36,6 +38,7 @@ impl WorldRuntime {
             let (tx, rx) = mpsc::channel(64);
             let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
             let tracked_troops = sector_troops.clone();
+            let tracked_entities = sector_entities.clone();
             let aoi = aoi.clone();
             let health = health.clone();
             let garrison_state = garrison_state.clone();
@@ -56,6 +59,7 @@ impl WorldRuntime {
                             wal,
                             shutdown_rx,
                             tracked_troops,
+                            tracked_entities,
                         );
                         if let Err(err) = actor.run().await {
                             tracing::error!(sector_id, error = %err, "sector actor exited with error");
@@ -77,6 +81,7 @@ impl WorldRuntime {
             sector_senders,
             shutdown_txs,
             sector_troops,
+            sector_entities,
             garrison_state,
             assembly_state,
         }
@@ -132,6 +137,68 @@ impl WorldRuntime {
         Ok(())
     }
 
+    pub async fn sync_entity_upsert(&self, entity: BaseEntity) -> Result<()> {
+        if !grid::is_valid_pos(entity.pos) {
+            return Err(anyhow!("invalid world entity position: {}", entity.pos));
+        }
+
+        let sector_id = Self::sector_id_for_pos(entity.pos);
+        self.send_to_sector(
+            sector_id,
+            SectorMessage::UpsertEntity {
+                entity_data: entity,
+            },
+        )
+        .await
+    }
+
+    pub fn sync_entity_upsert_now(&self, entity: BaseEntity) -> Result<()> {
+        if !grid::is_valid_pos(entity.pos) {
+            return Err(anyhow!("invalid world entity position: {}", entity.pos));
+        }
+
+        let sector_id = Self::sector_id_for_pos(entity.pos);
+        self.try_send_to_sector(
+            sector_id,
+            SectorMessage::UpsertEntity {
+                entity_data: entity,
+            },
+        )
+    }
+
+    pub async fn sync_entity_remove(&self, pos: i32) -> Result<()> {
+        if !grid::is_valid_pos(pos) {
+            return Err(anyhow!("invalid world entity position: {}", pos));
+        }
+
+        let sector_id = Self::sector_id_for_pos(pos);
+        self.send_to_sector(sector_id, SectorMessage::RemoveEntity { pos })
+            .await
+    }
+
+    pub fn sync_entity_remove_now(&self, pos: i32) -> Result<()> {
+        if !grid::is_valid_pos(pos) {
+            return Err(anyhow!("invalid world entity position: {}", pos));
+        }
+
+        let sector_id = Self::sector_id_for_pos(pos);
+        self.try_send_to_sector(sector_id, SectorMessage::RemoveEntity { pos })
+    }
+
+    pub async fn sync_entity_snapshot(&self, entities: Vec<BaseEntity>) -> Result<()> {
+        for entity in entities {
+            self.sync_entity_upsert(entity).await?;
+        }
+        Ok(())
+    }
+
+    pub fn sync_entity_snapshot_now(&self, entities: Vec<BaseEntity>) -> Result<()> {
+        for entity in entities {
+            self.sync_entity_upsert_now(entity)?;
+        }
+        Ok(())
+    }
+
     async fn send_to_sector(&self, sector_id: i32, msg: SectorMessage) -> Result<()> {
         let sender = self
             .sector_senders
@@ -141,6 +208,26 @@ impl WorldRuntime {
             .send(msg)
             .await
             .map_err(|_| anyhow!("sector {} receiver dropped", sector_id))
+    }
+
+    fn try_send_to_sector(&self, sector_id: i32, msg: SectorMessage) -> Result<()> {
+        let sender = self
+            .sector_senders
+            .get(&sector_id)
+            .ok_or_else(|| anyhow!("sector sender {} not found", sector_id))?;
+        match sender.try_send(msg) {
+            Ok(()) => Ok(()),
+            Err(mpsc::error::TrySendError::Full(msg)) => {
+                let sender = sender.clone();
+                tokio::spawn(async move {
+                    let _ = sender.send(msg).await;
+                });
+                Ok(())
+            }
+            Err(mpsc::error::TrySendError::Closed(_)) => {
+                Err(anyhow!("sector {} receiver dropped", sector_id))
+            }
+        }
     }
 
     fn sectors_tracking_troop(&self, troop_key: i32) -> BTreeSet<i32> {
@@ -167,6 +254,13 @@ impl WorldRuntime {
         self.sector_troops
             .get(&sector_id)
             .map(|troops| troops.iter().map(|troop| troop.key).collect())
+            .unwrap_or_default()
+    }
+
+    pub fn sector_entity_positions(&self, sector_id: i32) -> Vec<i32> {
+        self.sector_entities
+            .get(&sector_id)
+            .map(|entities| entities.iter().map(|entity| entity.pos).collect())
             .unwrap_or_default()
     }
 }
@@ -232,6 +326,22 @@ mod tests {
         }
     }
 
+    async fn wait_for_entity_positions(runtime: &WorldRuntime, sector_id: i32, expected: Vec<i32>) {
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(1);
+        loop {
+            if runtime.sector_entity_positions(sector_id) == expected {
+                return;
+            }
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "sector {} entity positions did not reach {:?}",
+                sector_id,
+                expected
+            );
+            tokio::task::yield_now().await;
+        }
+    }
+
     fn troop(key: i32, origin: i32, goal: i32, end_time: i64) -> BaseTroop {
         BaseTroop {
             key,
@@ -240,6 +350,15 @@ mod tests {
             status: Some(crate::march::MARCH_STATUS_MARCH),
             start_time: Some(crate::march::now_millis()),
             end_time: Some(end_time),
+            ..Default::default()
+        }
+    }
+
+    fn entity(pos: i32, entity_type: i32, key_id: i32) -> BaseEntity {
+        BaseEntity {
+            pos,
+            entity_type: Some(entity_type),
+            key_id: Some(key_id),
             ..Default::default()
         }
     }
@@ -288,5 +407,25 @@ mod tests {
 
         wait_for_keys(&runtime, sector_id, vec![12]).await;
         wait_for_keys(&runtime, sector_id, vec![]).await;
+    }
+
+    #[tokio::test]
+    async fn sync_entity_snapshot_routes_entities_to_owning_sectors() {
+        let runtime = WorldRuntime::new();
+        let first_pos = xy_to_pos(10, 10);
+        let second_pos = xy_to_pos(400, 400);
+        let first_sector = WorldRuntime::sector_id_for_pos(first_pos);
+        let second_sector = WorldRuntime::sector_id_for_pos(second_pos);
+
+        runtime
+            .sync_entity_snapshot(vec![entity(second_pos, 3, 2), entity(first_pos, 4, 1)])
+            .await
+            .unwrap();
+
+        wait_for_entity_positions(&runtime, first_sector, vec![first_pos]).await;
+        wait_for_entity_positions(&runtime, second_sector, vec![second_pos]).await;
+
+        runtime.sync_entity_remove(second_pos).await.unwrap();
+        wait_for_entity_positions(&runtime, second_sector, vec![]).await;
     }
 }
