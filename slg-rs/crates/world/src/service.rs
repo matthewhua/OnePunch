@@ -1,17 +1,16 @@
 use proto::slg::world_service_server::WorldService;
 use proto::slg::{
     BaseMap, BasePlayerMapData, BaseTroop, DispatchPigeonTroopRq, DispatchRq, DispatchRs,
-    DispatchScoutTroopRq, DispatchTroopRq, EnterWorldMapRq, GarrisonTroop,
-    GetAreaCityFirstKillInfoRq, GetAreaCityFirstKillInfoRs, GetAreaDetailsRq, GetAreaDetailsRs,
-    GetBlockDetailsRq, GetBlockDetailsRs, GetEntityInfoRq, GetEntityInfoRs, GetFightDetailsRq,
-    GetFightDetailsRs, GetFightInfoRq, GetFightInfoRs, GetFightListDetailsRq,
-    GetFightListDetailsRs, GetMapDetailsRq, GetMapDetailsRs, GetNearestNonOwnCampCityRq,
-    GetNearestNonOwnCampCityRs, GetPlayerTroopRs, GetTroopDetailsRq, GetTroopDetailsRs,
-    GetTroopInfoRq, GetTroopInfoRs, JoinMapRequest, JoinMapResponse, LeaveWorldMapRs,
-    MovePositionRq, MovePositionRs, RepatriateAssemblyTroopRq, RepatriateAssemblyTroopRs,
-    RepatriateGarrisonTroopRq, RepatriateGarrisonTroopRs, RpcMsg, SearchEntityRq, SearchEntityRs,
-    SelectPlayerGarrisonTroopRq, SelectPlayerGarrisonTroopRs, TroopAccelerateCommandRq,
-    TroopAccelerateCommandRs, TroopBackCommandRq, TroopBackCommandRs,
+    DispatchScoutTroopRq, DispatchTroopRq, EnterWorldMapRq, GetAreaCityFirstKillInfoRq,
+    GetAreaCityFirstKillInfoRs, GetAreaDetailsRq, GetAreaDetailsRs, GetBlockDetailsRq,
+    GetBlockDetailsRs, GetEntityInfoRq, GetEntityInfoRs, GetFightDetailsRq, GetFightDetailsRs,
+    GetFightInfoRq, GetFightInfoRs, GetFightListDetailsRq, GetFightListDetailsRs, GetMapDetailsRq,
+    GetMapDetailsRs, GetNearestNonOwnCampCityRq, GetNearestNonOwnCampCityRs, GetPlayerTroopRs,
+    GetTroopDetailsRq, GetTroopDetailsRs, GetTroopInfoRq, GetTroopInfoRs, JoinMapRequest,
+    JoinMapResponse, LeaveWorldMapRs, MovePositionRq, MovePositionRs, RepatriateAssemblyTroopRq,
+    RepatriateAssemblyTroopRs, RepatriateGarrisonTroopRq, RepatriateGarrisonTroopRs, RpcMsg,
+    SearchEntityRq, SearchEntityRs, SelectPlayerGarrisonTroopRq, SelectPlayerGarrisonTroopRs,
+    TroopAccelerateCommandRq, TroopAccelerateCommandRs, TroopBackCommandRq, TroopBackCommandRs,
 };
 use shared::msg::GameMessage;
 use std::sync::atomic::{AtomicI32, Ordering};
@@ -22,6 +21,8 @@ pub struct WorldServiceImpl {
     grid: Arc<crate::map::grid::MapGrid>,
     marching_mgr: Arc<crate::march::MarchingManager>,
     runtime: Arc<crate::runtime::WorldRuntime>,
+    garrison_state: Arc<crate::garrison::GarrisonState>,
+    assembly_state: Arc<crate::assembly::AssemblyState>,
     next_troop_key: AtomicI32,
 }
 
@@ -34,6 +35,8 @@ impl WorldServiceImpl {
             grid,
             marching_mgr,
             runtime: Arc::new(crate::runtime::WorldRuntime::new()),
+            garrison_state: Arc::new(crate::garrison::GarrisonState::new()),
+            assembly_state: Arc::new(crate::assembly::AssemblyState::new()),
             next_troop_key: AtomicI32::new(1),
         }
     }
@@ -114,37 +117,6 @@ impl WorldServiceImpl {
             .map(|entry| entry.value().base.clone())
             .collect();
         troops.sort_by_key(|troop| troop.key);
-        troops
-    }
-
-    fn garrison_troops_at(&self, pos: Option<i32>) -> Vec<GarrisonTroop> {
-        let mut troops: Vec<GarrisonTroop> = self
-            .marching_mgr
-            .troops
-            .iter()
-            .filter_map(|entry| {
-                let troop = &entry.value().base;
-                let is_garrison = matches!(
-                    troop.r#type,
-                    Some(crate::march::MARCH_TYPE_GARRISON_PLAYER)
-                        | Some(crate::march::MARCH_TYPE_GARRISON_CITY)
-                );
-                if !is_garrison || pos.map_or(false, |value| troop.goal != Some(value)) {
-                    return None;
-                }
-
-                Some(GarrisonTroop {
-                    role_id: None,
-                    name: None,
-                    portrait: None,
-                    portrait_frame: None,
-                    troop_key_id: Some(troop.key),
-                    end_time: troop.end_time,
-                    troop_hero: Vec::new(),
-                })
-            })
-            .collect();
-        troops.sort_by_key(|troop| troop.troop_key_id.unwrap_or_default());
         troops
     }
 
@@ -281,22 +253,28 @@ impl WorldService for WorldServiceImpl {
             }
             50027 => {
                 let rq: TroopBackCommandRq = self.decode_payload(req.cmd, req.payload)?;
-                let _troop = self
+                let troop = self
                     .marching_mgr
                     .recall_troop(rq.key_id, rq.r#type)
                     .map_err(|e| {
                         Status::failed_precondition(format!("recall troop failed: {}", e))
                     })?;
+                self.runtime.sync_troop_update(troop).await.map_err(|e| {
+                    Status::failed_precondition(format!("sector recall sync failed: {}", e))
+                })?;
                 self.response(50028, &TroopBackCommandRs::default())
             }
             50029 => {
                 let rq: TroopAccelerateCommandRq = self.decode_payload(req.cmd, req.payload)?;
-                let _troop = self
+                let troop = self
                     .marching_mgr
                     .accelerate_troop(rq.key_id, rq.r#type)
                     .map_err(|e| {
                         Status::failed_precondition(format!("accelerate troop failed: {}", e))
                     })?;
+                self.runtime.sync_troop_update(troop).await.map_err(|e| {
+                    Status::failed_precondition(format!("sector accelerate sync failed: {}", e))
+                })?;
                 self.response(50030, &TroopAccelerateCommandRs::default())
             }
             50031 => self.response(
@@ -333,12 +311,24 @@ impl WorldService for WorldServiceImpl {
                 self.response(
                     5122,
                     &SelectPlayerGarrisonTroopRs {
-                        garrison_troop: self.garrison_troops_at(rq.pos),
+                        garrison_troop: self.garrison_state.list(rq.pos),
                     },
                 )
             }
             5123 => {
-                let _rq: RepatriateGarrisonTroopRq = self.decode_payload(req.cmd, req.payload)?;
+                let rq: RepatriateGarrisonTroopRq = self.decode_payload(req.cmd, req.payload)?;
+                if rq.troop_key.unwrap_or_default() == 0 {
+                    self.garrison_state.repatriate_all();
+                } else {
+                    self.garrison_state
+                        .repatriate_one(rq.troop_key.unwrap_or_default())
+                        .map_err(|e| {
+                            Status::failed_precondition(format!(
+                                "repatriate garrison troop failed: {}",
+                                e
+                            ))
+                        })?;
+                }
                 self.response(5124, &RepatriateGarrisonTroopRs::default())
             }
             5141 => {
@@ -355,12 +345,24 @@ impl WorldService for WorldServiceImpl {
                 self.response(5144, &GetFightInfoRs { base_fight: None })
             }
             5145 => {
-                let _rq: RepatriateAssemblyTroopRq = self.decode_payload(req.cmd, req.payload)?;
+                let rq: RepatriateAssemblyTroopRq = self.decode_payload(req.cmd, req.payload)?;
+                self.assembly_state
+                    .repatriate(rq.assembly_id.unwrap_or_default(), rq.troop_key)
+                    .map_err(|e| {
+                        Status::failed_precondition(format!(
+                            "repatriate assembly troop failed: {}",
+                            e
+                        ))
+                    })?;
                 self.response(5146, &RepatriateAssemblyTroopRs::default())
             }
             5147 => {
-                let _rq: proto::slg::CancelAssemblyRq =
-                    self.decode_payload(req.cmd, req.payload)?;
+                let rq: proto::slg::CancelAssemblyRq = self.decode_payload(req.cmd, req.payload)?;
+                self.assembly_state
+                    .cancel(rq.assembly_id.unwrap_or_default())
+                    .map_err(|e| {
+                        Status::failed_precondition(format!("cancel assembly failed: {}", e))
+                    })?;
                 self.response(5148, &proto::slg::CancelAssemblyRs::default())
             }
             5161 => {
@@ -445,7 +447,7 @@ fn map_distance_squared(left: i32, right: i32) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto::slg::{BaseEntity, DispatchTroopRs, WorldEntityTypeDefine};
+    use proto::slg::{BaseEntity, DispatchTroopRs, GarrisonTroop, WorldEntityTypeDefine};
     use std::time::Duration;
 
     fn service() -> WorldServiceImpl {
@@ -758,35 +760,25 @@ mod tests {
     async fn select_garrison_troop_returns_matching_garrison_marches() {
         let svc = service();
         let target = crate::map::grid::xy_to_pos(20, 20);
-        svc.marching_mgr.troops.insert(
-            66,
-            crate::march::MarchingTroop {
-                base: BaseTroop {
-                    key: 66,
-                    r#type: Some(crate::march::MARCH_TYPE_GARRISON_CITY),
-                    origin: Some(crate::map::grid::xy_to_pos(1, 1)),
-                    goal: Some(target),
-                    status: Some(crate::march::MARCH_STATUS_ARRIVAL),
+        svc.garrison_state
+            .place(
+                target,
+                GarrisonTroop {
+                    troop_key_id: Some(66),
                     end_time: Some(12345),
                     ..Default::default()
                 },
-                speed: 1.0,
-            },
-        );
-        svc.marching_mgr.troops.insert(
-            67,
-            crate::march::MarchingTroop {
-                base: BaseTroop {
-                    key: 67,
-                    r#type: Some(crate::march::MARCH_TYPE_GARRISON_CITY),
-                    origin: Some(crate::map::grid::xy_to_pos(1, 1)),
-                    goal: Some(crate::map::grid::xy_to_pos(30, 30)),
-                    status: Some(crate::march::MARCH_STATUS_ARRIVAL),
+            )
+            .unwrap();
+        svc.garrison_state
+            .place(
+                crate::map::grid::xy_to_pos(30, 30),
+                GarrisonTroop {
+                    troop_key_id: Some(67),
                     ..Default::default()
                 },
-                speed: 1.0,
-            },
-        );
+            )
+            .unwrap();
 
         let body: SelectPlayerGarrisonTroopRs = dispatch_body(
             &svc,
@@ -804,6 +796,8 @@ mod tests {
     #[tokio::test]
     async fn remaining_world_business_commands_return_compatible_empty_responses() {
         let svc = service();
+        svc.assembly_state.create(1, 66).unwrap();
+        svc.assembly_state.add_troop(1, 67).unwrap();
 
         let _: RepatriateGarrisonTroopRs = dispatch_body(
             &svc,
@@ -831,6 +825,7 @@ mod tests {
             },
         )
         .await;
+        assert_eq!(svc.assembly_state.snapshot(1).unwrap().troop_keys, vec![67]);
 
         let _: proto::slg::CancelAssemblyRs = dispatch_body(
             &svc,

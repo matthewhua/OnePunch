@@ -1,9 +1,95 @@
+use anyhow::Result;
+use proto::slg::{BaseEntity, BaseTroop};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::Path;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use serde::{Serialize, Deserialize};
-use anyhow::Result;
-use tracing::{info, error};
+use tracing::{error, info};
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct WalTroop {
+    pub key: i32,
+    pub troop_type: Option<i32>,
+    pub origin: Option<i32>,
+    pub goal: Option<i32>,
+    pub status: Option<i32>,
+    pub start_time: Option<i64>,
+    pub end_time: Option<i64>,
+    pub camp: Option<i32>,
+}
+
+impl From<&BaseTroop> for WalTroop {
+    fn from(troop: &BaseTroop) -> Self {
+        Self {
+            key: troop.key,
+            troop_type: troop.r#type,
+            origin: troop.origin,
+            goal: troop.goal,
+            status: troop.status,
+            start_time: troop.start_time,
+            end_time: troop.end_time,
+            camp: troop.camp,
+        }
+    }
+}
+
+impl From<WalTroop> for BaseTroop {
+    fn from(troop: WalTroop) -> Self {
+        Self {
+            key: troop.key,
+            r#type: troop.troop_type,
+            origin: troop.origin,
+            goal: troop.goal,
+            status: troop.status,
+            start_time: troop.start_time,
+            end_time: troop.end_time,
+            camp: troop.camp,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct WalEntity {
+    pub pos: i32,
+    pub entity_type: Option<i32>,
+    pub key_id: Option<i32>,
+    pub camp: Option<i32>,
+    pub conf_id: Option<i32>,
+    pub protect_time: Option<i32>,
+    pub occupied_area: Vec<i32>,
+    pub is_battle: Option<bool>,
+}
+
+impl From<&BaseEntity> for WalEntity {
+    fn from(entity: &BaseEntity) -> Self {
+        Self {
+            pos: entity.pos,
+            entity_type: entity.entity_type,
+            key_id: entity.key_id,
+            camp: entity.camp,
+            conf_id: entity.conf_id,
+            protect_time: entity.protect_time,
+            occupied_area: entity.occupied_area.clone(),
+            is_battle: entity.is_battle,
+        }
+    }
+}
+
+impl From<WalEntity> for BaseEntity {
+    fn from(entity: WalEntity) -> Self {
+        Self {
+            pos: entity.pos,
+            entity_type: entity.entity_type,
+            key_id: entity.key_id,
+            camp: entity.camp,
+            conf_id: entity.conf_id,
+            protect_time: entity.protect_time,
+            occupied_area: entity.occupied_area,
+            is_battle: entity.is_battle,
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum WalEntry {
@@ -16,10 +102,15 @@ pub enum WalEntry {
         end_time: i64,
     },
     /// 部队转移到另一个 Sector
-    TroopTransfer {
-        key: i32,
-        target_sector: i32,
-    },
+    TroopTransfer { key: i32, target_sector: i32 },
+    /// 部队状态更新（召回、加速等会改变 BaseTroop 的行军状态）
+    TroopUpdated { troop: WalTroop },
+    /// 部队到达
+    TroopArrived { troop: WalTroop },
+    /// 实体新增或更新
+    EntityUpsert { entity: WalEntity },
+    /// 实体删除
+    EntityRemove { pos: i32 },
     /// 资源变动
     ResourceUpdate {
         role_id: i64,
@@ -28,9 +119,61 @@ pub enum WalEntry {
         amount: i64,
     },
     /// 检查点（表示之前的日志已经安全存盘到数据库，可以截断）
-    Checkpoint {
-        sequence: u64,
-    },
+    Checkpoint { sequence: u64 },
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct WalReplayState {
+    pub troops: HashMap<i32, BaseTroop>,
+    pub entities: HashMap<i32, BaseEntity>,
+}
+
+impl WalReplayState {
+    pub fn from_entries(entries: &[WalEntry]) -> Self {
+        let mut state = Self::default();
+        for entry in entries {
+            state.apply(entry);
+        }
+        state
+    }
+
+    pub fn apply(&mut self, entry: &WalEntry) {
+        match entry {
+            WalEntry::MarchStart {
+                key,
+                origin,
+                goal,
+                start_time,
+                end_time,
+            } => {
+                self.troops.insert(
+                    *key,
+                    BaseTroop {
+                        key: *key,
+                        origin: Some(*origin),
+                        goal: Some(*goal),
+                        status: Some(crate::march::MARCH_STATUS_MARCH),
+                        start_time: Some(*start_time),
+                        end_time: Some(*end_time),
+                        ..Default::default()
+                    },
+                );
+            }
+            WalEntry::TroopUpdated { troop } | WalEntry::TroopArrived { troop } => {
+                self.troops.insert(troop.key, troop.clone().into());
+            }
+            WalEntry::TroopTransfer { key, .. } => {
+                self.troops.remove(key);
+            }
+            WalEntry::EntityUpsert { entity } => {
+                self.entities.insert(entity.pos, entity.clone().into());
+            }
+            WalEntry::EntityRemove { pos } => {
+                self.entities.remove(pos);
+            }
+            WalEntry::ResourceUpdate { .. } | WalEntry::Checkpoint { .. } => {}
+        }
+    }
 }
 
 pub struct WriteAheadLog {
@@ -48,7 +191,7 @@ impl WriteAheadLog {
             .read(true)
             .open(&path)
             .await?;
-            
+
         Ok(Self {
             file,
             path: path_str,
@@ -61,14 +204,14 @@ impl WriteAheadLog {
         self.sequence += 1;
         let data = bincode::serialize(entry)?;
         let len = data.len() as u32;
-        
+
         // 写入长度 + 数据
         self.file.write_all(&len.to_le_bytes()).await?;
         self.file.write_all(&data).await?;
-        
+
         // 强制刷盘 (根据性能要求可以调整为定期刷盘)
         self.file.flush().await?;
-        
+
         Ok(self.sequence)
     }
 
@@ -78,22 +221,22 @@ impl WriteAheadLog {
         let mut file = File::open(&self.path).await?;
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).await?;
-        
+
         let mut cursor = 0;
         while cursor + 4 <= buffer.len() {
-            let len = u32::from_le_bytes(buffer[cursor..cursor+4].try_into()?) as usize;
+            let len = u32::from_le_bytes(buffer[cursor..cursor + 4].try_into()?) as usize;
             cursor += 4;
-            
+
             if cursor + len > buffer.len() {
                 error!("WAL corrupted: unexpected end of file");
                 break;
             }
-            
-            let entry: WalEntry = bincode::deserialize(&buffer[cursor..cursor+len])?;
+
+            let entry: WalEntry = bincode::deserialize(&buffer[cursor..cursor + len])?;
             entries.push(entry);
             cursor += len;
         }
-        
+
         info!("WAL recovered {} entries from {}", entries.len(), self.path);
         Ok(entries)
     }
@@ -108,5 +251,126 @@ impl WriteAheadLog {
             .await?;
         self.sequence = 0;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::march::{MARCH_STATUS_ARRIVAL, MARCH_STATUS_MARCH, MARCH_STATUS_RETREAT};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn troop(
+        key: i32,
+        status: i32,
+        origin: i32,
+        goal: i32,
+        start_time: i64,
+        end_time: i64,
+    ) -> BaseTroop {
+        BaseTroop {
+            key,
+            r#type: Some(2),
+            origin: Some(origin),
+            goal: Some(goal),
+            status: Some(status),
+            start_time: Some(start_time),
+            end_time: Some(end_time),
+            camp: Some(1),
+        }
+    }
+
+    #[test]
+    fn replay_keeps_latest_troop_after_recall_and_accelerate() {
+        let entries = vec![
+            WalEntry::MarchStart {
+                key: 7,
+                origin: 100,
+                goal: 200,
+                start_time: 1_000,
+                end_time: 11_000,
+            },
+            WalEntry::TroopUpdated {
+                troop: WalTroop::from(&troop(7, MARCH_STATUS_RETREAT, 150, 100, 6_000, 11_000)),
+            },
+            WalEntry::TroopUpdated {
+                troop: WalTroop::from(&troop(7, MARCH_STATUS_RETREAT, 150, 100, 6_000, 8_500)),
+            },
+        ];
+
+        let state = WalReplayState::from_entries(&entries);
+        let restored = state.troops.get(&7).expect("troop should recover");
+
+        assert_eq!(restored.status, Some(MARCH_STATUS_RETREAT));
+        assert_eq!(restored.origin, Some(150));
+        assert_eq!(restored.goal, Some(100));
+        assert_eq!(restored.start_time, Some(6_000));
+        assert_eq!(restored.end_time, Some(8_500));
+    }
+
+    #[test]
+    fn replay_records_arrival_and_entity_changes() {
+        let entity = BaseEntity {
+            pos: 300,
+            entity_type: Some(4),
+            key_id: Some(99),
+            camp: Some(2),
+            occupied_area: vec![300, 301],
+            is_battle: Some(true),
+            ..Default::default()
+        };
+        let entries = vec![
+            WalEntry::TroopUpdated {
+                troop: WalTroop::from(&troop(8, MARCH_STATUS_MARCH, 100, 300, 1_000, 2_000)),
+            },
+            WalEntry::TroopArrived {
+                troop: WalTroop::from(&troop(8, MARCH_STATUS_ARRIVAL, 100, 300, 1_000, 2_000)),
+            },
+            WalEntry::EntityUpsert {
+                entity: WalEntity::from(&entity),
+            },
+            WalEntry::EntityRemove { pos: 300 },
+        ];
+
+        let state = WalReplayState::from_entries(&entries);
+        let restored = state.troops.get(&8).expect("arrival should recover");
+
+        assert_eq!(restored.status, Some(MARCH_STATUS_ARRIVAL));
+        assert!(!state.entities.contains_key(&300));
+    }
+
+    #[tokio::test]
+    async fn recover_round_trips_new_wal_entries() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path =
+            std::env::temp_dir().join(format!("world-wal-test-{}-{}.log", std::process::id(), now));
+
+        let mut wal = WriteAheadLog::new(&path).await.unwrap();
+        wal.append(&WalEntry::TroopUpdated {
+            troop: WalTroop::from(&troop(9, MARCH_STATUS_RETREAT, 120, 10, 5_000, 6_000)),
+        })
+        .await
+        .unwrap();
+        wal.append(&WalEntry::EntityUpsert {
+            entity: WalEntity::from(&BaseEntity {
+                pos: 10,
+                entity_type: Some(1),
+                key_id: Some(2),
+                ..Default::default()
+            }),
+        })
+        .await
+        .unwrap();
+
+        let entries = wal.recover().await.unwrap();
+        let state = WalReplayState::from_entries(&entries);
+
+        assert_eq!(state.troops.get(&9).unwrap().end_time, Some(6_000));
+        assert_eq!(state.entities.get(&10).unwrap().key_id, Some(2));
+
+        let _ = tokio::fs::remove_file(path).await;
     }
 }

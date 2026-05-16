@@ -34,7 +34,7 @@ impl<T> TimerWheel<T> {
     /// 插入定时事件
     pub fn schedule(&mut self, deadline_ms: i64, data: T) {
         let delay_ms = deadline_ms - (self.base_time_ms + (self.current_tick * 100) as i64);
-        
+
         if delay_ms <= 0 {
             // 已过期的直接丢到当前 tick 桶里，下次 advance 就会弹出
             self.ticks[(self.current_tick % 10) as usize].push(data);
@@ -51,7 +51,10 @@ impl<T> TimerWheel<T> {
             self.seconds[target_sec as usize].push(TimerEntry { deadline_ms, data });
         } else {
             // 超过一分钟，进入溢出桶
-            self.overflow.entry(deadline_ms).or_default().push(TimerEntry { deadline_ms, data });
+            self.overflow
+                .entry(deadline_ms)
+                .or_default()
+                .push(TimerEntry { deadline_ms, data });
         }
     }
 
@@ -75,7 +78,7 @@ impl<T> TimerWheel<T> {
             if (self.current_tick / 10) % 60 == 0 {
                 let now_ms = self.base_time_ms + (self.current_tick * 100) as i64;
                 let next_min_ms = now_ms + 60_000;
-                
+
                 // 找出接下来一分钟内要到期的
                 let mut to_move = Vec::new();
                 while let Some(entry) = self.overflow.first_entry() {
@@ -85,7 +88,7 @@ impl<T> TimerWheel<T> {
                         break;
                     }
                 }
-                
+
                 for entries in to_move {
                     for entry in entries {
                         self.schedule_entry(entry);
@@ -96,6 +99,10 @@ impl<T> TimerWheel<T> {
 
         // 2. 获取当前 tick 的所有事件
         std::mem::take(&mut self.ticks[tick_idx])
+    }
+
+    pub fn current_time_ms(&self) -> i64 {
+        self.base_time_ms + (self.current_tick * 100) as i64
     }
 
     fn schedule_entry(&mut self, entry: TimerEntry<T>) {
@@ -114,24 +121,28 @@ mod tests {
         // 1. 测试短延时 (300ms)
         let mut wheel = TimerWheel::new(base_time);
         wheel.schedule(base_time + 300, 1);
-        
+
         // Advance 100ms
         assert!(wheel.advance().is_empty()); // 100ms
         assert!(wheel.advance().is_empty()); // 200ms
-        let results = wheel.advance();       // 300ms
+        let results = wheel.advance(); // 300ms
         assert_eq!(results, vec![1]);
 
         // 2. 测试跨秒延时 (1500ms)
         let mut wheel = TimerWheel::new(base_time);
         wheel.schedule(base_time + 1500, 2);
-        for _ in 0..14 { wheel.advance(); } // Up to 1400ms
-        let results = wheel.advance();      // 1500ms
+        for _ in 0..14 {
+            wheel.advance();
+        } // Up to 1400ms
+        let results = wheel.advance(); // 1500ms
         assert_eq!(results, vec![2]);
 
         // 3. 测试跨分钟延时 (65s)
         let mut wheel = TimerWheel::new(base_time);
         wheel.schedule(base_time + 65000, 3);
-        for _ in 0..649 { wheel.advance(); } 
+        for _ in 0..649 {
+            wheel.advance();
+        }
         let results = wheel.advance();
         assert_eq!(results, vec![3]);
     }

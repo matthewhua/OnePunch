@@ -1,2 +1,3 @@
-pub mod grid;
 pub mod aoi;
+pub mod grid;
+pub mod lifecycle;

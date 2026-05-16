@@ -1,7 +1,7 @@
-use bytes::Bytes;
-use tokio::sync::oneshot;
 use anyhow::Result;
-use proto::slg::BaseTroop; // 假设 proto crate 中有这个
+use bytes::Bytes;
+use proto::slg::BaseTroop;
+use tokio::sync::oneshot;
 
 pub enum SectorMessage {
     /// 玩家命令（派兵、召回等）
@@ -12,9 +12,11 @@ pub enum SectorMessage {
         reply: oneshot::Sender<Result<Bytes>>,
     },
     /// 跨区部队转移
-    TransferTroop {
-        troop_data: BaseTroop, // 这里可以先用 BaseTroop，以后根据需求扩展
-    },
+    TransferTroop { troop_data: BaseTroop },
+    /// 部队状态更新（召回、加速等）
+    UpdateTroop { troop_data: BaseTroop },
+    /// 从本 Sector 视图移除部队
+    RemoveTroop { troop_key: i32 },
     /// 定时 Tick (100ms)
     Tick,
     /// 配置热加载

@@ -1,18 +1,18 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::{mpsc, broadcast, oneshot};
-use crate::message::SectorMessage;
-use crate::timer_wheel::TimerWheel;
-use crate::supervisor::ActorId;
 use crate::health::HealthChecker;
-use crate::map::aoi::{AoiManager, AoiEvent};
-use crate::march::{arrival_action_for_troop, ArrivalAction};
-use crate::wal::{WriteAheadLog, WalEntry};
-use proto::slg::{BaseEntity, BaseTroop};
+use crate::map::aoi::{AoiEvent, AoiManager};
+use crate::march::{arrival_action_for_troop, ArrivalAction, MARCH_STATUS_ARRIVAL};
+use crate::message::SectorMessage;
+use crate::supervisor::ActorId;
+use crate::timer_wheel::TimerWheel;
+use crate::wal::{WalEntry, WalReplayState, WalTroop, WriteAheadLog};
 use anyhow::Result;
-use tracing::{info, error};
 use bytes::Bytes;
 use dashmap::DashMap;
+use proto::slg::{BaseEntity, BaseTroop};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::{broadcast, mpsc, oneshot};
+use tracing::{error, info};
 
 pub struct MapSectorActor {
     pub sector_id: i32,
@@ -22,16 +22,16 @@ pub struct MapSectorActor {
     marching_troops: HashMap<i32, BaseTroop>,
     /// 定时任务
     timer_wheel: TimerWheel<i32>,
-    
+
     /// 消息与通讯
     rx: mpsc::Receiver<SectorMessage>,
     neighbors: HashMap<i32, mpsc::Sender<SectorMessage>>,
-    
+
     /// 外部组件
     aoi_manager: Arc<AoiManager>,
     health_checker: Arc<HealthChecker>,
     wal: WriteAheadLog,
-    
+
     /// 关闭信号
     shutdown_rx: broadcast::Receiver<()>,
     tracked_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
@@ -66,25 +66,19 @@ impl MapSectorActor {
     /// 启动时恢复数据
     pub async fn init_with_recovery(&mut self) -> Result<()> {
         let entries = self.wal.recover().await?;
-        for entry in entries {
-            match entry {
-                WalEntry::MarchStart { key, origin, goal, start_time, end_time } => {
-                    let troop = BaseTroop {
-                        key,
-                        origin: Some(origin),
-                        goal: Some(goal),
-                        start_time: Some(start_time),
-                        end_time: Some(end_time),
-                        ..Default::default()
-                    };
-                    self.track_troop(troop.clone());
-                    self.marching_troops.insert(key, troop);
-                    self.timer_wheel.schedule(end_time, key);
-                }
-                _ => {
-                    // 处理其他恢复逻辑
-                }
+        let state = WalReplayState::from_entries(&entries);
+        self.entities = state.entities;
+
+        for (key, troop) in state.troops {
+            if troop.status == Some(MARCH_STATUS_ARRIVAL) {
+                continue;
             }
+
+            self.track_troop(troop.clone());
+            if let Some(end_time) = troop.end_time {
+                self.timer_wheel.schedule(end_time, key);
+            }
+            self.marching_troops.insert(key, troop);
         }
         Ok(())
     }
@@ -92,16 +86,19 @@ impl MapSectorActor {
     pub async fn run(mut self) -> Result<ActorId> {
         info!("Sector Actor {} started", self.sector_id);
         let actor_id = ActorId::Sector(self.sector_id);
-        
+
         // 执行恢复
         if let Err(e) = self.init_with_recovery().await {
             error!("Sector {} recovery failed: {}", self.sector_id, e);
         }
-        
+
         loop {
             self.health_checker.heartbeat(actor_id);
-            crate::metrics::world_metrics::record_marching_troops(self.sector_id, self.marching_troops.len());
-            
+            crate::metrics::world_metrics::record_marching_troops(
+                self.sector_id,
+                self.marching_troops.len(),
+            );
+
             tokio::select! {
                 Some(msg) = self.rx.recv() => {
                     crate::metrics::world_metrics::inc_messages_processed(self.sector_id);
@@ -117,17 +114,29 @@ impl MapSectorActor {
                 else => break,
             }
         }
-        
+
         Ok(actor_id)
     }
 
     async fn handle_message(&mut self, msg: SectorMessage) -> Result<()> {
         match msg {
-            SectorMessage::PlayerCommand { role_id, cmd, payload, reply } => {
-                self.handle_player_command(role_id, cmd, payload, reply).await?;
+            SectorMessage::PlayerCommand {
+                role_id,
+                cmd,
+                payload,
+                reply,
+            } => {
+                self.handle_player_command(role_id, cmd, payload, reply)
+                    .await?;
             }
             SectorMessage::TransferTroop { troop_data } => {
                 self.accept_transfer(troop_data).await?;
+            }
+            SectorMessage::UpdateTroop { troop_data } => {
+                self.update_troop(troop_data).await?;
+            }
+            SectorMessage::RemoveTroop { troop_key } => {
+                self.remove_troop(troop_key);
             }
             SectorMessage::Tick => {
                 self.tick().await;
@@ -153,14 +162,12 @@ impl MapSectorActor {
 
     async fn accept_transfer(&mut self, troop: BaseTroop) -> Result<()> {
         // 先写日志
-        self.wal.append(&WalEntry::MarchStart {
-            key: troop.key,
-            origin: troop.origin.unwrap_or(0),
-            goal: troop.goal.unwrap_or(0),
-            start_time: troop.start_time.unwrap_or(0),
-            end_time: troop.end_time.unwrap_or(0),
-        }).await?;
-        
+        self.wal
+            .append(&WalEntry::TroopUpdated {
+                troop: WalTroop::from(&troop),
+            })
+            .await?;
+
         // 内存处理
         let key = troop.key;
         self.marching_troops.insert(key, troop.clone());
@@ -168,19 +175,56 @@ impl MapSectorActor {
         if let Some(end_time) = troop.end_time {
             self.timer_wheel.schedule(end_time, key);
         }
-        
+
         // AOI
         let pos = troop.origin.unwrap_or(0);
         self.aoi_manager
             .broadcast_area(pos, AoiEvent::MarchStart { troop })
             .await;
-        
+
         Ok(())
+    }
+
+    async fn update_troop(&mut self, troop: BaseTroop) -> Result<()> {
+        self.wal
+            .append(&WalEntry::TroopUpdated {
+                troop: WalTroop::from(&troop),
+            })
+            .await?;
+
+        let key = troop.key;
+        self.marching_troops.insert(key, troop.clone());
+        self.track_troop(troop.clone());
+        if let Some(end_time) = troop.end_time {
+            self.timer_wheel.schedule(end_time, key);
+        }
+
+        let pos = troop.origin.or(troop.goal).unwrap_or(0);
+        self.aoi_manager
+            .broadcast_area(pos, AoiEvent::MarchStart { troop })
+            .await;
+
+        Ok(())
+    }
+
+    fn remove_troop(&mut self, troop_key: i32) {
+        self.marching_troops.remove(&troop_key);
+        self.untrack_troop(troop_key);
     }
 
     async fn tick(&mut self) {
         let expired_keys = self.timer_wheel.advance();
         for key in expired_keys {
+            let is_due = self
+                .marching_troops
+                .get(&key)
+                .and_then(|troop| troop.end_time)
+                .map(|end_time| end_time <= self.timer_wheel.current_time_ms())
+                .unwrap_or(false);
+            if !is_due {
+                continue;
+            }
+
             if let Some(troop) = self.marching_troops.remove(&key) {
                 self.untrack_troop(troop.key);
                 let goal_pos = troop.goal.unwrap_or(0);
@@ -196,10 +240,16 @@ impl MapSectorActor {
     async fn handle_arrival(&mut self, mut troop: BaseTroop) {
         let key = troop.key;
         let goal_pos = troop.goal.unwrap_or(0);
+        let action = arrival_action_for_troop(&troop);
         troop.status = Some(crate::march::MARCH_STATUS_ARRIVAL);
+        let _ = self
+            .wal
+            .append(&WalEntry::TroopArrived {
+                troop: WalTroop::from(&troop),
+            })
+            .await;
         self.untrack_troop(key);
 
-        let action = arrival_action_for_troop(&troop);
         match action {
             ArrivalAction::Battle => {
                 let target = self.entities.get(&goal_pos);
@@ -211,47 +261,72 @@ impl MapSectorActor {
                 );
             }
             ArrivalAction::Collect => {
-                info!(troop_key = key, goal_pos, "Troop arrived and started collect trigger");
+                info!(
+                    troop_key = key,
+                    goal_pos, "Troop arrived and started collect trigger"
+                );
             }
             ArrivalAction::Scout => {
-                info!(troop_key = key, goal_pos, "Troop arrived and queued scout trigger");
+                info!(
+                    troop_key = key,
+                    goal_pos, "Troop arrived and queued scout trigger"
+                );
             }
             ArrivalAction::Garrison => {
-                info!(troop_key = key, goal_pos, "Troop arrived and queued garrison trigger");
+                info!(
+                    troop_key = key,
+                    goal_pos, "Troop arrived and queued garrison trigger"
+                );
             }
             ArrivalAction::Return => {
                 info!(troop_key = key, goal_pos, "Troop returned to origin");
             }
             ArrivalAction::None => {
-                info!(troop_key = key, goal_pos, "Troop arrived with no trigger action");
+                info!(
+                    troop_key = key,
+                    goal_pos, "Troop arrived with no trigger action"
+                );
             }
         }
 
         self.aoi_manager
-            .broadcast_area(goal_pos, AoiEvent::MarchArrive { troop_key: key, pos: goal_pos })
+            .broadcast_area(
+                goal_pos,
+                AoiEvent::MarchArrive {
+                    troop_key: key,
+                    pos: goal_pos,
+                },
+            )
             .await;
     }
 
     async fn transfer_to_neighbor(&mut self, troop: BaseTroop) {
         let goal_pos = troop.goal.unwrap_or(0);
         let next_sector_id = crate::map::grid::pos_to_sector_id(goal_pos);
-        
+
         // 记录转移日志
-        let _ = self.wal.append(&WalEntry::TroopTransfer { 
-            key: troop.key, 
-            target_sector: next_sector_id 
-        }).await;
-        
+        let _ = self
+            .wal
+            .append(&WalEntry::TroopTransfer {
+                key: troop.key,
+                target_sector: next_sector_id,
+            })
+            .await;
+
         if let Some(neighbor_tx) = self.neighbors.get(&next_sector_id) {
-            let _ = neighbor_tx.send(SectorMessage::TransferTroop { troop_data: troop }).await;
+            let _ = neighbor_tx
+                .send(SectorMessage::TransferTroop { troop_data: troop })
+                .await;
         }
     }
 
     fn track_troop(&self, troop: BaseTroop) {
-        self.tracked_troops
-            .entry(self.sector_id)
-            .or_default()
-            .push(troop);
+        let mut entry = self.tracked_troops.entry(self.sector_id).or_default();
+        if let Some(existing) = entry.iter_mut().find(|existing| existing.key == troop.key) {
+            *existing = troop;
+        } else {
+            entry.push(troop);
+        }
     }
 
     fn untrack_troop(&self, troop_key: i32) {
@@ -261,7 +336,10 @@ impl MapSectorActor {
     }
 
     async fn save_and_clean_wal(&mut self) -> Result<()> {
-        info!("Sector {} saving data and truncating WAL...", self.sector_id);
+        info!(
+            "Sector {} saving data and truncating WAL...",
+            self.sector_id
+        );
         // 这里执行数据库原子存盘
         // ...
         self.wal.truncate().await?;
