@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use dashmap::DashMap;
 use proto::slg::BaseEntity;
+use std::collections::HashMap;
 
 pub const MAP_WIDTH: i32 = 1300;
 pub const MAP_HEIGHT: i32 = 1300;
@@ -66,7 +66,10 @@ impl MapGrid {
     /// 在指定位置添加实体
     pub fn add_entity(&self, entity: BaseEntity) {
         let gid = pos_to_grid(entity.pos);
-        self.sectors.entry(gid).or_default().insert(entity.pos, entity);
+        self.sectors
+            .entry(gid)
+            .or_default()
+            .insert(entity.pos, entity);
     }
 
     pub fn upsert_entity(&self, entity: BaseEntity) -> Result<Option<BaseEntity>> {
@@ -75,7 +78,11 @@ impl MapGrid {
         }
 
         let gid = pos_to_grid(entity.pos);
-        Ok(self.sectors.entry(gid).or_default().insert(entity.pos, entity))
+        Ok(self
+            .sectors
+            .entry(gid)
+            .or_default()
+            .insert(entity.pos, entity))
     }
 
     /// 移除指定位置的实体
@@ -132,6 +139,30 @@ impl MapGrid {
         entities
     }
 
+    pub fn search_entities(
+        &self,
+        entity_type: Option<i32>,
+        config_id: Option<i32>,
+    ) -> Vec<BaseEntity> {
+        let mut entities: Vec<BaseEntity> = self
+            .sectors
+            .iter()
+            .flat_map(|sector| {
+                sector
+                    .value()
+                    .values()
+                    .filter(|entity| {
+                        entity_type.map_or(true, |value| entity.entity_type == Some(value))
+                            && config_id.map_or(true, |value| entity.conf_id == Some(value))
+                    })
+                    .cloned()
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        entities.sort_by_key(|entity| entity.pos);
+        entities
+    }
+
     pub fn all_entities(&self) -> Vec<BaseEntity> {
         let mut entities: Vec<BaseEntity> = self
             .sectors
@@ -148,7 +179,7 @@ impl MapGrid {
         let gx = x / GRID_SIZE;
         let gy = y / GRID_SIZE;
         let cols = MAP_WIDTH / GRID_SIZE;
-        
+
         let mut gids = Vec::with_capacity(9);
         for dy in -1..=1 {
             for dx in -1..=1 {
@@ -181,7 +212,9 @@ mod tests {
         let grid = MapGrid::new();
 
         assert!(grid.upsert_entity(entity(-1, 4, 1)).is_err());
-        assert!(grid.upsert_entity(entity(MAP_WIDTH * MAP_HEIGHT, 4, 1)).is_err());
+        assert!(grid
+            .upsert_entity(entity(MAP_WIDTH * MAP_HEIGHT, 4, 1))
+            .is_err());
         assert!(!is_valid_xy(MAP_WIDTH, 0));
         assert!(!is_valid_xy(0, MAP_HEIGHT));
     }
@@ -200,6 +233,42 @@ mod tests {
 
         let cities = grid.search_by_type(4);
         assert_eq!(cities, vec![city]);
+    }
+
+    #[test]
+    fn searches_entities_by_type_and_config_id() {
+        let grid = MapGrid::new();
+        let mine_1 = BaseEntity {
+            pos: xy_to_pos(10, 20),
+            entity_type: Some(3),
+            key_id: Some(2001),
+            conf_id: Some(301),
+            ..Default::default()
+        };
+        let mine_2 = BaseEntity {
+            pos: xy_to_pos(12, 20),
+            entity_type: Some(3),
+            key_id: Some(2002),
+            conf_id: Some(302),
+            ..Default::default()
+        };
+        let city = BaseEntity {
+            pos: xy_to_pos(14, 20),
+            entity_type: Some(4),
+            key_id: Some(1001),
+            conf_id: Some(401),
+            ..Default::default()
+        };
+
+        grid.upsert_entity(mine_2.clone()).unwrap();
+        grid.upsert_entity(city).unwrap();
+        grid.upsert_entity(mine_1.clone()).unwrap();
+
+        assert_eq!(
+            grid.search_entities(Some(3), Some(301)),
+            vec![mine_1.clone()]
+        );
+        assert_eq!(grid.search_entities(Some(3), None), vec![mine_1, mine_2]);
     }
 
     #[test]
