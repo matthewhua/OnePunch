@@ -17,6 +17,8 @@ pub struct WorldRuntime {
     sector_senders: HashMap<i32, mpsc::Sender<SectorMessage>>,
     shutdown_txs: Vec<broadcast::Sender<()>>,
     sector_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
+    garrison_state: Arc<crate::garrison::GarrisonState>,
+    assembly_state: Arc<crate::assembly::AssemblyState>,
 }
 
 impl WorldRuntime {
@@ -24,6 +26,8 @@ impl WorldRuntime {
         let aoi = Arc::new(AoiManager::new());
         let health = Arc::new(HealthChecker::new(std::time::Duration::from_secs(30)));
         let sector_troops = Arc::new(DashMap::new());
+        let garrison_state = Arc::new(crate::garrison::GarrisonState::new());
+        let assembly_state = Arc::new(crate::assembly::AssemblyState::new());
         let mut sector_senders = HashMap::new();
         let mut shutdown_txs = Vec::new();
 
@@ -33,6 +37,8 @@ impl WorldRuntime {
             let tracked_troops = sector_troops.clone();
             let aoi = aoi.clone();
             let health = health.clone();
+            let garrison_state = garrison_state.clone();
+            let assembly_state = assembly_state.clone();
             let wal_path = sector_wal_path(sector_id);
 
             tokio::spawn(async move {
@@ -44,6 +50,8 @@ impl WorldRuntime {
                             0,
                             aoi,
                             health,
+                            garrison_state,
+                            assembly_state,
                             wal,
                             shutdown_rx,
                             tracked_troops,
@@ -66,11 +74,21 @@ impl WorldRuntime {
             sector_senders,
             shutdown_txs,
             sector_troops,
+            garrison_state,
+            assembly_state,
         }
     }
 
     pub fn sector_id_for_pos(pos: i32) -> i32 {
         grid::pos_to_sector_id(pos)
+    }
+
+    pub fn garrison_state(&self) -> Arc<crate::garrison::GarrisonState> {
+        self.garrison_state.clone()
+    }
+
+    pub fn assembly_state(&self) -> Arc<crate::assembly::AssemblyState> {
+        self.assembly_state.clone()
     }
 
     pub async fn send_transfer_troop(&self, troop: BaseTroop) -> Result<()> {

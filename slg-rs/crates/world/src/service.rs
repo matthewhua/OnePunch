@@ -31,12 +31,15 @@ impl WorldServiceImpl {
         grid: Arc<crate::map::grid::MapGrid>,
         marching_mgr: Arc<crate::march::MarchingManager>,
     ) -> Self {
+        let runtime = Arc::new(crate::runtime::WorldRuntime::new());
+        let garrison_state = runtime.garrison_state();
+        let assembly_state = runtime.assembly_state();
         Self {
             grid,
             marching_mgr,
-            runtime: Arc::new(crate::runtime::WorldRuntime::new()),
-            garrison_state: Arc::new(crate::garrison::GarrisonState::new()),
-            assembly_state: Arc::new(crate::assembly::AssemblyState::new()),
+            runtime,
+            garrison_state,
+            assembly_state,
             next_troop_key: AtomicI32::new(1),
         }
     }

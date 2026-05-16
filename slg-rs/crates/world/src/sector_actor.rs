@@ -12,7 +12,7 @@ use crate::wal::{WalEntry, WalReplayState, WalTroop, WriteAheadLog};
 use anyhow::Result;
 use bytes::Bytes;
 use dashmap::DashMap;
-use proto::slg::{BaseEntity, BaseTroop};
+use proto::slg::{BaseEntity, BaseTroop, GarrisonTroop};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, oneshot};
@@ -34,6 +34,8 @@ pub struct MapSectorActor {
     /// 外部组件
     aoi_manager: Arc<AoiManager>,
     health_checker: Arc<HealthChecker>,
+    garrison_state: Arc<crate::garrison::GarrisonState>,
+    _assembly_state: Arc<crate::assembly::AssemblyState>,
     outbound_sink: Arc<dyn WorldOutboundSink>,
     wal: WriteAheadLog,
 
@@ -49,6 +51,8 @@ impl MapSectorActor {
         base_time_ms: i64,
         aoi_manager: Arc<AoiManager>,
         health_checker: Arc<HealthChecker>,
+        garrison_state: Arc<crate::garrison::GarrisonState>,
+        assembly_state: Arc<crate::assembly::AssemblyState>,
         wal: WriteAheadLog,
         shutdown_rx: broadcast::Receiver<()>,
         tracked_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
@@ -59,6 +63,8 @@ impl MapSectorActor {
             base_time_ms,
             aoi_manager,
             health_checker,
+            garrison_state,
+            assembly_state,
             Arc::new(InMemoryOutboundSink::new()),
             wal,
             shutdown_rx,
@@ -72,6 +78,8 @@ impl MapSectorActor {
         base_time_ms: i64,
         aoi_manager: Arc<AoiManager>,
         health_checker: Arc<HealthChecker>,
+        garrison_state: Arc<crate::garrison::GarrisonState>,
+        assembly_state: Arc<crate::assembly::AssemblyState>,
         outbound_sink: Arc<dyn WorldOutboundSink>,
         wal: WriteAheadLog,
         shutdown_rx: broadcast::Receiver<()>,
@@ -86,6 +94,8 @@ impl MapSectorActor {
             neighbors: HashMap::new(),
             aoi_manager,
             health_checker,
+            garrison_state,
+            _assembly_state: assembly_state,
             outbound_sink,
             wal,
             shutdown_rx,
@@ -309,6 +319,21 @@ impl MapSectorActor {
                 );
             }
             ArrivalAction::Garrison => {
+                if let Err(err) = self.garrison_state.place(
+                    goal_pos,
+                    GarrisonTroop {
+                        troop_key_id: Some(key),
+                        end_time: troop.end_time,
+                        ..Default::default()
+                    },
+                ) {
+                    error!(
+                        troop_key = key,
+                        goal_pos,
+                        error = %err,
+                        "Failed to place garrison troop"
+                    );
+                }
                 info!(
                     troop_key = key,
                     goal_pos,
@@ -414,11 +439,16 @@ mod tests {
 
     async fn actor_with_sink(
         sink: Arc<InMemoryOutboundSink>,
-    ) -> (MapSectorActor, std::path::PathBuf) {
+    ) -> (
+        MapSectorActor,
+        Arc<crate::garrison::GarrisonState>,
+        std::path::PathBuf,
+    ) {
         let (_tx, rx) = mpsc::channel(8);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let _shutdown_tx = shutdown_tx;
         let tracked_troops = Arc::new(DashMap::new());
+        let garrison_state = Arc::new(crate::garrison::GarrisonState::new());
         let wal_path = std::env::temp_dir().join(format!(
             "sector-arrival-outbound-test-{}-{}.wal",
             std::process::id(),
@@ -435,18 +465,20 @@ mod tests {
             0,
             Arc::new(AoiManager::new()),
             Arc::new(HealthChecker::new(Duration::from_secs(30))),
+            garrison_state.clone(),
+            Arc::new(crate::assembly::AssemblyState::new()),
             outbound_sink,
             wal,
             shutdown_rx,
             tracked_troops,
         );
-        (actor, wal_path)
+        (actor, garrison_state, wal_path)
     }
 
     #[tokio::test]
     async fn arrival_publishes_battle_event() {
         let sink = Arc::new(InMemoryOutboundSink::new());
-        let (mut actor, wal_path) = actor_with_sink(sink.clone()).await;
+        let (mut actor, _garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
         let origin = xy_to_pos(0, 0);
         let goal = xy_to_pos(10, 10);
 
@@ -481,7 +513,7 @@ mod tests {
     #[tokio::test]
     async fn retreat_arrival_publishes_return_event_before_status_changes() {
         let sink = Arc::new(InMemoryOutboundSink::new());
-        let (mut actor, wal_path) = actor_with_sink(sink.clone()).await;
+        let (mut actor, _garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
         let origin = xy_to_pos(5, 5);
         let home = xy_to_pos(0, 0);
 
@@ -502,6 +534,40 @@ mod tests {
                 troop_key: 2,
                 home_pos: home,
                 march_type: Some(MARCH_TYPE_ATK_PLAYER),
+            }]
+        );
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn garrison_arrival_places_troop_in_shared_state() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
+        let target = xy_to_pos(12, 12);
+
+        actor
+            .handle_arrival(BaseTroop {
+                key: 3,
+                r#type: Some(crate::march::MARCH_TYPE_GARRISON_CITY),
+                origin: Some(xy_to_pos(1, 1)),
+                goal: Some(target),
+                end_time: Some(99_000),
+                ..Default::default()
+            })
+            .await;
+
+        let garrisons = garrison_state.list(Some(target));
+        assert_eq!(garrisons.len(), 1);
+        assert_eq!(garrisons[0].troop_key_id, Some(3));
+        assert_eq!(garrisons[0].end_time, Some(99_000));
+        assert_eq!(
+            sink.records(),
+            vec![WorldOutboundEvent::GarrisonChanged {
+                troop_key: 3,
+                target_pos: target,
+                camp: None,
+                is_arrival: true,
             }]
         );
 
