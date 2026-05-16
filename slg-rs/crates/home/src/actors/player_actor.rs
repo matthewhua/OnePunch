@@ -1,22 +1,22 @@
-use tokio::sync::{mpsc, oneshot, watch};
+use proto::slg::{FunctionClientBase, GetRoleDataRs, LordDataFunction, RoleLoginRs};
+use shared::persistence::{LordRow, PlayerDao, SaveEntry};
+use shared::static_config::StaticConfig;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{info, warn, error};
-use proto::slg::{RoleLoginRs, GetRoleDataRs};
-use shared::static_config::StaticConfig;
-use shared::persistence::{PlayerDao, LordRow, SaveEntry};
+use tokio::sync::{mpsc, oneshot, watch};
+use tracing::{error, info, warn};
 
-use crate::systems::PlayerSystem;
+use crate::actors::global_event_bus::GlobalEventBus;
 use crate::systems::activity::ActivitySystem;
-use crate::systems::hero::HeroSystem;
 use crate::systems::backpack::BackpackSystem;
 use crate::systems::building::BuildingSystem;
-use crate::systems::tech::TechSystem;
 use crate::systems::equip::EquipSystem;
+use crate::systems::hero::HeroSystem;
 use crate::systems::mission::MissionSystem;
 use crate::systems::skin::SkinSystem;
-use shared::event::{EventDispatcher, PlayerContext, GameEvent};
-use crate::actors::global_event_bus::GlobalEventBus;
+use crate::systems::tech::TechSystem;
+use crate::systems::PlayerSystem;
+use shared::event::{EventDispatcher, GameEvent, PlayerContext};
 
 /// 存盘间隔（秒）
 const SAVE_INTERVAL_SECS: u64 = 300;
@@ -118,7 +118,10 @@ impl PlayerActor {
             mission_system: MissionSystem::new(),
             skin_system: SkinSystem::new(),
             event_dispatcher: EventDispatcher::new(),
-            ctx: PlayerContext { role_id, account_id },
+            ctx: PlayerContext {
+                role_id,
+                account_id,
+            },
             global_event_bus,
             config_rx,
             current_config,
@@ -134,8 +137,22 @@ impl PlayerActor {
         self.lord = self.dao.load_lord(self.role_id).await?;
 
         // 2. 加载 p_data（功能模块 blob 数据）
-        if let Some(row) = self.dao.load_player_data(self.role_id).await? {
+        let mission_blob_loaded = if let Some(row) = self.dao.load_player_data(self.role_id).await?
+        {
+            let mission_blob_loaded = row
+                .mission_func
+                .as_ref()
+                .map(|data| !data.is_empty())
+                .unwrap_or(false);
             self.load_system_from_row(&row);
+            mission_blob_loaded
+        } else {
+            false
+        };
+
+        if !mission_blob_loaded && self.mission_system.is_uninitialized() {
+            self.mission_system
+                .init_for_new_player(&self.current_config);
         }
 
         // 3. 更新登录信息
@@ -149,14 +166,14 @@ impl PlayerActor {
     /// 将 PlayerDataRow 中的各列分发到对应系统
     fn load_system_from_row(&mut self, row: &shared::persistence::PlayerDataRow) {
         let systems: Vec<(&mut dyn PlayerSystem, Option<&Vec<u8>>)> = vec![
-            (&mut self.activity_system,  row.activity_func.as_ref()),
-            (&mut self.hero_system,      row.hero_func.as_ref()),
-            (&mut self.backpack_system,  row.backpack_func.as_ref()),
-            (&mut self.building_system,  row.sim_func.as_ref()),
-            (&mut self.tech_system,      row.technology_func.as_ref()),
-            (&mut self.equip_system,     row.equip_func.as_ref()),
-            (&mut self.mission_system,   row.mission_func.as_ref()),
-            (&mut self.skin_system,      row.skin_func.as_ref()),
+            (&mut self.activity_system, row.activity_func.as_ref()),
+            (&mut self.hero_system, row.hero_func.as_ref()),
+            (&mut self.backpack_system, row.backpack_func.as_ref()),
+            (&mut self.building_system, row.sim_func.as_ref()),
+            (&mut self.tech_system, row.technology_func.as_ref()),
+            (&mut self.equip_system, row.equip_func.as_ref()),
+            (&mut self.mission_system, row.mission_func.as_ref()),
+            (&mut self.skin_system, row.skin_func.as_ref()),
         ];
 
         for (system, data_opt) in systems {
@@ -166,7 +183,8 @@ impl PlayerActor {
                         warn!(
                             role_id = self.role_id,
                             col = system.column_name(),
-                            "Failed to deserialize, using default: {}", e
+                            "Failed to deserialize, using default: {}",
+                            e
                         );
                     }
                 }
@@ -302,7 +320,8 @@ impl PlayerActor {
                         error!(
                             role_id = self.role_id,
                             col = system.column_name(),
-                            "Serialize failed: {}", e
+                            "Serialize failed: {}",
+                            e
                         );
                     }
                 }
@@ -317,29 +336,48 @@ impl PlayerActor {
         let save_result = tokio::time::timeout(
             Duration::from_secs(SAVE_TIMEOUT_SECS),
             self.dao.save_player_data(self.role_id, &entries),
-        ).await;
+        )
+        .await;
 
         match save_result {
             Ok(Ok(())) => {
                 self.save_fail_count = 0;
                 info!(
-                    role_id = self.role_id, modules = entry_count,
-                    force = force_all, "Save completed"
+                    role_id = self.role_id,
+                    modules = entry_count,
+                    force = force_all,
+                    "Save completed"
                 );
             }
             Ok(Err(e)) => {
                 self.save_fail_count += 1;
-                error!(role_id = self.role_id, fail_count = self.save_fail_count, "Save failed: {}", e);
+                error!(
+                    role_id = self.role_id,
+                    fail_count = self.save_fail_count,
+                    "Save failed: {}",
+                    e
+                );
                 if self.save_fail_count >= 3 {
                     warn!(role_id = self.role_id, "Emergency save to file");
-                    shared::persistence::emergency_save_to_file(EMERGENCY_SAVE_DIR, self.role_id, &entries);
+                    shared::persistence::emergency_save_to_file(
+                        EMERGENCY_SAVE_DIR,
+                        self.role_id,
+                        &entries,
+                    );
                 }
             }
             Err(_) => {
                 self.save_fail_count += 1;
-                error!(role_id = self.role_id, "Save timed out ({}s)", SAVE_TIMEOUT_SECS);
+                error!(
+                    role_id = self.role_id,
+                    "Save timed out ({}s)", SAVE_TIMEOUT_SECS
+                );
                 if self.save_fail_count >= 3 {
-                    shared::persistence::emergency_save_to_file(EMERGENCY_SAVE_DIR, self.role_id, &entries);
+                    shared::persistence::emergency_save_to_file(
+                        EMERGENCY_SAVE_DIR,
+                        self.role_id,
+                        &entries,
+                    );
                 }
             }
         }
@@ -350,10 +388,15 @@ impl PlayerActor {
         self.state = PlayerState::InGame;
         self.login_timestamp = chrono::Utc::now().timestamp();
 
-        let event = GameEvent::PlayerLogin { role_id: self.role_id };
+        let event = GameEvent::PlayerLogin {
+            role_id: self.role_id,
+        };
         self.dispatch_event(&event);
 
-        let _ = tx.send(Ok(RoleLoginRs { state: Some(1), ..Default::default() }));
+        let _ = tx.send(Ok(RoleLoginRs {
+            state: Some(1),
+            ..Default::default()
+        }));
     }
 
     pub fn dispatch_event(&mut self, event: &GameEvent) {
@@ -362,7 +405,8 @@ impl PlayerActor {
             let me = GameEvent::Mission(mission_event);
             self.activity_system.handle_event(&me, &mut self.ctx);
             // 带 config 的任务进度更新（能查 s_task 配置）
-            self.mission_system.handle_event_with_config(&me, &self.current_config, &mut self.ctx);
+            self.mission_system
+                .handle_event_with_config(&me, &self.current_config, &mut self.ctx);
             self.event_dispatcher.dispatch(&me, &mut self.ctx);
         }
 
@@ -373,44 +417,85 @@ impl PlayerActor {
     }
 
     async fn handle_get_role_data(&mut self, tx: oneshot::Sender<anyhow::Result<GetRoleDataRs>>) {
-        use proto::slg::FunctionClientBase;
-        use prost::Message;
+        let _ = tx.send(Ok(self.build_role_data_response()));
+    }
+
+    fn build_role_data_response(&self) -> GetRoleDataRs {
         use shared::msg::ToFunctionClientBaseBytes;
 
         let mut function_base = Vec::new();
 
-        let act_bytes = self.activity_system.to_function_base_bytes();
-        if let Ok(f_base) = FunctionClientBase::decode(act_bytes.as_slice()) {
-            function_base.push(f_base);
+        if let Some(lord) = &self.lord {
+            push_function_base(
+                &mut function_base,
+                Self::lord_data_function(lord).to_function_base_bytes(),
+            );
         }
+        push_function_base(
+            &mut function_base,
+            self.activity_system.to_function_base_bytes(),
+        );
+        push_function_base(
+            &mut function_base,
+            self.hero_system.to_function_base_bytes(),
+        );
+        push_function_base(
+            &mut function_base,
+            self.backpack_system.to_function_base_bytes(),
+        );
+        push_function_base(
+            &mut function_base,
+            self.building_system.to_function_base_bytes(),
+        );
+        push_function_base(
+            &mut function_base,
+            self.tech_system.to_function_base_bytes(),
+        );
+        push_function_base(
+            &mut function_base,
+            self.equip_system.to_function_base_bytes(),
+        );
+        push_function_base(
+            &mut function_base,
+            self.mission_system.to_function_base_bytes(),
+        );
+        push_function_base(
+            &mut function_base,
+            self.skin_system.to_function_base_bytes(),
+        );
 
-        let hero_bytes = self.hero_system.to_function_base_bytes();
-        if let Ok(f_base) = FunctionClientBase::decode(hero_bytes.as_slice()) {
-            function_base.push(f_base);
+        GetRoleDataRs {
+            function_base,
+            ..Default::default()
         }
+    }
 
-        let backpack_bytes = self.backpack_system.to_function_base_bytes();
-        if let Ok(f_base) = FunctionClientBase::decode(backpack_bytes.as_slice()) {
-            function_base.push(f_base);
+    fn lord_data_function(lord: &LordRow) -> LordDataFunction {
+        LordDataFunction {
+            nick_name: lord.nick.clone(),
+            portrait: lord
+                .portrait
+                .as_deref()
+                .and_then(|portrait| portrait.parse::<i32>().ok()),
+            diamond: lord.diamond,
+            battle_fight: lord.battle_fight,
+            guide_index: lord.guide_id,
+            title: lord.title,
+            portrait_frame: lord.portrait_frame,
+            server_open_time: Some(0),
+            role_create_time: lord.on_time,
+            off_time: lord.off_time,
+            meat: lord.meat,
+            fame: lord.fame,
+            gold: lord.gold,
+            search_survivor_time: lord.search_survivor_time,
+            stamina: lord.stamina.map(i64_to_i32_saturating),
+            total_login: lord.total_login,
+            current_streak: lord.current_streak,
+            vip_level: lord.vip_level,
+            vip_exp: lord.vip_exp,
+            ..Default::default()
         }
-
-        let tech_bytes = self.tech_system.to_function_base_bytes();
-        if let Ok(f_base) = FunctionClientBase::decode(tech_bytes.as_slice()) {
-            function_base.push(f_base);
-        }
-
-        let equip_bytes = self.equip_system.to_function_base_bytes();
-        if let Ok(f_base) = FunctionClientBase::decode(equip_bytes.as_slice()) {
-            function_base.push(f_base);
-        }
-
-        let mission_bytes = self.mission_system.to_function_base_bytes();
-        if let Ok(f_base) = FunctionClientBase::decode(mission_bytes.as_slice()) {
-            function_base.push(f_base);
-        }
-
-        let rs = GetRoleDataRs { function_base, ..Default::default() };
-        let _ = tx.send(Ok(rs));
     }
 
     /// 按 cmd 范围将业务命令路由到对应系统处理，返回序列化后的响应 payload。
@@ -440,17 +525,44 @@ impl PlayerActor {
             payload
         };
 
+        if cmd == 1109 {
+            return shared::msg::GameMessage::build_response(
+                1110,
+                &self.build_role_data_response(),
+            );
+        }
+
         // 调用对应系统，获取响应 payload 和需要分发的事件
         let (resp, events) = match cmd {
-            1101..=1200 => self.mission_system.handle_command_with_events(cmd, &payload, &config),
-            1501..=1603 => self.building_system.handle_command_with_events(cmd, &payload, &config),
-            2001..=2500 => self.hero_system.handle_command_with_events(cmd, &payload, &config),
-            4001..=4004 => self.backpack_system.handle_command_with_events(cmd, &payload, &config),
-            4201..=4208 => self.tech_system.handle_command_with_events(cmd, &payload, &config),
-            4801..=5100 => self.equip_system.handle_command_with_events(cmd, &payload, &config),
-            8001..=10000 => self.activity_system.handle_command_with_events(cmd, &payload, &config),
+            1101..=1200 => self
+                .mission_system
+                .handle_command_with_events(cmd, &payload, &config),
+            1501..=1603 => self
+                .building_system
+                .handle_command_with_events(cmd, &payload, &config),
+            2001..=2500 => self
+                .hero_system
+                .handle_command_with_events(cmd, &payload, &config),
+            4001..=4004 => self.backpack_system.handle_command_with_events_for_role(
+                self.role_id,
+                cmd,
+                &payload,
+                &config,
+            ),
+            4201..=4208 => self
+                .tech_system
+                .handle_command_with_events(cmd, &payload, &config),
+            4801..=5100 => self
+                .equip_system
+                .handle_command_with_events(cmd, &payload, &config),
+            8001..=10000 => self
+                .activity_system
+                .handle_command_with_events(cmd, &payload, &config),
             _ => {
-                warn!(role_id = self.role_id, cmd, "Unhandled cmd, no system matched");
+                warn!(
+                    role_id = self.role_id,
+                    cmd, "Unhandled cmd, no system matched"
+                );
                 return Err(anyhow::anyhow!("Unknown cmd: {}", cmd));
             }
         }?;
@@ -461,5 +573,118 @@ impl PlayerActor {
         }
 
         shared::msg::GameMessage::build_response_from_raw(cmd as i32 + 1, &resp)
+    }
+}
+
+fn push_function_base(function_base: &mut Vec<FunctionClientBase>, bytes: Vec<u8>) {
+    use prost::Message;
+
+    if let Ok(f_base) = FunctionClientBase::decode(bytes.as_slice()) {
+        function_base.push(f_base);
+    }
+}
+
+fn i64_to_i32_saturating(value: i64) -> i32 {
+    value.clamp(i32::MIN as i64, i32::MAX as i64) as i32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proto::slg::GetRoleDataRq;
+    use shared::msg::{func_type, GameMessage};
+    use sqlx::mysql::MySqlPoolOptions;
+
+    fn test_lord(role_id: i64) -> LordRow {
+        LordRow {
+            role_id,
+            nick: Some("tester".to_string()),
+            portrait: Some("1001".to_string()),
+            portrait_frame: Some(2),
+            top_up: None,
+            diamond: Some(100),
+            diamond_cost: Some(0),
+            guide_id: Some(3),
+            on_time: Some(1_700_000_000),
+            ol_time: Some(0),
+            off_time: Some(0),
+            ol_month: Some(0),
+            title: Some(0),
+            max_key: Some(0),
+            role_status: None,
+            across_day_deal_time: Some(0),
+            battle_fight: Some(12_345),
+            meat: Some(200),
+            fame: Some(7),
+            gold: Some(300),
+            search_survivor_time: Some(0),
+            stamina: Some(120),
+            start_ad_time: Some(0),
+            start_ad_id: Some(0),
+            is_add_login: Some(1),
+            total_login: Some(1),
+            current_streak: Some(1),
+            vip_level: Some(0),
+            vip_exp: Some(0),
+            camp_id: Some(1),
+            last_periodic_task_time: None,
+            lord_system_setting: None,
+            pay_amount: Some(0),
+            language: None,
+            push_switch: None,
+        }
+    }
+
+    fn test_actor(account_id: i64, role_id: i64) -> PlayerActor {
+        let (_msg_tx, msg_rx) = mpsc::unbounded_channel();
+        let (global_tx, _global_rx) = mpsc::channel(8);
+        let (_config_tx, config_rx) = watch::channel(Arc::new(StaticConfig::default()));
+        let pool = MySqlPoolOptions::new()
+            .connect_lazy("mysql://root:password@127.0.0.1/slg_test")
+            .expect("lazy mysql pool should not connect during this test");
+        let mut actor = PlayerActor::new(
+            account_id,
+            role_id,
+            msg_rx,
+            GlobalEventBus::new(global_tx),
+            config_rx,
+            Arc::new(PlayerDao::new(pool)),
+        );
+        actor.lord = Some(test_lord(role_id));
+        actor
+    }
+
+    #[tokio::test]
+    async fn role_login_then_dispatch_1109_returns_get_role_data() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+
+        let (login_tx, login_rx) = oneshot::channel();
+        actor.handle_role_login(login_tx).await;
+        let login_rs = login_rx.await.unwrap().unwrap();
+        assert_eq!(login_rs.state, Some(1));
+        assert_eq!(actor.state, PlayerState::InGame);
+
+        let request_payload = GameMessage::build_response(1109, &GetRoleDataRq::default()).unwrap();
+        let response_payload = actor
+            .handle_game_command(1109, request_payload)
+            .await
+            .unwrap();
+
+        let response = GameMessage::decode(response_payload).unwrap();
+        assert_eq!(response.base.cmd, 1110);
+        let body: GetRoleDataRs = response.get_payload().unwrap();
+
+        let mut function_types: Vec<i32> = body
+            .function_base
+            .iter()
+            .filter_map(|base| base.r#type)
+            .collect();
+        function_types.sort_unstable();
+
+        assert!(function_types.contains(&func_type::LORD));
+        assert!(function_types.contains(&func_type::BAG));
+        assert!(function_types.contains(&func_type::SIM));
+        assert!(function_types.contains(&func_type::MISSION));
     }
 }

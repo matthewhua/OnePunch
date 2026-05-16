@@ -1,12 +1,12 @@
-use dashmap::DashMap;
-use tokio::sync::mpsc;
-use std::sync::Arc;
-use tracing::{info, warn};
-use crate::actors::player_actor::{PlayerActor, PlayerMessage};
 use crate::actors::global_event_bus::GlobalEventBus;
-use shared::static_config::StaticConfig;
+use crate::actors::player_actor::{PlayerActor, PlayerMessage};
+use dashmap::DashMap;
 use shared::persistence::PlayerDao;
+use shared::static_config::StaticConfig;
+use std::sync::Arc;
+use tokio::sync::mpsc;
 use tokio::sync::watch;
+use tracing::{info, warn};
 
 /// 玩家管理器：维护在线玩家的 AccountID/RoleID -> Actor Sender 的映射
 pub struct PlayerManager {
@@ -55,7 +55,11 @@ impl PlayerManager {
     /// 启动新玩家 Actor
     ///
     /// 如果该 account_id 已有在线 Actor，先踢掉旧的。
-    pub fn spawn_actor(&self, account_id: i64, role_id: i64) -> mpsc::UnboundedSender<PlayerMessage> {
+    pub fn spawn_actor(
+        &self,
+        account_id: i64,
+        role_id: i64,
+    ) -> mpsc::UnboundedSender<PlayerMessage> {
         if let Some(existing) = self.role_to_actor.get(&role_id) {
             return existing.clone();
         }
@@ -91,9 +95,17 @@ impl PlayerManager {
 
     /// 移除玩家（下线后清理映射）
     pub fn remove_player(&self, account_id: i64, role_id: i64) {
-        self.account_to_actor.remove(&account_id);
-        if role_id > 0 {
-            self.role_to_actor.remove(&role_id);
+        let removed_by_role = if role_id > 0 {
+            self.role_to_actor.remove(&role_id).map(|(_, tx)| tx)
+        } else {
+            None
+        };
+
+        if account_id > 0 {
+            self.account_to_actor.remove(&account_id);
+        } else if let Some(role_tx) = removed_by_role {
+            self.account_to_actor
+                .retain(|_, account_tx| !account_tx.same_channel(&role_tx));
         }
     }
 

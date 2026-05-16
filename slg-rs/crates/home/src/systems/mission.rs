@@ -13,22 +13,20 @@
 //!       → config_id 加入 passedMission → 解锁 goto_states 指向的下一个任务
 //! ```
 
-use std::sync::Arc;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use prost::Message;
-use tracing::{info, debug};
+use std::sync::Arc;
+use tracing::{debug, info};
 
 use super::PlayerSystem;
 use proto::slg::{
-    MissionDataFunction, BaseMission, DailyMission,
-    ReceiveMissionRewardRq, ReceiveMissionRewardRs,
-    ReceiveChapterMissionRq, ReceiveChapterMissionRs,
-    GainDailyLivenessRewardRq, GainDailyLivenessRewardRs,
-    ReceiveChapterMissionRewardBatchRs,
-    ChangeInfo, AwardPb,
+    AwardPb, BaseMission, ChangeInfo, DailyMission, GainDailyLivenessRewardRq,
+    GainDailyLivenessRewardRs, MissionDataFunction, ReceiveChapterMissionRewardBatchRs,
+    ReceiveChapterMissionRq, ReceiveChapterMissionRs, ReceiveMissionRewardRq,
+    ReceiveMissionRewardRs,
 };
-use shared::persistence::col;
 use shared::event::{GameEvent, MissionEvent, PlayerContext};
+use shared::persistence::col;
 use shared::static_config::StaticConfig;
 
 /// 任务状态（与 proto MissionStatus 枚举对齐）
@@ -37,10 +35,10 @@ const STATUS_AVAILABLE: i32 = 1;
 const STATUS_RECEIVED: i32 = 2;
 
 /// 任务类型（与 proto MissionDefine 枚举对齐）
-const MISSION_DEFINE_MAIN: i32 = 0;       // 章节任务
-const MISSION_DEFINE_DAILY: i32 = 2;      // 每日任务
-const MISSION_DEFINE_GROW_MAIN: i32 = 3;  // 成长主线
-const MISSION_DEFINE_GROW_SPUR: i32 = 4;  // 成长支线
+const MISSION_DEFINE_MAIN: i32 = 0; // 章节任务
+const MISSION_DEFINE_DAILY: i32 = 2; // 每日任务
+const MISSION_DEFINE_GROW_MAIN: i32 = 3; // 成长主线
+const MISSION_DEFINE_GROW_SPUR: i32 = 4; // 成长支线
 
 /// 任务系统
 pub struct MissionSystem {
@@ -78,8 +76,20 @@ impl MissionSystem {
             }
         }
         self.dirty = true;
-        info!(tasks = self.data.grow_main_mission.len() + self.data.grow_spur_mission.len(),
-              "MissionSystem initialized for new player");
+        info!(
+            tasks = self.data.grow_main_mission.len() + self.data.grow_spur_mission.len(),
+            "MissionSystem initialized for new player"
+        );
+    }
+
+    pub fn is_uninitialized(&self) -> bool {
+        self.data.curr_chapter_mission.is_none()
+            && self.data.open_mission.is_empty()
+            && self.data.passed_mission.is_empty()
+            && self.data.daily_mission.is_none()
+            && self.data.grow_main_mission.is_empty()
+            && self.data.grow_spur_mission.is_empty()
+            && self.data.time_limit_mission.is_empty()
     }
 
     // ── 事件处理 ──────────────────────────────────────────────────────────────
@@ -113,7 +123,8 @@ impl MissionSystem {
 
         // 找到该 mission_type 对应的所有 task_id
         let candidate_task_ids: Vec<i32> = if let Some(cfg) = config {
-            cfg.task.tasks_by_mission_type_idx
+            cfg.task
+                .tasks_by_mission_type_idx
                 .get(&mission_type_val)
                 .cloned()
                 .unwrap_or_default()
@@ -144,9 +155,15 @@ impl MissionSystem {
                     None => continue,
                 };
                 // 跳过已完成或已领取
-                if passed.contains(&config_id) { continue; }
-                if mission.status == Some(STATUS_RECEIVED) { continue; }
-                if !candidate_task_ids.contains(&config_id) { continue; }
+                if passed.contains(&config_id) {
+                    continue;
+                }
+                if mission.status == Some(STATUS_RECEIVED) {
+                    continue;
+                }
+                if !candidate_task_ids.contains(&config_id) {
+                    continue;
+                }
 
                 // 获取目标进度
                 let target = config
@@ -160,7 +177,11 @@ impl MissionSystem {
 
                 if new_val >= target && mission.status != Some(STATUS_AVAILABLE) {
                     mission.status = Some(STATUS_AVAILABLE);
-                    debug!(config_id, mission_type = mission_type_val, "Mission available");
+                    debug!(
+                        config_id,
+                        mission_type = mission_type_val,
+                        "Mission available"
+                    );
                 }
                 changed = true;
             }
@@ -169,10 +190,19 @@ impl MissionSystem {
         // 日常任务
         if let Some(daily) = &mut self.data.daily_mission {
             for mission in &mut daily.mission {
-                let config_id = match mission.config_id { Some(id) => id, None => continue };
-                if passed.contains(&config_id) { continue; }
-                if mission.status == Some(STATUS_RECEIVED) { continue; }
-                if !candidate_task_ids.contains(&config_id) { continue; }
+                let config_id = match mission.config_id {
+                    Some(id) => id,
+                    None => continue,
+                };
+                if passed.contains(&config_id) {
+                    continue;
+                }
+                if mission.status == Some(STATUS_RECEIVED) {
+                    continue;
+                }
+                if !candidate_task_ids.contains(&config_id) {
+                    continue;
+                }
 
                 let target = config
                     .and_then(|c| c.task.tasks.get(&config_id))
@@ -199,7 +229,11 @@ impl MissionSystem {
     /// 收集所有活跃任务的 config_id（无 config 时的兜底）
     fn all_active_config_ids(&self) -> Vec<i32> {
         let mut ids = Vec::new();
-        for list in [&self.data.open_mission, &self.data.grow_main_mission, &self.data.grow_spur_mission] {
+        for list in [
+            &self.data.open_mission,
+            &self.data.grow_main_mission,
+            &self.data.grow_spur_mission,
+        ] {
             for m in list {
                 if let Some(id) = m.config_id {
                     if m.status != Some(STATUS_RECEIVED) {
@@ -226,7 +260,8 @@ impl MissionSystem {
     ///
     /// 格式：`"type,id,count;type,id,count;..."`
     fn parse_award_list(award_str: &str) -> Vec<AwardPb> {
-        award_str.split(';')
+        award_str
+            .split(';')
             .filter(|s| !s.is_empty())
             .filter_map(|seg| {
                 let parts: Vec<&str> = seg.split(',').collect();
@@ -269,12 +304,17 @@ impl MissionSystem {
             _ => &mut self.data.open_mission,
         };
 
-        let mission = mission_list.iter_mut()
+        let mission = mission_list
+            .iter_mut()
             .find(|m| m.config_id == Some(config_id))
             .ok_or_else(|| anyhow!("Mission {} not found", config_id))?;
 
         if mission.status != Some(STATUS_AVAILABLE) {
-            return Err(anyhow!("Mission {} not available (status={:?})", config_id, mission.status));
+            return Err(anyhow!(
+                "Mission {} not available (status={:?})",
+                config_id,
+                mission.status
+            ));
         }
 
         // 标记已领取
@@ -283,7 +323,10 @@ impl MissionSystem {
         self.dirty = true;
 
         // 获取奖励
-        let awards = config.task.tasks.get(&config_id)
+        let awards = config
+            .task
+            .tasks
+            .get(&config_id)
             .and_then(|t| t.award_list.as_deref())
             .map(Self::parse_award_list)
             .unwrap_or_default();
@@ -293,7 +336,10 @@ impl MissionSystem {
         if let Some(task) = config.task.tasks.get(&config_id) {
             if let Some(next_id) = task.goto_states {
                 if next_id > 0 && !self.data.passed_mission.contains(&next_id) {
-                    let next_define = config.task.tasks.get(&next_id)
+                    let next_define = config
+                        .task
+                        .tasks
+                        .get(&next_id)
                         .and_then(|t| t.task_type)
                         .unwrap_or(mission_define);
                     let next_mission = BaseMission {
@@ -316,7 +362,10 @@ impl MissionSystem {
         }
 
         let rs = ReceiveMissionRewardRs {
-            info: Some(ChangeInfo { show_award: awards, ..Default::default() }),
+            info: Some(ChangeInfo {
+                show_award: awards,
+                ..Default::default()
+            }),
             next: next_missions,
             cur: None,
             mission_define,
@@ -333,10 +382,15 @@ impl MissionSystem {
         config_id: i32,
         config: &StaticConfig,
     ) -> Result<(Vec<u8>, Vec<GameEvent>)> {
-        let daily = self.data.daily_mission.as_mut()
+        let daily = self
+            .data
+            .daily_mission
+            .as_mut()
             .ok_or_else(|| anyhow!("No daily mission data"))?;
 
-        let mission = daily.mission.iter_mut()
+        let mission = daily
+            .mission
+            .iter_mut()
             .find(|m| m.config_id == Some(config_id))
             .ok_or_else(|| anyhow!("Daily mission {} not found", config_id))?;
 
@@ -347,13 +401,19 @@ impl MissionSystem {
         mission.status = Some(STATUS_RECEIVED);
         self.dirty = true;
 
-        let awards = config.task.tasks.get(&config_id)
+        let awards = config
+            .task
+            .tasks
+            .get(&config_id)
             .and_then(|t| t.award_list.as_deref())
             .map(Self::parse_award_list)
             .unwrap_or_default();
 
         let rs = ReceiveMissionRewardRs {
-            info: Some(ChangeInfo { show_award: awards, ..Default::default() }),
+            info: Some(ChangeInfo {
+                show_award: awards,
+                ..Default::default()
+            }),
             mission_define: MISSION_DEFINE_DAILY,
             ..Default::default()
         };
@@ -372,12 +432,17 @@ impl MissionSystem {
 
         let chapter_id = rq.chapter_id;
 
-        let chapter = self.data.curr_chapter_mission.as_mut()
+        let chapter = self
+            .data
+            .curr_chapter_mission
+            .as_mut()
             .filter(|c| c.config_id == chapter_id)
             .ok_or_else(|| anyhow!("Chapter {} not current", chapter_id))?;
 
         // 检查章节内所有任务是否都已完成
-        let all_done = chapter.mission.iter()
+        let all_done = chapter
+            .mission
+            .iter()
             .all(|m| m.status == Some(STATUS_RECEIVED));
         if !all_done {
             return Err(anyhow!("Chapter {} not all missions done", chapter_id));
@@ -387,13 +452,19 @@ impl MissionSystem {
         self.dirty = true;
 
         // 章节奖励
-        let awards = config.task.chapters.get(&chapter_id)
+        let awards = config
+            .task
+            .chapters
+            .get(&chapter_id)
             .and_then(|c| c.reward.as_deref())
             .map(Self::parse_award_list)
             .unwrap_or_default();
 
         let rs = ReceiveChapterMissionRs {
-            info: Some(ChangeInfo { show_award: awards, ..Default::default() }),
+            info: Some(ChangeInfo {
+                show_award: awards,
+                ..Default::default()
+            }),
             cur: None,
             next: None,
             ..Default::default()
@@ -413,11 +484,17 @@ impl MissionSystem {
 
         let reward_id = rq.id;
 
-        let daily = self.data.daily_mission.as_mut()
+        let daily = self
+            .data
+            .daily_mission
+            .as_mut()
             .ok_or_else(|| anyhow!("No daily mission data"))?;
 
         if daily.has_received.contains(&reward_id) {
-            return Err(anyhow!("Daily liveness reward {} already received", reward_id));
+            return Err(anyhow!(
+                "Daily liveness reward {} already received",
+                reward_id
+            ));
         }
 
         // TODO: 检查当前活跃度值是否达到 reward_id 对应的门槛
@@ -452,7 +529,10 @@ impl MissionSystem {
                     if let Some(config_id) = mission.config_id {
                         mission.status = Some(STATUS_RECEIVED);
                         self.data.passed_mission.push(config_id);
-                        if let Some(awards) = config.task.tasks.get(&config_id)
+                        if let Some(awards) = config
+                            .task
+                            .tasks
+                            .get(&config_id)
                             .and_then(|t| t.award_list.as_deref())
                             .map(Self::parse_award_list)
                         {
@@ -466,7 +546,10 @@ impl MissionSystem {
         self.dirty = true;
 
         let rs = ReceiveChapterMissionRewardBatchRs {
-            info: Some(ChangeInfo { show_award: total_awards, ..Default::default() }),
+            info: Some(ChangeInfo {
+                show_award: total_awards,
+                ..Default::default()
+            }),
             cur: None,
             next: None,
             ..Default::default()
@@ -482,13 +565,16 @@ impl MissionSystem {
         // 找到今天对应的 s_task_daily 配置（简化：取第一条）
         // TODO: 根据开服天数选择对应的 daily 配置
         if let Some(daily_conf) = config.task.dailies.first() {
-            let task_ids: Vec<i32> = daily_conf.task_id.as_deref()
+            let task_ids: Vec<i32> = daily_conf
+                .task_id
+                .as_deref()
                 .unwrap_or("")
                 .split(',')
                 .filter_map(|s| s.trim().parse().ok())
                 .collect();
 
-            let missions: Vec<BaseMission> = task_ids.iter()
+            let missions: Vec<BaseMission> = task_ids
+                .iter()
                 .map(|&tid| BaseMission {
                     mission_define: Some(MISSION_DEFINE_DAILY),
                     config_id: Some(tid),
@@ -525,10 +611,18 @@ impl PlayerSystem for MissionSystem {
         Ok(self.data.encode_to_vec())
     }
 
-    fn is_dirty(&self) -> bool { self.dirty }
-    fn mark_dirty(&mut self) { self.dirty = true; }
-    fn clear_dirty(&mut self) { self.dirty = false; }
-    fn column_name(&self) -> &'static str { col::MISSION }
+    fn is_dirty(&self) -> bool {
+        self.dirty
+    }
+    fn mark_dirty(&mut self) {
+        self.dirty = true;
+    }
+    fn clear_dirty(&mut self) {
+        self.dirty = false;
+    }
+    fn column_name(&self) -> &'static str {
+        col::MISSION
+    }
 
     fn on_daily_reset(&mut self) {
         // 无 config 时仅清空，PlayerActor 会在有 config 时调用 do_daily_reset
@@ -571,7 +665,11 @@ impl PlayerSystem for MissionSystem {
 
 impl shared::msg::ToFunctionClientBaseBytes for MissionSystem {
     fn to_function_base_bytes(&self) -> Vec<u8> {
-        use shared::msg::{func_type, func_tag};
-        shared::msg::build_function_base_bytes_pub(func_type::MISSION, func_tag::MISSION, &self.data)
+        use shared::msg::{func_tag, func_type};
+        shared::msg::build_function_base_bytes_pub(
+            func_type::MISSION,
+            func_tag::MISSION,
+            &self.data,
+        )
     }
 }

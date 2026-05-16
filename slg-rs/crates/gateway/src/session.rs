@@ -14,8 +14,8 @@
 
 use dashmap::DashMap;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 
@@ -85,6 +85,8 @@ impl Session {
 pub struct SessionStore {
     /// conn_id → Session
     sessions: DashMap<u64, Session>,
+    /// conn_id → shutdown signal sender（用于踢重复登录的旧连接）
+    shutdown_senders: DashMap<u64, mpsc::UnboundedSender<()>>,
     /// account_key_id → conn_id（用于踢重复登录）
     account_index: DashMap<i64, u64>,
     /// 自增连接ID
@@ -95,6 +97,7 @@ impl SessionStore {
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
             sessions: DashMap::new(),
+            shutdown_senders: DashMap::new(),
             account_index: DashMap::new(),
             next_conn_id: AtomicU64::new(1),
         })
@@ -107,17 +110,42 @@ impl SessionStore {
 
     /// 注册新连接
     pub fn register(&self, conn_id: u64, peer_addr: SocketAddr) {
-        self.sessions.insert(conn_id, Session::new(conn_id, peer_addr));
+        self.sessions
+            .insert(conn_id, Session::new(conn_id, peer_addr));
+    }
+
+    /// 注册连接关闭信号发送端。
+    pub fn register_shutdown(&self, conn_id: u64, shutdown_tx: mpsc::UnboundedSender<()>) {
+        self.shutdown_senders.insert(conn_id, shutdown_tx);
     }
 
     /// 移除连接
     pub fn remove(&self, conn_id: u64) {
+        self.shutdown_senders.remove(&conn_id);
         if let Some((_, session)) = self.sessions.remove(&conn_id) {
             if let Some(account_key_id) = session.account_key_id {
                 // 只有当 account_index 指向本连接时才移除（防止踢人后误删新连接）
-                self.account_index.remove_if(&account_key_id, |_, &v| v == conn_id);
+                self.account_index
+                    .remove_if(&account_key_id, |_, &v| v == conn_id);
             }
         }
+    }
+
+    /// 标记连接正在断开，并通知对应连接任务退出。
+    ///
+    /// 返回值表示该连接是否仍在会话表中。
+    pub fn mark_disconnecting(&self, conn_id: u64) -> bool {
+        let mut found = false;
+        if let Some(mut session) = self.sessions.get_mut(&conn_id) {
+            session.state = SessionState::Disconnecting;
+            found = true;
+        }
+
+        if let Some(shutdown_tx) = self.shutdown_senders.get(&conn_id) {
+            let _ = shutdown_tx.send(());
+        }
+
+        found
     }
 
     /// 绑定账号到连接（DoLogin 成功后调用）
@@ -208,4 +236,44 @@ pub type DisconnectRx = mpsc::UnboundedReceiver<DisconnectNotice>;
 
 pub fn disconnect_channel() -> (DisconnectTx, DisconnectRx) {
     mpsc::unbounded_channel()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn peer_addr() -> SocketAddr {
+        "127.0.0.1:10001".parse().unwrap()
+    }
+
+    #[test]
+    fn bind_account_returns_old_conn_and_preserves_new_index() {
+        let sessions = SessionStore::new();
+        sessions.register(1, peer_addr());
+        sessions.register(2, peer_addr());
+
+        assert_eq!(sessions.bind_account(1, 42, "old-token".to_string()), None);
+        assert_eq!(
+            sessions.bind_account(2, 42, "new-token".to_string()),
+            Some(1)
+        );
+
+        sessions.remove(1);
+
+        assert_eq!(sessions.get_account_key_id(2), Some(42));
+        assert_eq!(sessions.get_state(2), Some(SessionState::Authenticated));
+    }
+
+    #[tokio::test]
+    async fn mark_disconnecting_updates_state_and_signals_shutdown() {
+        let sessions = SessionStore::new();
+        sessions.register(1, peer_addr());
+        let (shutdown_tx, mut shutdown_rx) = mpsc::unbounded_channel();
+        sessions.register_shutdown(1, shutdown_tx);
+
+        assert!(sessions.mark_disconnecting(1));
+
+        assert_eq!(sessions.get_state(1), Some(SessionState::Disconnecting));
+        assert_eq!(shutdown_rx.recv().await, Some(()));
+    }
 }

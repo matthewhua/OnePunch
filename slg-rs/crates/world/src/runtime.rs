@@ -1,4 +1,5 @@
 use crate::message::SectorMessage;
+use crate::outbound::{InMemoryOutboundSink, WorldOutboundSink};
 use crate::sector_actor::MapSectorActor;
 use crate::{health::HealthChecker, map::aoi::AoiManager, map::grid, wal::WriteAheadLog};
 use anyhow::{anyhow, Result};
@@ -18,12 +19,17 @@ pub struct WorldRuntime {
     shutdown_txs: Vec<broadcast::Sender<()>>,
     sector_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
     sector_entities: Arc<DashMap<i32, Vec<BaseEntity>>>,
+    aoi: Arc<AoiManager>,
     garrison_state: Arc<crate::garrison::GarrisonState>,
     assembly_state: Arc<crate::assembly::AssemblyState>,
 }
 
 impl WorldRuntime {
     pub fn new() -> Self {
+        Self::new_with_outbound(Arc::new(InMemoryOutboundSink::new()))
+    }
+
+    pub fn new_with_outbound(outbound_sink: Arc<dyn WorldOutboundSink>) -> Self {
         let base_time_ms = crate::march::now_millis();
         let aoi = Arc::new(AoiManager::new());
         let health = Arc::new(HealthChecker::new(std::time::Duration::from_secs(30)));
@@ -43,12 +49,13 @@ impl WorldRuntime {
             let health = health.clone();
             let garrison_state = garrison_state.clone();
             let assembly_state = assembly_state.clone();
+            let outbound_sink = outbound_sink.clone();
             let wal_path = sector_wal_path(sector_id);
 
             tokio::spawn(async move {
                 match WriteAheadLog::new(&wal_path).await {
                     Ok(wal) => {
-                        let actor = MapSectorActor::new(
+                        let actor = MapSectorActor::new_with_outbound(
                             sector_id,
                             rx,
                             base_time_ms,
@@ -56,6 +63,7 @@ impl WorldRuntime {
                             health,
                             garrison_state,
                             assembly_state,
+                            outbound_sink,
                             wal,
                             shutdown_rx,
                             tracked_troops,
@@ -82,6 +90,7 @@ impl WorldRuntime {
             shutdown_txs,
             sector_troops,
             sector_entities,
+            aoi,
             garrison_state,
             assembly_state,
         }
@@ -97,6 +106,10 @@ impl WorldRuntime {
 
     pub fn assembly_state(&self) -> Arc<crate::assembly::AssemblyState> {
         self.assembly_state.clone()
+    }
+
+    pub fn aoi_manager(&self) -> Arc<AoiManager> {
+        self.aoi.clone()
     }
 
     pub async fn send_transfer_troop(&self, troop: BaseTroop) -> Result<()> {

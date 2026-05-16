@@ -26,11 +26,25 @@ impl PlayerSystem for SkinSystem {
         Ok(vec![])
     }
 
-    fn is_dirty(&self) -> bool { self.dirty }
-    fn mark_dirty(&mut self) { self.dirty = true; }
-    fn clear_dirty(&mut self) { self.dirty = false; }
+    fn is_dirty(&self) -> bool {
+        self.dirty
+    }
+    fn mark_dirty(&mut self) {
+        self.dirty = true;
+    }
+    fn clear_dirty(&mut self) {
+        self.dirty = false;
+    }
 
     fn column_name(&self) -> &'static str {
         shared::persistence::col::SKIN
+    }
+}
+
+impl shared::msg::ToFunctionClientBaseBytes for SkinSystem {
+    fn to_function_base_bytes(&self) -> Vec<u8> {
+        shared::msg::ToFunctionClientBaseBytes::to_function_base_bytes(
+            &proto::slg::SkinDataFunction::default(),
+        )
     }
 }

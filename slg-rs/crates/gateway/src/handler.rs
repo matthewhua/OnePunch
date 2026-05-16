@@ -26,6 +26,7 @@ use futures::{SinkExt, StreamExt};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpStream;
+use tokio::sync::mpsc;
 use tokio::time::timeout;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info, warn};
@@ -75,10 +76,12 @@ impl ConnectionHandler {
         let peer_addr = stream.peer_addr()?;
         let conn_id = self.sessions.alloc_conn_id();
         self.sessions.register(conn_id, peer_addr);
+        let (shutdown_tx, shutdown_rx) = mpsc::unbounded_channel();
+        self.sessions.register_shutdown(conn_id, shutdown_tx);
 
         info!(conn_id, %peer_addr, "Connection established");
 
-        let result = self.run_connection(conn_id, stream).await;
+        let result = self.run_connection(conn_id, stream, shutdown_rx).await;
 
         // 连接结束，清理会话并发送下线通知
         let account_key_id = self.sessions.get_account_key_id(conn_id);
@@ -98,12 +101,24 @@ impl ConnectionHandler {
         result
     }
 
-    async fn run_connection(&self, conn_id: u64, stream: TcpStream) -> Result<()> {
+    async fn run_connection(
+        &self,
+        conn_id: u64,
+        stream: TcpStream,
+        mut shutdown_rx: mpsc::UnboundedReceiver<()>,
+    ) -> Result<()> {
         let mut framed = Framed::new(stream, GameCodec);
 
         loop {
-            let packet_result =
-                timeout(Duration::from_secs(HEARTBEAT_TIMEOUT_SECS), framed.next()).await;
+            let packet_result = tokio::select! {
+                _ = shutdown_rx.recv() => {
+                    debug!(conn_id, "Connection shutdown requested");
+                    break;
+                }
+                packet_result = timeout(Duration::from_secs(HEARTBEAT_TIMEOUT_SECS), framed.next()) => {
+                    packet_result
+                }
+            };
 
             match packet_result {
                 Ok(Some(Ok(packet))) => {
@@ -239,11 +254,11 @@ impl ConnectionHandler {
             self.sessions
                 .bind_account(conn_id, account_key_id, token.clone())
         {
+            let marked = self.sessions.mark_disconnecting(old_conn_id);
             warn!(
                 conn_id,
-                old_conn_id, account_key_id, "Kicking duplicate login"
+                old_conn_id, account_key_id, marked, "Kicking duplicate login"
             );
-            // 旧连接会在下次 dispatch 时因 session 被覆盖而断开
         }
 
         // 返回 DoLoginRs
@@ -581,5 +596,252 @@ impl ConnectionHandler {
 
         framed.send(GamePacket::new(rs_cmd, rs.payload)).await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proto::slg::auth_service_server::{AuthService, AuthServiceServer};
+    use proto::slg::home_service_client::HomeServiceClient;
+    use proto::slg::home_service_server::{HomeService, HomeServiceServer};
+    use proto::slg::{
+        BeginGameRq, BeginGameRs, CreateRoleRq, CreateRoleRs, DispatchRq, DispatchRs, DoLoginRq,
+        GetRoleDataRs, LoginRequest, LoginResponse, PlayerOfflineRq, PlayerOfflineRs, RoleLoginRq,
+        RoleLoginRs, ValidateTokenRequest, ValidateTokenResponse, VerifyRq,
+    };
+    use shared::msg::GameMessage;
+    use std::sync::Mutex;
+    use tokio::net::TcpListener;
+    use tokio_stream::wrappers::TcpListenerStream;
+    use tonic::transport::Server;
+    use tonic::{Request, Response, Status};
+
+    const ACCOUNT_ID: i64 = 77_001;
+    const ROLE_ID: i64 = 88_001;
+
+    #[derive(Default)]
+    struct MockAuthService;
+
+    #[tonic::async_trait]
+    impl AuthService for MockAuthService {
+        async fn login(
+            &self,
+            _request: Request<LoginRequest>,
+        ) -> Result<Response<LoginResponse>, Status> {
+            Ok(Response::new(LoginResponse {
+                success: true,
+                token: "token-77001".to_string(),
+                account_id: ACCOUNT_ID,
+                error_msg: String::new(),
+            }))
+        }
+
+        async fn validate_token(
+            &self,
+            _request: Request<ValidateTokenRequest>,
+        ) -> Result<Response<ValidateTokenResponse>, Status> {
+            Ok(Response::new(ValidateTokenResponse {
+                valid: true,
+                account_id: ACCOUNT_ID,
+            }))
+        }
+    }
+
+    #[derive(Default)]
+    struct MockHomeService {
+        offline_roles: Arc<Mutex<Vec<i64>>>,
+    }
+
+    #[tonic::async_trait]
+    impl HomeService for MockHomeService {
+        async fn begin_game(
+            &self,
+            _request: Request<BeginGameRq>,
+        ) -> Result<Response<BeginGameRs>, Status> {
+            Ok(Response::new(BeginGameRs {
+                state: Some(2),
+                role_id: Some(ROLE_ID),
+                camp: Some(1),
+                ..Default::default()
+            }))
+        }
+
+        async fn create_role(
+            &self,
+            _request: Request<CreateRoleRq>,
+        ) -> Result<Response<CreateRoleRs>, Status> {
+            Ok(Response::new(CreateRoleRs::default()))
+        }
+
+        async fn role_login(
+            &self,
+            _request: Request<RoleLoginRq>,
+        ) -> Result<Response<RoleLoginRs>, Status> {
+            Ok(Response::new(RoleLoginRs {
+                state: Some(1),
+                ..Default::default()
+            }))
+        }
+
+        async fn dispatch(
+            &self,
+            _request: Request<DispatchRq>,
+        ) -> Result<Response<DispatchRs>, Status> {
+            Ok(Response::new(DispatchRs {
+                code: 0,
+                payload: GameMessage::build_response(1110, &GetRoleDataRs::default()).unwrap(),
+            }))
+        }
+
+        async fn player_offline(
+            &self,
+            request: Request<PlayerOfflineRq>,
+        ) -> Result<Response<PlayerOfflineRs>, Status> {
+            self.offline_roles
+                .lock()
+                .unwrap()
+                .push(request.into_inner().role_id);
+            Ok(Response::new(PlayerOfflineRs { code: 0 }))
+        }
+    }
+
+    async fn spawn_auth_service() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            Server::builder()
+                .add_service(AuthServiceServer::new(MockAuthService))
+                .serve_with_incoming(TcpListenerStream::new(listener))
+                .await
+                .unwrap();
+        });
+        format!("http://{}", addr)
+    }
+
+    async fn spawn_home_service(offline_roles: Arc<Mutex<Vec<i64>>>) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            Server::builder()
+                .add_service(HomeServiceServer::new(MockHomeService { offline_roles }))
+                .serve_with_incoming(TcpListenerStream::new(listener))
+                .await
+                .unwrap();
+        });
+        format!("http://{}", addr)
+    }
+
+    async fn send_and_recv<T: prost::Message>(
+        framed: &mut Framed<TcpStream, GameCodec>,
+        cmd: GameCmd,
+        body: &T,
+    ) -> GamePacket {
+        let payload = GameMessage::build_response(cmd as i32, body).unwrap();
+        framed.send(GamePacket::new(cmd, payload)).await.unwrap();
+        framed.next().await.unwrap().unwrap()
+    }
+
+    async fn connect_through_begin_game(
+        gateway_addr: std::net::SocketAddr,
+    ) -> Framed<TcpStream, GameCodec> {
+        let stream = TcpStream::connect(gateway_addr).await.unwrap();
+        let mut framed = Framed::new(stream, GameCodec);
+
+        let mut login = DoLoginRq::default();
+        login.sid = "sid".to_string();
+        login.base_version = "1".to_string();
+        login.version = "1".to_string();
+        login.device_no = "device".to_string();
+        login.plat = "test".to_string();
+        login.param = vec!["plat-account".to_string()];
+        let login_packet = send_and_recv(&mut framed, GameCmd::DoLoginRq, &login).await;
+        assert_eq!(login_packet.cmd, GameCmd::DoLoginRs);
+
+        let mut verify = VerifyRq::default();
+        verify.key_id = ACCOUNT_ID;
+        verify.server_id = 1;
+        verify.token = "token-77001".to_string();
+        verify.cur_version = "1".to_string();
+        verify.device_no = "device".to_string();
+        verify.channel_id = 1;
+        let verify_packet = send_and_recv(&mut framed, GameCmd::VerifyRq, &verify).await;
+        assert_eq!(verify_packet.cmd, GameCmd::VerifyRs);
+
+        let mut begin = BeginGameRq::default();
+        begin.server_id = 1;
+        begin.key_id = ACCOUNT_ID;
+        begin.token = "token-77001".to_string();
+        begin.device_no = "device".to_string();
+        begin.cur_version = "1".to_string();
+        let begin_packet = send_and_recv(&mut framed, GameCmd::BeginGameRq, &begin).await;
+        assert_eq!(begin_packet.cmd, GameCmd::BeginGameRs);
+        assert_eq!(
+            begin_packet
+                .to_message()
+                .unwrap()
+                .get_payload::<BeginGameRs>()
+                .unwrap()
+                .role_id,
+            Some(ROLE_ID)
+        );
+
+        framed
+    }
+
+    #[tokio::test]
+    async fn duplicate_login_disconnects_old_session_and_notifies_home_offline() {
+        let auth_addr = spawn_auth_service().await;
+        let offline_roles = Arc::new(Mutex::new(Vec::new()));
+        let home_addr = spawn_home_service(offline_roles.clone()).await;
+
+        let sessions = SessionStore::new();
+        let (disconnect_tx, mut disconnect_rx) = crate::session::disconnect_channel();
+        let home_addr_for_offline = home_addr.clone();
+        tokio::spawn(async move {
+            while let Some(notice) = disconnect_rx.recv().await {
+                if let Some(role_id) = notice.role_id.filter(|id| *id > 0) {
+                    let mut client = HomeServiceClient::connect(home_addr_for_offline.clone())
+                        .await
+                        .unwrap();
+                    let _ = client.player_offline(PlayerOfflineRq { role_id }).await;
+                }
+            }
+        });
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let gateway_addr = listener.local_addr().unwrap();
+        let handler = Arc::new(ConnectionHandler::new(
+            sessions,
+            auth_addr,
+            home_addr,
+            "http://127.0.0.1:9".to_string(),
+            disconnect_tx,
+        ));
+        tokio::spawn(async move {
+            loop {
+                let (stream, _) = listener.accept().await.unwrap();
+                let handler = handler.clone();
+                tokio::spawn(async move {
+                    let _ = handler.handle(stream).await;
+                });
+            }
+        });
+
+        let _old_client = connect_through_begin_game(gateway_addr).await;
+        let _new_client = connect_through_begin_game(gateway_addr).await;
+
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(2);
+        loop {
+            if offline_roles.lock().unwrap().contains(&ROLE_ID) {
+                return;
+            }
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "duplicate login did not notify Home PlayerOffline for role {}",
+                ROLE_ID
+            );
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
     }
 }

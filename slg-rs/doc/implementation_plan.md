@@ -87,6 +87,8 @@ Step 16 安全与上线准备 .......... 待执行
 | 心跳回包、cmd 路由、断开通知 | `crates/gateway/src/handler.rs` |
 | 断开通知后台任务 | `crates/gateway/src/main.rs` |
 
+补充进展（2026-05-16）：已补 Gateway 重复登录集成测试，覆盖新连接登录同账号时旧 session 收到断开信号，并通过断开通知链路触发 Home `PlayerOffline`。
+
 ### Step 6：端到端联调 ⏸️ 暂跳过
 
 家里电脑已做，待合并。
@@ -206,6 +208,11 @@ Step 16 安全与上线准备 .......... 待执行
 
 **验证**：每个子步骤完成后 `cargo check`，建议为核心路径添加单元测试。
 
+**当前进展（2026-05-16）**：
+- `BackpackSystem` 已补道具增加、堆叠、消耗和 `PropUseRq/PropUseRs` 最小主链，支持 `s_prop_conf.rewardList` 发放背包类奖励，并补单元测试。
+- `BuildingSystem` 已补 `SimDataFunction` load/save，`BuildStart`、`BuildLvUp`、`BuildSpeed` 会维护最小 `BaseBuildData` / `BuildQueue` 状态，并补单元测试。
+- `PlayerActor` 已将 Dispatch `1109` 直接接到 `GetRoleDataRs` 组装逻辑，覆盖 BeginGame/RoleLogin 后获取全量功能数据的闭环测试。
+
 ---
 
 ### Step 12：活动系统命令完善 ✅
@@ -234,19 +241,24 @@ Step 16 安全与上线准备 .......... 待执行
 **当前进展（2026-05-16）**：
 - 已修正 `50001..=50040`、`5121..=5220` World 命令路由归属，避免大地图/行军命令落到 Home。
 - 已补 `MapGrid` 实体索引、坐标边界校验、按类型查询、跨 Grid 移动。
+- 已补 AOI 订阅/取消/移动更新逻辑，并覆盖入图、迁城、离图链路。
 - 已补确定性行军 API：起止时间计算、状态更新、重复 key/非法速度/非法坐标校验、到达动作分类。
 - `MapSectorActor` 已接入行军开始/到达 AOI 事件，到达后按战斗、采集、侦查、驻防、返回分类触发占位逻辑。
 - 已修复 `TimerWheel` seconds/overflow 下沉到当前 tick 时延后一轮的问题，并补回归测试。
+- 已补 `WorldOutboundDispatcher`，Home 目标事件可进入 channel consumer，Battle 目标暂保留占位 sink。
 
 **本轮 P0 进展（2026-05-16）**：
 - `WorldService::Dispatch` 已经把第一批 World 查询命令和派兵命令接通，查询仍然走 `MapGrid` / `MarchingManager` 内存视图。
 - World 派兵命令已从孤立的 `MarchingManager` 写入，改为同时投递到最小 `WorldRuntime` / `SectorActor` sender registry。
 - 创角链路已修复并保持可用，World 侧不再阻断后续业务命令分发。
+- 已补 `EnterWorldMap -> MovePosition -> LeaveWorldMap` 集成链路测试。
+- 已补 `BeginGame -> RoleLogin -> Dispatch 1109 GetRoleData` 集成链路测试。
 
 **剩余 P0 / 未使用项**：
-- `SectorActor` 的 AOI / WAL 到达处理仍是骨架，未做真实到达结算。
+- `SectorActor` 的 WAL 到达处理仍是骨架，未做真实到达结算。
 - 真实实体生成与实体生命周期管理未接入。
 - 战斗、采集、侦查等到达业务仍是占位逻辑，未实现结算与结果回写。
+- Home outbound channel 已接入，但仍缺少明确的 Home RPC/协议消息承载 World 到达事件。
 - 其他 World 业务命令仍待分批接入，当前只覆盖第一批查询与派兵链路。
 
 ---

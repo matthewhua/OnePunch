@@ -8,6 +8,7 @@ use tracing::{error, info};
 pub mod arrival;
 pub mod assembly;
 mod circuit_breaker;
+pub mod collect;
 pub mod garrison;
 mod health;
 mod map;
@@ -56,7 +57,21 @@ async fn main() -> anyhow::Result<()> {
         .or_else(|| config.world_service_addr.strip_prefix("https://"))
         .unwrap_or(&config.world_service_addr);
     let addr = bind_addr.parse()?;
-    let world_service = service::WorldServiceImpl::new(grid.clone(), marching_mgr.clone());
+    let (home_outbound_tx, mut home_outbound_rx) = tokio::sync::mpsc::unbounded_channel();
+    tokio::spawn(async move {
+        while let Some(event) = home_outbound_rx.recv().await {
+            info!(?event, "World outbound Home event consumed");
+        }
+    });
+    let outbound_dispatcher = outbound::WorldOutboundDispatcher::new(
+        Arc::new(outbound::ChannelOutboundSink::new(home_outbound_tx)),
+        Arc::new(outbound::InMemoryOutboundSink::new()),
+    );
+    let world_service = service::WorldServiceImpl::new_with_outbound(
+        grid.clone(),
+        marching_mgr.clone(),
+        Arc::new(outbound_dispatcher),
+    );
 
     info!("World Service starting on {}", addr);
 

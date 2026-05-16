@@ -30,6 +30,7 @@ pub struct WorldServiceImpl {
     garrison_state: Arc<crate::garrison::GarrisonState>,
     assembly_state: Arc<crate::assembly::AssemblyState>,
     player_positions: DashMap<i64, i32>,
+    aoi_senders: DashMap<i64, tokio::sync::mpsc::Sender<crate::map::aoi::AoiEvent>>,
     next_troop_key: AtomicI32,
 }
 
@@ -38,7 +39,21 @@ impl WorldServiceImpl {
         grid: Arc<crate::map::grid::MapGrid>,
         marching_mgr: Arc<crate::march::MarchingManager>,
     ) -> Self {
-        let runtime = Arc::new(crate::runtime::WorldRuntime::new());
+        Self::new_with_outbound(
+            grid,
+            marching_mgr,
+            Arc::new(crate::outbound::InMemoryOutboundSink::new()),
+        )
+    }
+
+    pub fn new_with_outbound(
+        grid: Arc<crate::map::grid::MapGrid>,
+        marching_mgr: Arc<crate::march::MarchingManager>,
+        outbound_sink: Arc<dyn crate::outbound::WorldOutboundSink>,
+    ) -> Self {
+        let runtime = Arc::new(crate::runtime::WorldRuntime::new_with_outbound(
+            outbound_sink,
+        ));
         let garrison_state = runtime.garrison_state();
         let assembly_state = runtime.assembly_state();
         let svc = Self {
@@ -49,6 +64,7 @@ impl WorldServiceImpl {
             garrison_state,
             assembly_state,
             player_positions: DashMap::new(),
+            aoi_senders: DashMap::new(),
             next_troop_key: AtomicI32::new(1),
         };
         svc.refresh_default_entities_at(DEFAULT_ENTITY_REFRESH_TIME_MS)
@@ -193,7 +209,8 @@ impl WorldServiceImpl {
             )));
         }
 
-        if let Some(old_pos) = self.player_positions.insert(role_id, pos) {
+        let old_pos = self.player_positions.insert(role_id, pos);
+        if let Some(old_pos) = old_pos {
             if old_pos != pos {
                 self.grid.remove_entity(old_pos);
                 self.runtime.sync_entity_remove_now(old_pos).map_err(|e| {
@@ -214,6 +231,7 @@ impl WorldServiceImpl {
         self.runtime
             .sync_entity_upsert_now(entity)
             .map_err(|e| Status::internal(format!("sync player city failed: {}", e)))?;
+        self.update_aoi_subscription(role_id, old_pos, pos);
 
         Ok(BasePlayerMapData {
             map: 1,
@@ -221,6 +239,54 @@ impl WorldServiceImpl {
             pos,
             ..Default::default()
         })
+    }
+
+    fn enter_world_map(&self, role_id: i64, map_id: i32) -> Result<BasePlayerMapData, Status> {
+        let pos = self
+            .player_positions
+            .get(&role_id)
+            .map(|entry| *entry.value())
+            .unwrap_or(0);
+        let mut player_data = self.move_player_city(role_id, pos)?;
+        player_data.map = map_id;
+        Ok(player_data)
+    }
+
+    fn leave_world_map(&self, role_id: i64) -> Result<(), Status> {
+        let Some((_, pos)) = self.player_positions.remove(&role_id) else {
+            self.aoi_senders.remove(&role_id);
+            return Ok(());
+        };
+
+        self.runtime.aoi_manager().unsubscribe_area(pos, role_id);
+        self.aoi_senders.remove(&role_id);
+        self.grid.remove_entity(pos);
+        self.runtime
+            .sync_entity_remove_now(pos)
+            .map_err(|e| Status::internal(format!("sync player leave removal failed: {}", e)))
+    }
+
+    fn update_aoi_subscription(&self, role_id: i64, old_pos: Option<i32>, new_pos: i32) {
+        let tx = self.aoi_sender_for_role(role_id);
+        let aoi = self.runtime.aoi_manager();
+        match old_pos {
+            Some(old_pos) => aoi.move_subscription(old_pos, new_pos, role_id, tx),
+            None => aoi.subscribe_area(new_pos, role_id, tx),
+        }
+    }
+
+    fn aoi_sender_for_role(
+        &self,
+        role_id: i64,
+    ) -> tokio::sync::mpsc::Sender<crate::map::aoi::AoiEvent> {
+        if let Some(sender) = self.aoi_senders.get(&role_id) {
+            return sender.clone();
+        }
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel(128);
+        tokio::spawn(async move { while rx.recv().await.is_some() {} });
+        self.aoi_senders.insert(role_id, tx.clone());
+        tx
     }
 
     #[cfg(test)]
@@ -239,6 +305,19 @@ impl WorldServiceImpl {
     fn sector_entity_positions(&self, pos: i32) -> Vec<i32> {
         self.runtime
             .sector_entity_positions(crate::runtime::WorldRuntime::sector_id_for_pos(pos))
+    }
+
+    #[cfg(test)]
+    fn aoi_subscription_count_for_pos(&self, pos: i32, role_id: i64) -> usize {
+        crate::map::grid::MapGrid::get_view_grid_ids(pos)
+            .into_iter()
+            .filter(|gid| {
+                self.runtime
+                    .aoi_manager()
+                    .subscribers(*gid)
+                    .contains(&role_id)
+            })
+            .count()
     }
 }
 
@@ -267,19 +346,19 @@ impl WorldService for WorldServiceImpl {
             }
             50003 => {
                 let rq: EnterWorldMapRq = self.decode_payload(req.cmd, req.payload)?;
+                let player_data = self.enter_world_map(req.role_id, rq.map_id)?;
                 self.response(
                     50004,
                     &proto::slg::EnterWorldMapRs {
-                        player_data: Some(BasePlayerMapData {
-                            map: rq.map_id,
-                            role_id: req.role_id,
-                            pos: 0,
-                            ..Default::default()
-                        }),
+                        player_data: Some(player_data),
                     },
                 )
             }
-            50005 => self.response(50006, &LeaveWorldMapRs::default()),
+            50005 => {
+                let _rq: proto::slg::LeaveWorldMapRq = self.decode_payload(req.cmd, req.payload)?;
+                self.leave_world_map(req.role_id)?;
+                self.response(50006, &LeaveWorldMapRs::default())
+            }
             50007 => {
                 let rq: GetAreaDetailsRq = self.decode_payload(req.cmd, req.payload)?;
                 self.response(
@@ -650,6 +729,57 @@ mod tests {
             );
             tokio::task::yield_now().await;
         }
+    }
+
+    #[tokio::test]
+    async fn enter_move_and_leave_world_map_manage_player_aoi_subscription() {
+        let svc = service();
+        let role_id = 42;
+        let enter: proto::slg::EnterWorldMapRs =
+            dispatch_body(&svc, 50003, 50004, &EnterWorldMapRq { map_id: 1 }).await;
+        let player_data = enter.player_data.unwrap();
+
+        assert_eq!(player_data.role_id, role_id);
+        assert_eq!(player_data.pos, 0);
+        assert_eq!(
+            svc.aoi_subscription_count_for_pos(player_data.pos, role_id),
+            crate::map::grid::MapGrid::get_view_grid_ids(player_data.pos).len()
+        );
+        assert!(svc.grid.get_entity(player_data.pos).is_some());
+
+        let new_pos = crate::map::grid::xy_to_pos(400, 400);
+        let moved: MovePositionRs = dispatch_body(
+            &svc,
+            50013,
+            50014,
+            &MovePositionRq {
+                map: 1,
+                r#type: 2,
+                pos: Some(new_pos),
+            },
+        )
+        .await;
+        let moved_player_data = moved.player_data.unwrap();
+
+        assert_eq!(moved_player_data.role_id, role_id);
+        assert_eq!(moved_player_data.pos, new_pos);
+        assert!(svc.grid.get_entity(player_data.pos).is_none());
+        assert!(svc.grid.get_entity(new_pos).is_some());
+        assert_eq!(
+            svc.aoi_subscription_count_for_pos(player_data.pos, role_id),
+            0
+        );
+        assert_eq!(
+            svc.aoi_subscription_count_for_pos(new_pos, role_id),
+            crate::map::grid::MapGrid::get_view_grid_ids(new_pos).len()
+        );
+
+        let _leave: LeaveWorldMapRs =
+            dispatch_body(&svc, 50005, 50006, &proto::slg::LeaveWorldMapRq::default()).await;
+
+        assert!(svc.player_positions.get(&role_id).is_none());
+        assert_eq!(svc.aoi_subscription_count_for_pos(new_pos, role_id), 0);
+        assert!(svc.grid.get_entity(new_pos).is_none());
     }
 
     #[tokio::test]

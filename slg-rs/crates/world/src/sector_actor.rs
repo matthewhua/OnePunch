@@ -1,10 +1,11 @@
 use crate::arrival::resolve_arrival;
+use crate::collect::CollectStateMachine;
 use crate::health::HealthChecker;
 use crate::map::aoi::{AoiEvent, AoiManager};
 use crate::march::{arrival_action_for_troop, ArrivalAction, MARCH_STATUS_ARRIVAL};
 use crate::message::SectorMessage;
 use crate::outbound::{
-    outbound_events_for_action, InMemoryOutboundSink, WorldOutboundEvent, WorldOutboundSink,
+    outbound_events_for_resolution, InMemoryOutboundSink, WorldOutboundEvent, WorldOutboundSink,
 };
 use crate::supervisor::ActorId;
 use crate::timer_wheel::TimerWheel;
@@ -36,6 +37,7 @@ pub struct MapSectorActor {
     health_checker: Arc<HealthChecker>,
     garrison_state: Arc<crate::garrison::GarrisonState>,
     _assembly_state: Arc<crate::assembly::AssemblyState>,
+    collect_state: CollectStateMachine,
     outbound_sink: Arc<dyn WorldOutboundSink>,
     wal: WriteAheadLog,
 
@@ -75,7 +77,7 @@ impl MapSectorActor {
         )
     }
 
-    fn new_with_outbound(
+    pub(crate) fn new_with_outbound(
         sector_id: i32,
         rx: mpsc::Receiver<SectorMessage>,
         base_time_ms: i64,
@@ -100,6 +102,7 @@ impl MapSectorActor {
             health_checker,
             garrison_state,
             _assembly_state: assembly_state,
+            collect_state: CollectStateMachine::default(),
             outbound_sink,
             wal,
             shutdown_rx,
@@ -117,6 +120,9 @@ impl MapSectorActor {
 
         for (key, troop) in state.troops {
             if troop.status == Some(MARCH_STATUS_ARRIVAL) {
+                let resolution =
+                    resolve_arrival(&troop, self.entities.get(&troop.goal.unwrap_or(0)));
+                self.collect_state.on_arrival(&troop, &resolution);
                 continue;
             }
 
@@ -261,6 +267,7 @@ impl MapSectorActor {
 
     fn remove_troop(&mut self, troop_key: i32) {
         self.marching_troops.remove(&troop_key);
+        self.collect_state.remove(troop_key);
         self.untrack_troop(troop_key);
     }
 
@@ -312,7 +319,8 @@ impl MapSectorActor {
         let goal_pos = troop.goal.unwrap_or(0);
         let action = arrival_action_for_troop(&troop);
         let resolution = resolve_arrival(&troop, self.entities.get(&goal_pos));
-        self.publish_outbound_events(outbound_events_for_action(&troop, action, goal_pos));
+        let outbound_events = outbound_events_for_resolution(&troop, &resolution);
+        let collect_state = self.collect_state.on_arrival(&troop, &resolution).cloned();
         troop.status = Some(crate::march::MARCH_STATUS_ARRIVAL);
         let _ = self
             .wal
@@ -336,6 +344,7 @@ impl MapSectorActor {
                 info!(
                     troop_key = key,
                     goal_pos,
+                    collect_phase = ?collect_state.as_ref().map(|state| state.phase),
                     effect = ?resolution.effect,
                     "Troop arrived and started collect trigger"
                 );
@@ -388,6 +397,8 @@ impl MapSectorActor {
                 );
             }
         }
+
+        self.publish_outbound_events(outbound_events);
 
         self.aoi_manager
             .broadcast_area(
@@ -469,7 +480,7 @@ impl MapSectorActor {
 mod tests {
     use super::*;
     use crate::map::grid::xy_to_pos;
-    use crate::march::{MARCH_STATUS_RETREAT, MARCH_TYPE_ATK_PLAYER};
+    use crate::march::{MARCH_STATUS_RETREAT, MARCH_TYPE_ATK_PLAYER, MARCH_TYPE_MINE_COLLECT};
     use crate::outbound::WorldOutboundTarget;
     use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -606,6 +617,42 @@ mod tests {
                 target_pos: target,
                 camp: None,
                 is_arrival: true,
+            }]
+        );
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn collect_arrival_enters_collecting_state_and_publishes_started_event() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, _garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
+        let target = xy_to_pos(101, 100);
+
+        actor
+            .handle_arrival(BaseTroop {
+                key: 4,
+                r#type: Some(MARCH_TYPE_MINE_COLLECT),
+                origin: Some(xy_to_pos(1, 1)),
+                goal: Some(target),
+                end_time: Some(12_000),
+                ..Default::default()
+            })
+            .await;
+
+        let collect_state = actor.collect_state.get(4).unwrap();
+        assert_eq!(collect_state.target_pos, target);
+        assert_eq!(
+            collect_state.phase,
+            crate::collect::CollectPhase::Collecting
+        );
+        assert_eq!(
+            sink.records(),
+            vec![WorldOutboundEvent::CollectStarted {
+                troop_key: 4,
+                target_pos: target,
+                march_type: Some(MARCH_TYPE_MINE_COLLECT),
+                start_time_ms: 12_000,
             }]
         );
 
