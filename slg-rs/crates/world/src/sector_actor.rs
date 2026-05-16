@@ -1,7 +1,11 @@
+use crate::arrival::resolve_arrival;
 use crate::health::HealthChecker;
 use crate::map::aoi::{AoiEvent, AoiManager};
 use crate::march::{arrival_action_for_troop, ArrivalAction, MARCH_STATUS_ARRIVAL};
 use crate::message::SectorMessage;
+use crate::outbound::{
+    outbound_events_for_action, InMemoryOutboundSink, WorldOutboundEvent, WorldOutboundSink,
+};
 use crate::supervisor::ActorId;
 use crate::timer_wheel::TimerWheel;
 use crate::wal::{WalEntry, WalReplayState, WalTroop, WriteAheadLog};
@@ -30,6 +34,7 @@ pub struct MapSectorActor {
     /// 外部组件
     aoi_manager: Arc<AoiManager>,
     health_checker: Arc<HealthChecker>,
+    outbound_sink: Arc<dyn WorldOutboundSink>,
     wal: WriteAheadLog,
 
     /// 关闭信号
@@ -48,6 +53,30 @@ impl MapSectorActor {
         shutdown_rx: broadcast::Receiver<()>,
         tracked_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
     ) -> Self {
+        Self::new_with_outbound(
+            sector_id,
+            rx,
+            base_time_ms,
+            aoi_manager,
+            health_checker,
+            Arc::new(InMemoryOutboundSink::new()),
+            wal,
+            shutdown_rx,
+            tracked_troops,
+        )
+    }
+
+    fn new_with_outbound(
+        sector_id: i32,
+        rx: mpsc::Receiver<SectorMessage>,
+        base_time_ms: i64,
+        aoi_manager: Arc<AoiManager>,
+        health_checker: Arc<HealthChecker>,
+        outbound_sink: Arc<dyn WorldOutboundSink>,
+        wal: WriteAheadLog,
+        shutdown_rx: broadcast::Receiver<()>,
+        tracked_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
+    ) -> Self {
         Self {
             sector_id,
             entities: HashMap::new(),
@@ -57,6 +86,7 @@ impl MapSectorActor {
             neighbors: HashMap::new(),
             aoi_manager,
             health_checker,
+            outbound_sink,
             wal,
             shutdown_rx,
             tracked_troops,
@@ -241,6 +271,8 @@ impl MapSectorActor {
         let key = troop.key;
         let goal_pos = troop.goal.unwrap_or(0);
         let action = arrival_action_for_troop(&troop);
+        let resolution = resolve_arrival(&troop, self.entities.get(&goal_pos));
+        self.publish_outbound_events(outbound_events_for_action(&troop, action, goal_pos));
         troop.status = Some(crate::march::MARCH_STATUS_ARRIVAL);
         let _ = self
             .wal
@@ -252,39 +284,52 @@ impl MapSectorActor {
 
         match action {
             ArrivalAction::Battle => {
-                let target = self.entities.get(&goal_pos);
                 info!(
                     troop_key = key,
                     goal_pos,
-                    target_exists = target.is_some(),
+                    target_exists = resolution.target.is_some(),
+                    effect = ?resolution.effect,
                     "Troop arrived and queued battle trigger"
                 );
             }
             ArrivalAction::Collect => {
                 info!(
                     troop_key = key,
-                    goal_pos, "Troop arrived and started collect trigger"
+                    goal_pos,
+                    effect = ?resolution.effect,
+                    "Troop arrived and started collect trigger"
                 );
             }
             ArrivalAction::Scout => {
                 info!(
                     troop_key = key,
-                    goal_pos, "Troop arrived and queued scout trigger"
+                    goal_pos,
+                    effect = ?resolution.effect,
+                    "Troop arrived and queued scout trigger"
                 );
             }
             ArrivalAction::Garrison => {
                 info!(
                     troop_key = key,
-                    goal_pos, "Troop arrived and queued garrison trigger"
+                    goal_pos,
+                    effect = ?resolution.effect,
+                    "Troop arrived and queued garrison trigger"
                 );
             }
             ArrivalAction::Return => {
-                info!(troop_key = key, goal_pos, "Troop returned to origin");
+                info!(
+                    troop_key = key,
+                    goal_pos,
+                    effect = ?resolution.effect,
+                    "Troop returned to origin"
+                );
             }
             ArrivalAction::None => {
                 info!(
                     troop_key = key,
-                    goal_pos, "Troop arrived with no trigger action"
+                    goal_pos,
+                    effect = ?resolution.effect,
+                    "Troop arrived with no trigger action"
                 );
             }
         }
@@ -298,6 +343,14 @@ impl MapSectorActor {
                 },
             )
             .await;
+    }
+
+    fn publish_outbound_events(&self, events: Vec<WorldOutboundEvent>) {
+        for event in events {
+            if let Err(err) = self.outbound_sink.publish(event) {
+                error!(error = %err, "Failed to publish world outbound event");
+            }
+        }
     }
 
     async fn transfer_to_neighbor(&mut self, troop: BaseTroop) {
@@ -348,5 +401,110 @@ impl MapSectorActor {
 
     pub fn set_neighbor(&mut self, sector_id: i32, tx: mpsc::Sender<SectorMessage>) {
         self.neighbors.insert(sector_id, tx);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::map::grid::xy_to_pos;
+    use crate::march::{MARCH_STATUS_RETREAT, MARCH_TYPE_ATK_PLAYER};
+    use crate::outbound::WorldOutboundTarget;
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+    async fn actor_with_sink(
+        sink: Arc<InMemoryOutboundSink>,
+    ) -> (MapSectorActor, std::path::PathBuf) {
+        let (_tx, rx) = mpsc::channel(8);
+        let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+        let _shutdown_tx = shutdown_tx;
+        let tracked_troops = Arc::new(DashMap::new());
+        let wal_path = std::env::temp_dir().join(format!(
+            "sector-arrival-outbound-test-{}-{}.wal",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let wal = WriteAheadLog::new(&wal_path).await.unwrap();
+        let outbound_sink: Arc<dyn WorldOutboundSink> = sink;
+        let actor = MapSectorActor::new_with_outbound(
+            0,
+            rx,
+            0,
+            Arc::new(AoiManager::new()),
+            Arc::new(HealthChecker::new(Duration::from_secs(30))),
+            outbound_sink,
+            wal,
+            shutdown_rx,
+            tracked_troops,
+        );
+        (actor, wal_path)
+    }
+
+    #[tokio::test]
+    async fn arrival_publishes_battle_event() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, wal_path) = actor_with_sink(sink.clone()).await;
+        let origin = xy_to_pos(0, 0);
+        let goal = xy_to_pos(10, 10);
+
+        actor
+            .handle_arrival(BaseTroop {
+                key: 1,
+                r#type: Some(MARCH_TYPE_ATK_PLAYER),
+                origin: Some(origin),
+                goal: Some(goal),
+                camp: Some(2),
+                ..Default::default()
+            })
+            .await;
+
+        let records = sink.records();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].target(), WorldOutboundTarget::Battle);
+        assert_eq!(
+            records[0],
+            WorldOutboundEvent::BattleStartRequested {
+                troop_key: 1,
+                march_type: Some(MARCH_TYPE_ATK_PLAYER),
+                origin: Some(origin),
+                target_pos: goal,
+                camp: Some(2),
+            }
+        );
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn retreat_arrival_publishes_return_event_before_status_changes() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, wal_path) = actor_with_sink(sink.clone()).await;
+        let origin = xy_to_pos(5, 5);
+        let home = xy_to_pos(0, 0);
+
+        actor
+            .handle_arrival(BaseTroop {
+                key: 2,
+                r#type: Some(MARCH_TYPE_ATK_PLAYER),
+                origin: Some(origin),
+                goal: Some(home),
+                status: Some(MARCH_STATUS_RETREAT),
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(
+            sink.records(),
+            vec![WorldOutboundEvent::TroopReturned {
+                troop_key: 2,
+                home_pos: home,
+                march_type: Some(MARCH_TYPE_ATK_PLAYER),
+            }]
+        );
+
+        let _ = tokio::fs::remove_file(wal_path).await;
     }
 }
