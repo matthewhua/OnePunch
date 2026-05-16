@@ -1,12 +1,17 @@
 use proto::slg::world_service_server::WorldService;
 use proto::slg::{
     BaseMap, BasePlayerMapData, BaseTroop, DispatchPigeonTroopRq, DispatchRq, DispatchRs,
-    DispatchScoutTroopRq, DispatchTroopRq, EnterWorldMapRq, GetAreaDetailsRq, GetAreaDetailsRs,
+    DispatchScoutTroopRq, DispatchTroopRq, EnterWorldMapRq, GarrisonTroop,
+    GetAreaCityFirstKillInfoRq, GetAreaCityFirstKillInfoRs, GetAreaDetailsRq, GetAreaDetailsRs,
     GetBlockDetailsRq, GetBlockDetailsRs, GetEntityInfoRq, GetEntityInfoRs, GetFightDetailsRq,
-    GetFightDetailsRs, GetMapDetailsRq, GetMapDetailsRs, GetPlayerTroopRs, GetTroopDetailsRq,
-    GetTroopDetailsRs, GetTroopInfoRq, GetTroopInfoRs, JoinMapRequest, JoinMapResponse,
-    LeaveWorldMapRs, MovePositionRq, MovePositionRs, RpcMsg, SearchEntityRq, SearchEntityRs,
-    TroopAccelerateCommandRq, TroopAccelerateCommandRs, TroopBackCommandRq, TroopBackCommandRs,
+    GetFightDetailsRs, GetFightInfoRq, GetFightInfoRs, GetFightListDetailsRq,
+    GetFightListDetailsRs, GetMapDetailsRq, GetMapDetailsRs, GetNearestNonOwnCampCityRq,
+    GetNearestNonOwnCampCityRs, GetPlayerTroopRs, GetTroopDetailsRq, GetTroopDetailsRs,
+    GetTroopInfoRq, GetTroopInfoRs, JoinMapRequest, JoinMapResponse, LeaveWorldMapRs,
+    MovePositionRq, MovePositionRs, RepatriateAssemblyTroopRq, RepatriateAssemblyTroopRs,
+    RepatriateGarrisonTroopRq, RepatriateGarrisonTroopRs, RpcMsg, SearchEntityRq, SearchEntityRs,
+    SelectPlayerGarrisonTroopRq, SelectPlayerGarrisonTroopRs, TroopAccelerateCommandRq,
+    TroopAccelerateCommandRs, TroopBackCommandRq, TroopBackCommandRs,
 };
 use shared::msg::GameMessage;
 use std::sync::atomic::{AtomicI32, Ordering};
@@ -110,6 +115,55 @@ impl WorldServiceImpl {
             .collect();
         troops.sort_by_key(|troop| troop.key);
         troops
+    }
+
+    fn garrison_troops_at(&self, pos: Option<i32>) -> Vec<GarrisonTroop> {
+        let mut troops: Vec<GarrisonTroop> = self
+            .marching_mgr
+            .troops
+            .iter()
+            .filter_map(|entry| {
+                let troop = &entry.value().base;
+                let is_garrison = matches!(
+                    troop.r#type,
+                    Some(crate::march::MARCH_TYPE_GARRISON_PLAYER)
+                        | Some(crate::march::MARCH_TYPE_GARRISON_CITY)
+                );
+                if !is_garrison || pos.map_or(false, |value| troop.goal != Some(value)) {
+                    return None;
+                }
+
+                Some(GarrisonTroop {
+                    role_id: None,
+                    name: None,
+                    portrait: None,
+                    portrait_frame: None,
+                    troop_key_id: Some(troop.key),
+                    end_time: troop.end_time,
+                    troop_hero: Vec::new(),
+                })
+            })
+            .collect();
+        troops.sort_by_key(|troop| troop.troop_key_id.unwrap_or_default());
+        troops
+    }
+
+    fn nearest_non_own_camp_city(&self, own_camp: i32, origin_pos: i32) -> Option<(i32, i32)> {
+        self.grid
+            .search_entities(
+                Some(proto::slg::WorldEntityTypeDefine::EntityTypeCity as i32),
+                None,
+            )
+            .into_iter()
+            .filter(|entity| entity.camp != Some(own_camp))
+            .min_by_key(|entity| {
+                (
+                    map_distance_squared(origin_pos, entity.pos),
+                    entity.pos,
+                    entity.key_id.unwrap_or_default(),
+                )
+            })
+            .map(|entity| (entity.key_id.unwrap_or_default(), entity.pos))
     }
 
     #[cfg(test)]
@@ -274,6 +328,71 @@ impl WorldService for WorldServiceImpl {
                     .await?;
                 self.response(50040, &proto::slg::DispatchScoutTroopRs::default())
             }
+            5121 => {
+                let rq: SelectPlayerGarrisonTroopRq = self.decode_payload(req.cmd, req.payload)?;
+                self.response(
+                    5122,
+                    &SelectPlayerGarrisonTroopRs {
+                        garrison_troop: self.garrison_troops_at(rq.pos),
+                    },
+                )
+            }
+            5123 => {
+                let _rq: RepatriateGarrisonTroopRq = self.decode_payload(req.cmd, req.payload)?;
+                self.response(5124, &RepatriateGarrisonTroopRs::default())
+            }
+            5141 => {
+                let _rq: GetFightListDetailsRq = self.decode_payload(req.cmd, req.payload)?;
+                self.response(
+                    5142,
+                    &GetFightListDetailsRs {
+                        base_fight: Vec::new(),
+                    },
+                )
+            }
+            5143 => {
+                let _rq: GetFightInfoRq = self.decode_payload(req.cmd, req.payload)?;
+                self.response(5144, &GetFightInfoRs { base_fight: None })
+            }
+            5145 => {
+                let _rq: RepatriateAssemblyTroopRq = self.decode_payload(req.cmd, req.payload)?;
+                self.response(5146, &RepatriateAssemblyTroopRs::default())
+            }
+            5147 => {
+                let _rq: proto::slg::CancelAssemblyRq =
+                    self.decode_payload(req.cmd, req.payload)?;
+                self.response(5148, &proto::slg::CancelAssemblyRs::default())
+            }
+            5161 => {
+                let _rq: proto::slg::CitySupplementArmyRq =
+                    self.decode_payload(req.cmd, req.payload)?;
+                self.response(
+                    5162,
+                    &proto::slg::CitySupplementArmyRs {
+                        npc_info: Vec::new(),
+                    },
+                )
+            }
+            5163 => {
+                let _rq: GetAreaCityFirstKillInfoRq = self.decode_payload(req.cmd, req.payload)?;
+                self.response(
+                    5164,
+                    &GetAreaCityFirstKillInfoRs {
+                        first_defeat_team: Vec::new(),
+                    },
+                )
+            }
+            5165 => {
+                let _rq: GetNearestNonOwnCampCityRq = self.decode_payload(req.cmd, req.payload)?;
+                let nearest = self.nearest_non_own_camp_city(0, 0);
+                self.response(
+                    5166,
+                    &GetNearestNonOwnCampCityRs {
+                        city_id: nearest.map(|(city_id, _)| city_id),
+                        city_pos: nearest.map(|(_, city_pos)| city_pos),
+                    },
+                )
+            }
             5201 => {
                 let rq: SearchEntityRq = self.decode_payload(req.cmd, req.payload)?;
                 self.response(
@@ -317,6 +436,12 @@ impl WorldService for WorldServiceImpl {
     }
 }
 
+fn map_distance_squared(left: i32, right: i32) -> i32 {
+    let (left_x, left_y) = crate::map::grid::pos_to_xy(left);
+    let (right_x, right_y) = crate::map::grid::pos_to_xy(right);
+    (left_x - right_x).pow(2) + (left_y - right_y).pow(2)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -336,6 +461,22 @@ mod tests {
             cmd,
             payload: GameMessage::build_response(cmd, body).unwrap(),
         }
+    }
+
+    async fn dispatch_body<T, R>(svc: &WorldServiceImpl, cmd: i32, response_cmd: i32, body: &T) -> R
+    where
+        T: prost::Message,
+        R: prost::Message + Default,
+    {
+        let rs = svc
+            .dispatch(Request::new(request(cmd, 42, body)))
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(rs.code, 0);
+        let msg = GameMessage::decode(rs.payload).unwrap();
+        assert_eq!(msg.base.cmd, response_cmd);
+        msg.get_payload().unwrap()
     }
 
     async fn wait_for_sector_troop_count(svc: &WorldServiceImpl, pos: i32, expected: usize) {
@@ -611,5 +752,153 @@ mod tests {
 
         assert_eq!(body.auto, Some(true));
         assert_eq!(body.entity, vec![mine]);
+    }
+
+    #[tokio::test]
+    async fn select_garrison_troop_returns_matching_garrison_marches() {
+        let svc = service();
+        let target = crate::map::grid::xy_to_pos(20, 20);
+        svc.marching_mgr.troops.insert(
+            66,
+            crate::march::MarchingTroop {
+                base: BaseTroop {
+                    key: 66,
+                    r#type: Some(crate::march::MARCH_TYPE_GARRISON_CITY),
+                    origin: Some(crate::map::grid::xy_to_pos(1, 1)),
+                    goal: Some(target),
+                    status: Some(crate::march::MARCH_STATUS_ARRIVAL),
+                    end_time: Some(12345),
+                    ..Default::default()
+                },
+                speed: 1.0,
+            },
+        );
+        svc.marching_mgr.troops.insert(
+            67,
+            crate::march::MarchingTroop {
+                base: BaseTroop {
+                    key: 67,
+                    r#type: Some(crate::march::MARCH_TYPE_GARRISON_CITY),
+                    origin: Some(crate::map::grid::xy_to_pos(1, 1)),
+                    goal: Some(crate::map::grid::xy_to_pos(30, 30)),
+                    status: Some(crate::march::MARCH_STATUS_ARRIVAL),
+                    ..Default::default()
+                },
+                speed: 1.0,
+            },
+        );
+
+        let body: SelectPlayerGarrisonTroopRs = dispatch_body(
+            &svc,
+            5121,
+            5122,
+            &SelectPlayerGarrisonTroopRq { pos: Some(target) },
+        )
+        .await;
+
+        assert_eq!(body.garrison_troop.len(), 1);
+        assert_eq!(body.garrison_troop[0].troop_key_id, Some(66));
+        assert_eq!(body.garrison_troop[0].end_time, Some(12345));
+    }
+
+    #[tokio::test]
+    async fn remaining_world_business_commands_return_compatible_empty_responses() {
+        let svc = service();
+
+        let _: RepatriateGarrisonTroopRs = dispatch_body(
+            &svc,
+            5123,
+            5124,
+            &RepatriateGarrisonTroopRq { troop_key: Some(0) },
+        )
+        .await;
+
+        let fights: GetFightListDetailsRs =
+            dispatch_body(&svc, 5141, 5142, &GetFightListDetailsRq::default()).await;
+        assert!(fights.base_fight.is_empty());
+
+        let fight: GetFightInfoRs =
+            dispatch_body(&svc, 5143, 5144, &GetFightInfoRq { fight_id: Some(1) }).await;
+        assert!(fight.base_fight.is_none());
+
+        let _: RepatriateAssemblyTroopRs = dispatch_body(
+            &svc,
+            5145,
+            5146,
+            &RepatriateAssemblyTroopRq {
+                assembly_id: Some(1),
+                troop_key: 66,
+            },
+        )
+        .await;
+
+        let _: proto::slg::CancelAssemblyRs = dispatch_body(
+            &svc,
+            5147,
+            5148,
+            &proto::slg::CancelAssemblyRq {
+                assembly_id: Some(1),
+            },
+        )
+        .await;
+
+        let city: proto::slg::CitySupplementArmyRs = dispatch_body(
+            &svc,
+            5161,
+            5162,
+            &proto::slg::CitySupplementArmyRq { city_id: Some(1) },
+        )
+        .await;
+        assert!(city.npc_info.is_empty());
+
+        let first_kill: GetAreaCityFirstKillInfoRs = dispatch_body(
+            &svc,
+            5163,
+            5164,
+            &GetAreaCityFirstKillInfoRq {
+                area_id: 1,
+                city_type: None,
+            },
+        )
+        .await;
+        assert!(first_kill.first_defeat_team.is_empty());
+    }
+
+    #[tokio::test]
+    async fn nearest_non_own_camp_city_returns_closest_matching_city() {
+        let svc = service();
+        svc.grid
+            .upsert_entity(BaseEntity {
+                pos: crate::map::grid::xy_to_pos(1, 0),
+                entity_type: Some(WorldEntityTypeDefine::EntityTypeCity as i32),
+                key_id: Some(100),
+                camp: Some(0),
+                ..Default::default()
+            })
+            .unwrap();
+        svc.grid
+            .upsert_entity(BaseEntity {
+                pos: crate::map::grid::xy_to_pos(10, 0),
+                entity_type: Some(WorldEntityTypeDefine::EntityTypeCity as i32),
+                key_id: Some(200),
+                camp: Some(1),
+                ..Default::default()
+            })
+            .unwrap();
+        svc.grid
+            .upsert_entity(BaseEntity {
+                pos: crate::map::grid::xy_to_pos(20, 0),
+                entity_type: Some(WorldEntityTypeDefine::EntityTypeCity as i32),
+                key_id: Some(300),
+                camp: Some(2),
+                ..Default::default()
+            })
+            .unwrap();
+
+        let body: GetNearestNonOwnCampCityRs =
+            dispatch_body(&svc, 5165, 5166, &GetNearestNonOwnCampCityRq::default()).await;
+
+        assert_eq!(body.city_id, Some(200));
+        assert_eq!(body.city_pos, Some(crate::map::grid::xy_to_pos(10, 0)));
     }
 }
