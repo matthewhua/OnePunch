@@ -1,28 +1,30 @@
-use tonic::transport::Server;
 use proto::slg::world_service_server::WorldServiceServer;
+use shared::config::AppConfig;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{info, error};
+use tonic::transport::Server;
+use tracing::{error, info};
 
+mod circuit_breaker;
+mod health;
 mod map;
 mod march;
-mod service;
-mod timer_wheel;
 mod message;
-mod sector_actor;
-mod supervisor;
-mod shutdown;
-mod health;
-mod rpc_client;
-mod wal;
-mod circuit_breaker;
 mod metrics;
 pub mod router;
+mod rpc_client;
+mod sector_actor;
+mod service;
+mod shutdown;
+mod supervisor;
+mod timer_wheel;
+mod wal;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // 1. 初始化日志
     tracing_subscriber::fmt::init();
+    let config = AppConfig::load().unwrap_or_default();
 
     // 2. 初始化核心组件
     let grid = Arc::new(map::grid::MapGrid::new());
@@ -44,8 +46,13 @@ async fn main() -> anyhow::Result<()> {
     });
 
     // 4. 启动 gRPC 服务
-    let addr = "0.0.0.0:50051".parse()?;
-    let world_service = service::WorldServiceImpl::new();
+    let bind_addr = config
+        .world_service_addr
+        .strip_prefix("http://")
+        .or_else(|| config.world_service_addr.strip_prefix("https://"))
+        .unwrap_or(&config.world_service_addr);
+    let addr = bind_addr.parse()?;
+    let world_service = service::WorldServiceImpl::new(grid.clone(), marching_mgr.clone());
 
     info!("World Service starting on {}", addr);
 

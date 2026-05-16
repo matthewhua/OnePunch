@@ -132,6 +132,16 @@ impl MapGrid {
         entities
     }
 
+    pub fn all_entities(&self) -> Vec<BaseEntity> {
+        let mut entities: Vec<BaseEntity> = self
+            .sectors
+            .iter()
+            .flat_map(|sector| sector.value().values().cloned().collect::<Vec<_>>())
+            .collect();
+        entities.sort_by_key(|entity| entity.pos);
+        entities
+    }
+
     /// 获取玩家视野内的所有 Grid ID (周围 9 宫格)
     pub fn get_view_grid_ids(pos: i32) -> Vec<i32> {
         let (x, y) = pos_to_xy(pos);

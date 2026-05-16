@@ -8,6 +8,7 @@ pub const MARCH_TYPE_ATK_BANDIT: i32 = 1;
 pub const MARCH_TYPE_ATK_PLAYER: i32 = 2;
 pub const MARCH_TYPE_MINE_COLLECT: i32 = 3;
 pub const MARCH_TYPE_ATK_CITY: i32 = 4;
+pub const MARCH_TYPE_INTEL_TASK: i32 = 5;
 pub const MARCH_TYPE_GARRISON_PLAYER: i32 = 6;
 pub const MARCH_TYPE_SPONSOR_ASSEMBLY: i32 = 7;
 pub const MARCH_TYPE_JOIN_ASSEMBLY: i32 = 8;

@@ -12,6 +12,9 @@ service WorldService {
     // 统一入口，模拟 Dubbo/Command 模式的转发
     rpc Call(RpcMsg) returns (RpcMsg);
 
+    // Gateway 转发世界地图/行军/战斗命令
+    rpc Dispatch(DispatchRq) returns (DispatchRs);
+
     // 也可以定义具体业务接口
     rpc JoinMap(JoinMapRequest) returns (JoinMapResponse);
 }

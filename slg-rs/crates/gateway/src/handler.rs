@@ -21,20 +21,21 @@
 //!   │──[业务消息]──────────────▶│──路由到 Home/World Service
 //! ```
 
-use tokio::net::TcpStream;
-use tokio_util::codec::Framed;
+use anyhow::{anyhow, Result};
 use futures::{SinkExt, StreamExt};
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::net::TcpStream;
 use tokio::time::timeout;
-use tracing::{info, warn, error, debug};
-use anyhow::{Result, anyhow};
+use tokio_util::codec::Framed;
+use tracing::{debug, error, info, warn};
 
 use crate::codec::{GameCodec, GamePacket};
-use crate::session::{SessionStore, SessionState, DisconnectTx, DisconnectNotice};
-use shared::cmd::{GameCmd, GameCmdExt, CmdRoute};
+use crate::session::{DisconnectNotice, DisconnectTx, SessionState, SessionStore};
 use proto::slg::auth_service_client::AuthServiceClient;
 use proto::slg::home_service_client::HomeServiceClient;
+use proto::slg::world_service_client::WorldServiceClient;
+use shared::cmd::{CmdRoute, GameCmd, GameCmdExt};
 
 /// 心跳超时（60 秒无任何包则断开）
 const HEARTBEAT_TIMEOUT_SECS: u64 = 60;
@@ -48,6 +49,7 @@ pub struct ConnectionHandler {
     pub sessions: Arc<SessionStore>,
     pub auth_addr: String,
     pub home_addr: String,
+    pub world_addr: String,
     pub disconnect_tx: DisconnectTx,
 }
 
@@ -56,9 +58,16 @@ impl ConnectionHandler {
         sessions: Arc<SessionStore>,
         auth_addr: String,
         home_addr: String,
+        world_addr: String,
         disconnect_tx: DisconnectTx,
     ) -> Self {
-        Self { sessions, auth_addr, home_addr, disconnect_tx }
+        Self {
+            sessions,
+            auth_addr,
+            home_addr,
+            world_addr,
+            disconnect_tx,
+        }
     }
 
     /// 处理一个 TCP 连接的完整生命周期
@@ -93,10 +102,8 @@ impl ConnectionHandler {
         let mut framed = Framed::new(stream, GameCodec);
 
         loop {
-            let packet_result = timeout(
-                Duration::from_secs(HEARTBEAT_TIMEOUT_SECS),
-                framed.next(),
-            ).await;
+            let packet_result =
+                timeout(Duration::from_secs(HEARTBEAT_TIMEOUT_SECS), framed.next()).await;
 
             match packet_result {
                 Ok(Some(Ok(packet))) => {
@@ -138,7 +145,9 @@ impl ConnectionHandler {
         packet: GamePacket,
         framed: &mut Framed<TcpStream, GameCodec>,
     ) -> Result<()> {
-        let state = self.sessions.get_state(conn_id)
+        let state = self
+            .sessions
+            .get_state(conn_id)
             .unwrap_or(SessionState::Disconnecting);
 
         match state {
@@ -175,9 +184,7 @@ impl ConnectionHandler {
                 // 已进入游戏：按 cmd 路由
                 self.handle_in_game(conn_id, packet, framed).await
             }
-            SessionState::Disconnecting => {
-                Err(anyhow!("Session is disconnecting"))
-            }
+            SessionState::Disconnecting => Err(anyhow!("Session is disconnecting")),
         }
     }
 
@@ -203,18 +210,24 @@ impl ConnectionHandler {
         debug!(conn_id, plat_id, "DoLogin attempt");
 
         // 调用 Auth Service
-        let mut auth_client = AuthServiceClient::connect(self.auth_addr.clone()).await
+        let mut auth_client = AuthServiceClient::connect(self.auth_addr.clone())
+            .await
             .map_err(|e| anyhow!("Auth service unavailable: {}", e))?;
 
-        let login_resp = auth_client.login(proto::slg::LoginRequest {
-            username: plat_id.clone(),
-            password: device_no,
-        }).await?.into_inner();
+        let login_resp = auth_client
+            .login(proto::slg::LoginRequest {
+                username: plat_id.clone(),
+                password: device_no,
+            })
+            .await?
+            .into_inner();
 
         if !login_resp.success {
             warn!(conn_id, plat_id, "DoLogin failed: {}", login_resp.error_msg);
             let err = shared::msg::GameMessage::build_error(GameCmd::DoLoginRs as i32, 101)?;
-            framed.send(GamePacket::new(GameCmd::DoLoginRs, err)).await?;
+            framed
+                .send(GamePacket::new(GameCmd::DoLoginRs, err))
+                .await?;
             return Err(anyhow!("Login failed: {}", login_resp.error_msg));
         }
 
@@ -222,8 +235,14 @@ impl ConnectionHandler {
         let token = login_resp.token.clone();
 
         // 踢掉旧连接（如果有）
-        if let Some(old_conn_id) = self.sessions.bind_account(conn_id, account_key_id, token.clone()) {
-            warn!(conn_id, old_conn_id, account_key_id, "Kicking duplicate login");
+        if let Some(old_conn_id) =
+            self.sessions
+                .bind_account(conn_id, account_key_id, token.clone())
+        {
+            warn!(
+                conn_id,
+                old_conn_id, account_key_id, "Kicking duplicate login"
+            );
             // 旧连接会在下次 dispatch 时因 session 被覆盖而断开
         }
 
@@ -233,7 +252,9 @@ impl ConnectionHandler {
             token: Some(token),
             ..Default::default()
         };
-        framed.send(GamePacket::build_rs(GameCmd::DoLoginRs, &rs)?).await?;
+        framed
+            .send(GamePacket::build_rs(GameCmd::DoLoginRs, &rs)?)
+            .await?;
 
         info!(conn_id, account_key_id, "DoLogin success");
         Ok(())
@@ -257,12 +278,16 @@ impl ConnectionHandler {
         debug!(conn_id, server_id, "Verify attempt");
 
         // 调用 Auth Service 验证 token
-        let mut auth_client = AuthServiceClient::connect(self.auth_addr.clone()).await
+        let mut auth_client = AuthServiceClient::connect(self.auth_addr.clone())
+            .await
             .map_err(|e| anyhow!("Auth service unavailable: {}", e))?;
 
-        let validate_resp = auth_client.validate_token(proto::slg::ValidateTokenRequest {
-            token: token.clone(),
-        }).await?.into_inner();
+        let validate_resp = auth_client
+            .validate_token(proto::slg::ValidateTokenRequest {
+                token: token.clone(),
+            })
+            .await?
+            .into_inner();
 
         if !validate_resp.valid {
             warn!(conn_id, "Verify failed: invalid token");
@@ -280,9 +305,16 @@ impl ConnectionHandler {
             server_id: Some(server_id),
             ..Default::default()
         };
-        framed.send(GamePacket::build_rs(GameCmd::VerifyRs, &rs)?).await?;
+        framed
+            .send(GamePacket::build_rs(GameCmd::VerifyRs, &rs)?)
+            .await?;
 
-        info!(conn_id, account_key_id = validate_resp.account_id, server_id, "Verify success");
+        info!(
+            conn_id,
+            account_key_id = validate_resp.account_id,
+            server_id,
+            "Verify success"
+        );
         Ok(())
     }
 
@@ -298,15 +330,17 @@ impl ConnectionHandler {
         let msg = packet.to_message()?;
         let rq: proto::slg::BeginGameRq = msg.get_payload()?;
 
-        let account_key_id = self.sessions.get_account_key_id(conn_id)
+        let account_key_id = self
+            .sessions
+            .get_account_key_id(conn_id)
             .ok_or_else(|| anyhow!("No account_key_id in session"))?;
-        let server_id = self.sessions.get_server_id(conn_id)
-            .unwrap_or(rq.server_id);
+        let server_id = self.sessions.get_server_id(conn_id).unwrap_or(rq.server_id);
 
         debug!(conn_id, account_key_id, server_id, "BeginGame");
 
         // 转发到 Home Service
-        let mut home_client = HomeServiceClient::connect(self.home_addr.clone()).await
+        let mut home_client = HomeServiceClient::connect(self.home_addr.clone())
+            .await
             .map_err(|e| anyhow!("Home service unavailable: {}", e))?;
 
         let begin_rq = proto::slg::BeginGameRq {
@@ -323,14 +357,22 @@ impl ConnectionHandler {
         // 如果已有角色，更新 role_id
         if let Some(role_id) = rs.role_id {
             self.sessions.set_in_game(conn_id, role_id);
-            info!(conn_id, account_key_id, role_id, state = rs.state, "BeginGame: role exists");
+            info!(
+                conn_id,
+                account_key_id,
+                role_id,
+                state = rs.state,
+                "BeginGame: role exists"
+            );
         } else {
             // 未创建角色，仍进入 InGame 状态（等待 CreateRole）
             self.sessions.set_in_game(conn_id, 0);
             info!(conn_id, account_key_id, "BeginGame: no role yet");
         }
 
-        framed.send(GamePacket::build_rs(GameCmd::BeginGameRs, &rs)?).await?;
+        framed
+            .send(GamePacket::build_rs(GameCmd::BeginGameRs, &rs)?)
+            .await?;
         Ok(())
     }
 
@@ -349,6 +391,9 @@ impl ConnectionHandler {
         if cmd == GameCmd::HeartbeatRq {
             return self.handle_heartbeat(conn_id, framed).await;
         }
+        if cmd == GameCmd::CreateRoleRq {
+            return self.handle_create_role(conn_id, packet, framed).await;
+        }
 
         // 按 cmd 路由
         match cmd.route() {
@@ -357,14 +402,8 @@ impl ConnectionHandler {
                 warn!(conn_id, cmd = ?cmd, "Unexpected Auth cmd in InGame state");
                 Ok(())
             }
-            CmdRoute::Home => {
-                self.forward_to_home(conn_id, packet, framed).await
-            }
-            CmdRoute::World => {
-                // TODO: 转发到 World Service
-                debug!(conn_id, cmd = ?cmd, "World cmd (not yet implemented)");
-                Ok(())
-            }
+            CmdRoute::Home => self.forward_to_home(conn_id, packet, framed).await,
+            CmdRoute::World => self.forward_to_world(conn_id, packet, framed).await,
         }
     }
 
@@ -377,8 +416,70 @@ impl ConnectionHandler {
         let rs = proto::slg::HeartbeatRs {
             time: Some(chrono::Utc::now().timestamp() as i32),
         };
-        framed.send(GamePacket::build_rs(GameCmd::HeartbeatRs, &rs)?).await?;
+        framed
+            .send(GamePacket::build_rs(GameCmd::HeartbeatRs, &rs)?)
+            .await?;
         debug!(conn_id, "Heartbeat");
+        Ok(())
+    }
+
+    /// 处理 CreateRoleRq。创建成功后立即重新 BeginGame，同步 session 中的 role_id。
+    async fn handle_create_role(
+        &self,
+        conn_id: u64,
+        packet: GamePacket,
+        framed: &mut Framed<TcpStream, GameCodec>,
+    ) -> Result<()> {
+        let msg = packet.to_message()?;
+        let rq: proto::slg::CreateRoleRq = msg.get_payload()?;
+        let account_key_id = self
+            .sessions
+            .get_account_key_id(conn_id)
+            .ok_or_else(|| anyhow!("No account_key_id in session"))?;
+        let server_id = self
+            .sessions
+            .get_server_id(conn_id)
+            .unwrap_or_else(|| rq.server_id.unwrap_or(1));
+
+        let mut home_client = HomeServiceClient::connect(self.home_addr.clone())
+            .await
+            .map_err(|e| anyhow!("Home service unavailable: {}", e))?;
+
+        let mut request = tonic::Request::new(proto::slg::CreateRoleRq {
+            server_id: Some(server_id),
+            nick: rq.nick.clone(),
+            ..Default::default()
+        });
+        request.metadata_mut().insert(
+            "x-account-id",
+            account_key_id
+                .to_string()
+                .parse()
+                .map_err(|e| anyhow!("invalid x-account-id metadata: {}", e))?,
+        );
+
+        let rs = home_client.create_role(request).await?.into_inner();
+        if rs.state == Some(1) || rs.state == Some(2) {
+            let begin_rs = home_client
+                .begin_game(proto::slg::BeginGameRq {
+                    server_id,
+                    key_id: account_key_id,
+                    ..Default::default()
+                })
+                .await?
+                .into_inner();
+            if let Some(role_id) = begin_rs.role_id {
+                self.sessions.set_in_game(conn_id, role_id);
+                info!(
+                    conn_id,
+                    account_key_id, role_id, "CreateRole: role is ready"
+                );
+            }
+        }
+
+        framed
+            .send(GamePacket::build_rs(GameCmd::CreateRoleRs, &rs)?)
+            .await?;
         Ok(())
     }
 
@@ -394,7 +495,9 @@ impl ConnectionHandler {
         packet: GamePacket,
         framed: &mut Framed<TcpStream, GameCodec>,
     ) -> Result<()> {
-        let role_id = self.sessions.get_role_id(conn_id)
+        let role_id = self
+            .sessions
+            .get_role_id(conn_id)
             .filter(|&id| id > 0)
             .ok_or_else(|| anyhow!("No role_id in session for conn {}", conn_id))?;
 
@@ -404,7 +507,8 @@ impl ConnectionHandler {
         debug!(conn_id, role_id, cmd = ?cmd, "Forward to Home via gRPC Dispatch");
 
         // 建立 gRPC 连接（TODO: 连接池复用）
-        let mut home_client = HomeServiceClient::connect(self.home_addr.clone()).await
+        let mut home_client = HomeServiceClient::connect(self.home_addr.clone())
+            .await
             .map_err(|e| anyhow!("Home service unavailable: {}", e))?;
 
         let dispatch_rq = proto::slg::DispatchRq {
@@ -413,7 +517,9 @@ impl ConnectionHandler {
             payload,
         };
 
-        let rs = home_client.dispatch(dispatch_rq).await
+        let rs = home_client
+            .dispatch(dispatch_rq)
+            .await
             .map_err(|s| anyhow!("Dispatch gRPC error: {}", s))?
             .into_inner();
 
@@ -432,6 +538,48 @@ impl ConnectionHandler {
         let rs_cmd = GameCmd::from(cmd as u32 + 1);
         framed.send(GamePacket::new(rs_cmd, rs.payload)).await?;
 
+        Ok(())
+    }
+
+    /// 转发消息到 World Service（gRPC Dispatch）。
+    async fn forward_to_world(
+        &self,
+        conn_id: u64,
+        packet: GamePacket,
+        framed: &mut Framed<TcpStream, GameCodec>,
+    ) -> Result<()> {
+        let role_id = self
+            .sessions
+            .get_role_id(conn_id)
+            .filter(|&id| id > 0)
+            .ok_or_else(|| anyhow!("No role_id in session for conn {}", conn_id))?;
+
+        let cmd = packet.cmd;
+        debug!(conn_id, role_id, cmd = ?cmd, "Forward to World via gRPC Dispatch");
+
+        let mut world_client = WorldServiceClient::connect(self.world_addr.clone())
+            .await
+            .map_err(|e| anyhow!("World service unavailable: {}", e))?;
+
+        let rs = world_client
+            .dispatch(proto::slg::DispatchRq {
+                role_id,
+                cmd: cmd as i32,
+                payload: packet.payload,
+            })
+            .await
+            .map_err(|s| anyhow!("World Dispatch gRPC error: {}", s))?
+            .into_inner();
+
+        let rs_cmd = GameCmd::from(cmd as u32 + 1);
+        if rs.code != 0 {
+            warn!(conn_id, role_id, cmd = ?cmd, code = rs.code, "World dispatch returned error");
+            let err_payload = shared::msg::GameMessage::build_error(cmd as i32, rs.code)?;
+            framed.send(GamePacket::new(rs_cmd, err_payload)).await?;
+            return Ok(());
+        }
+
+        framed.send(GamePacket::new(rs_cmd, rs.payload)).await?;
         Ok(())
     }
 }

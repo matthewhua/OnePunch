@@ -1,14 +1,14 @@
-use tokio::net::TcpListener;
-use tracing::{info, warn, error};
-use std::sync::Arc;
 use shared::config::AppConfig;
+use std::sync::Arc;
+use tokio::net::TcpListener;
+use tracing::{error, info, warn};
 
 mod codec;
 mod handler;
 mod session;
 
-use session::{SessionStore, disconnect_channel, DisconnectNotice};
 use handler::ConnectionHandler;
+use session::{disconnect_channel, DisconnectNotice, SessionStore};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -24,6 +24,7 @@ async fn main() -> anyhow::Result<()> {
     info!("Starting Gateway on {}", config.server_addr);
     info!("Auth Service: {}", config.auth_service_addr);
     info!("Home Service: {}", config.home_service_addr);
+    info!("World Service: {}", config.world_service_addr);
 
     // 3. 初始化会话存储
     let sessions = SessionStore::new();
@@ -51,6 +52,7 @@ async fn main() -> anyhow::Result<()> {
             sessions.clone(),
             config.auth_service_addr.clone(),
             config.home_service_addr.clone(),
+            config.world_service_addr.clone(),
             disconnect_tx.clone(),
         ));
 
@@ -74,7 +76,9 @@ async fn handle_disconnect(notice: DisconnectNotice, home_addr: &str) {
             role_id,
             "Player offline, notifying Home Service"
         );
-        match proto::slg::home_service_client::HomeServiceClient::connect(home_addr.to_string()).await {
+        match proto::slg::home_service_client::HomeServiceClient::connect(home_addr.to_string())
+            .await
+        {
             Ok(mut client) => {
                 let rq = proto::slg::PlayerOfflineRq { role_id };
                 if let Err(e) = client.player_offline(rq).await {
@@ -82,7 +86,10 @@ async fn handle_disconnect(notice: DisconnectNotice, home_addr: &str) {
                 }
             }
             Err(e) => {
-                warn!(role_id, "Cannot connect to Home Service for offline notify: {}", e);
+                warn!(
+                    role_id,
+                    "Cannot connect to Home Service for offline notify: {}", e
+                );
             }
         }
     }
