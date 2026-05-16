@@ -43,7 +43,8 @@ impl<T> TimerWheel<T> {
 
         if delay_ms < 1000 {
             // 落在当前秒内的 ticks 轮
-            let target_tick = (self.current_tick + (delay_ms / 100) as u64) % 10;
+            let ticks_ahead = ((delay_ms + 99) / 100) as u64;
+            let target_tick = (self.current_tick + ticks_ahead) % 10;
             self.ticks[target_tick as usize].push(data);
         } else if delay_ms < 60_000 {
             // 落在当前分钟内的 seconds 轮
@@ -162,5 +163,17 @@ mod tests {
         }
         let results = wheel.advance();
         assert_eq!(results, vec![3]);
+    }
+
+    #[test]
+    fn sub_tick_delays_are_not_returned_before_deadline() {
+        let base_time = 1000000;
+        let mut wheel = TimerWheel::new(base_time);
+        wheel.schedule(base_time + 150, 1);
+
+        assert!(wheel.advance().is_empty());
+        assert_eq!(wheel.current_time_ms(), base_time + 100);
+        assert_eq!(wheel.advance(), vec![1]);
+        assert_eq!(wheel.current_time_ms(), base_time + 200);
     }
 }

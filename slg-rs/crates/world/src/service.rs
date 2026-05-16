@@ -14,11 +14,16 @@ use proto::slg::{
 };
 use shared::msg::GameMessage;
 use std::sync::atomic::{AtomicI32, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tonic::{Request, Response, Status};
+
+const DEFAULT_ENTITY_REFRESH_TIME_MS: u64 = 0;
+const DEFAULT_BANDIT_CONF_ID: i32 = 201;
+const DEFAULT_MINE_CONF_ID: i32 = 401;
 
 pub struct WorldServiceImpl {
     grid: Arc<crate::map::grid::MapGrid>,
+    entity_lifecycle: Mutex<crate::map::lifecycle::EntityLifecycleManager>,
     marching_mgr: Arc<crate::march::MarchingManager>,
     runtime: Arc<crate::runtime::WorldRuntime>,
     garrison_state: Arc<crate::garrison::GarrisonState>,
@@ -34,14 +39,18 @@ impl WorldServiceImpl {
         let runtime = Arc::new(crate::runtime::WorldRuntime::new());
         let garrison_state = runtime.garrison_state();
         let assembly_state = runtime.assembly_state();
-        Self {
+        let svc = Self {
             grid,
+            entity_lifecycle: Mutex::new(crate::map::lifecycle::EntityLifecycleManager::new()),
             marching_mgr,
             runtime,
             garrison_state,
             assembly_state,
             next_troop_key: AtomicI32::new(1),
-        }
+        };
+        svc.refresh_default_entities_at(DEFAULT_ENTITY_REFRESH_TIME_MS)
+            .expect("default world entity spawn rules must be valid");
+        svc
     }
 
     fn response<T: prost::Message>(&self, cmd: i32, msg: &T) -> Result<DispatchRs, Status> {
@@ -65,6 +74,20 @@ impl WorldServiceImpl {
         }
         msg.get_payload()
             .map_err(|e| Status::invalid_argument(format!("decode world payload failed: {}", e)))
+    }
+
+    fn refresh_default_entities_at(
+        &self,
+        now_ms: u64,
+    ) -> Result<crate::map::lifecycle::EntityRefreshReport, Status> {
+        let rules = default_entity_spawn_rules();
+        let mut lifecycle = self
+            .entity_lifecycle
+            .lock()
+            .map_err(|_| Status::internal("world entity lifecycle lock poisoned"))?;
+        lifecycle
+            .refresh_at(&self.grid, &rules, now_ms)
+            .map_err(|e| Status::internal(format!("refresh default world entities failed: {}", e)))
     }
 
     async fn dispatch_troop(
@@ -441,6 +464,25 @@ impl WorldService for WorldServiceImpl {
     }
 }
 
+fn default_entity_spawn_rules() -> Vec<crate::map::lifecycle::EntitySpawnRule> {
+    vec![
+        crate::map::lifecycle::EntitySpawnRule::at_positions(
+            proto::slg::WorldEntityTypeDefine::EntityTypeBandit as i32,
+            DEFAULT_BANDIT_CONF_ID,
+            1,
+            vec![crate::map::grid::xy_to_pos(100, 100)],
+            None,
+        ),
+        crate::map::lifecycle::EntitySpawnRule::at_positions(
+            proto::slg::WorldEntityTypeDefine::EntityTypeMine as i32,
+            DEFAULT_MINE_CONF_ID,
+            1,
+            vec![crate::map::grid::xy_to_pos(101, 100)],
+            None,
+        ),
+    ]
+}
+
 fn map_distance_squared(left: i32, right: i32) -> i32 {
     let (left_x, left_y) = crate::map::grid::pos_to_xy(left);
     let (right_x, right_y) = crate::map::grid::pos_to_xy(right);
@@ -710,6 +752,56 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    }
+
+    #[tokio::test]
+    async fn service_initialization_refreshes_default_entities_for_search() {
+        let svc = service();
+
+        let body: SearchEntityRs = dispatch_body(
+            &svc,
+            5201,
+            5202,
+            &SearchEntityRq {
+                auto: Some(false),
+                entity_type: Some(WorldEntityTypeDefine::EntityTypeMine as i32),
+                config_id: Some(DEFAULT_MINE_CONF_ID),
+            },
+        )
+        .await;
+
+        assert_eq!(body.entity.len(), 1);
+        assert_eq!(body.entity[0].pos, crate::map::grid::xy_to_pos(101, 100));
+        assert_eq!(
+            body.entity[0].entity_type,
+            Some(WorldEntityTypeDefine::EntityTypeMine as i32)
+        );
+        assert_eq!(body.entity[0].conf_id, Some(DEFAULT_MINE_CONF_ID));
+
+        let area: GetAreaDetailsRs =
+            dispatch_body(&svc, 50007, 50008, &GetAreaDetailsRq { map: 1, area: None }).await;
+        assert_eq!(area.entity.len(), 2);
+        assert!(area
+            .entity
+            .iter()
+            .any(|entity| entity.conf_id == Some(DEFAULT_BANDIT_CONF_ID)));
+        assert!(area
+            .entity
+            .iter()
+            .any(|entity| entity.conf_id == Some(DEFAULT_MINE_CONF_ID)));
+    }
+
+    #[tokio::test]
+    async fn default_entity_refresh_does_not_duplicate_existing_entities() {
+        let svc = service();
+        let before = svc.grid.all_entities();
+
+        let report = svc.refresh_default_entities_at(1_000).unwrap();
+        let after = svc.grid.all_entities();
+
+        assert!(report.expired.is_empty());
+        assert!(report.spawned.is_empty());
+        assert_eq!(after, before);
     }
 
     #[tokio::test]

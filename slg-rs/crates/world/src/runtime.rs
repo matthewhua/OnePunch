@@ -23,6 +23,7 @@ pub struct WorldRuntime {
 
 impl WorldRuntime {
     pub fn new() -> Self {
+        let base_time_ms = crate::march::now_millis();
         let aoi = Arc::new(AoiManager::new());
         let health = Arc::new(HealthChecker::new(std::time::Duration::from_secs(30)));
         let sector_troops = Arc::new(DashMap::new());
@@ -47,7 +48,7 @@ impl WorldRuntime {
                         let actor = MapSectorActor::new(
                             sector_id,
                             rx,
-                            0,
+                            base_time_ms,
                             aoi,
                             health,
                             garrison_state,
@@ -69,6 +70,8 @@ impl WorldRuntime {
             sector_senders.insert(sector_id, tx);
             shutdown_txs.push(shutdown_tx);
         }
+
+        spawn_sector_tick_loop(sector_senders.values().cloned().collect());
 
         Self {
             sector_senders,
@@ -168,6 +171,18 @@ impl WorldRuntime {
     }
 }
 
+fn spawn_sector_tick_loop(sector_senders: Vec<mpsc::Sender<SectorMessage>>) {
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_millis(100));
+        loop {
+            interval.tick().await;
+            for sender in &sector_senders {
+                let _ = sender.send(SectorMessage::Tick).await;
+            }
+        }
+    });
+}
+
 fn troop_sector_ids(troop: &BaseTroop) -> Result<BTreeSet<i32>> {
     let mut sector_ids = BTreeSet::new();
     if let Some(origin) = troop.origin {
@@ -223,7 +238,7 @@ mod tests {
             origin: Some(origin),
             goal: Some(goal),
             status: Some(crate::march::MARCH_STATUS_MARCH),
-            start_time: Some(1_000),
+            start_time: Some(crate::march::now_millis()),
             end_time: Some(end_time),
             ..Default::default()
         }
@@ -236,9 +251,10 @@ mod tests {
         let original_goal = xy_to_pos(1000, 1000);
         let current_pos = xy_to_pos(500, 500);
         let home = original_origin;
+        let now = crate::march::now_millis();
 
         runtime
-            .send_transfer_troop(troop(11, original_origin, original_goal, 10_000))
+            .send_transfer_troop(troop(11, original_origin, original_goal, now + 10_000))
             .await
             .unwrap();
 
@@ -247,7 +263,7 @@ mod tests {
 
         let updated = BaseTroop {
             status: Some(crate::march::MARCH_STATUS_RETREAT),
-            ..troop(11, current_pos, home, 20_000)
+            ..troop(11, current_pos, home, now + 20_000)
         };
         runtime.sync_troop_update(updated).await.unwrap();
 
@@ -256,5 +272,21 @@ mod tests {
         wait_for_keys(&runtime, old_sector, vec![]).await;
         wait_for_keys(&runtime, current_sector, vec![11]).await;
         wait_for_keys(&runtime, home_sector, vec![11]).await;
+    }
+
+    #[tokio::test]
+    async fn runtime_tick_loop_drives_sector_arrival() {
+        let runtime = WorldRuntime::new();
+        let origin = xy_to_pos(0, 0);
+        let goal = xy_to_pos(10, 10);
+        let sector_id = WorldRuntime::sector_id_for_pos(goal);
+
+        runtime
+            .send_transfer_troop(troop(12, origin, goal, crate::march::now_millis() + 150))
+            .await
+            .unwrap();
+
+        wait_for_keys(&runtime, sector_id, vec![12]).await;
+        wait_for_keys(&runtime, sector_id, vec![]).await;
     }
 }
