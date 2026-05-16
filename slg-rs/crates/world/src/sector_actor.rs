@@ -12,6 +12,7 @@ use proto::slg::{BaseEntity, BaseTroop};
 use anyhow::Result;
 use tracing::{info, error};
 use bytes::Bytes;
+use dashmap::DashMap;
 
 pub struct MapSectorActor {
     pub sector_id: i32,
@@ -33,6 +34,7 @@ pub struct MapSectorActor {
     
     /// 关闭信号
     shutdown_rx: broadcast::Receiver<()>,
+    tracked_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
 }
 
 impl MapSectorActor {
@@ -44,6 +46,7 @@ impl MapSectorActor {
         health_checker: Arc<HealthChecker>,
         wal: WriteAheadLog,
         shutdown_rx: broadcast::Receiver<()>,
+        tracked_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
     ) -> Self {
         Self {
             sector_id,
@@ -56,6 +59,7 @@ impl MapSectorActor {
             health_checker,
             wal,
             shutdown_rx,
+            tracked_troops,
         }
     }
 
@@ -73,6 +77,7 @@ impl MapSectorActor {
                         end_time: Some(end_time),
                         ..Default::default()
                     };
+                    self.track_troop(troop.clone());
                     self.marching_troops.insert(key, troop);
                     self.timer_wheel.schedule(end_time, key);
                 }
@@ -159,6 +164,7 @@ impl MapSectorActor {
         // 内存处理
         let key = troop.key;
         self.marching_troops.insert(key, troop.clone());
+        self.track_troop(troop.clone());
         if let Some(end_time) = troop.end_time {
             self.timer_wheel.schedule(end_time, key);
         }
@@ -176,6 +182,7 @@ impl MapSectorActor {
         let expired_keys = self.timer_wheel.advance();
         for key in expired_keys {
             if let Some(troop) = self.marching_troops.remove(&key) {
+                self.untrack_troop(troop.key);
                 let goal_pos = troop.goal.unwrap_or(0);
                 if crate::map::grid::pos_to_sector_id(goal_pos) == self.sector_id {
                     self.handle_arrival(troop).await;
@@ -190,6 +197,7 @@ impl MapSectorActor {
         let key = troop.key;
         let goal_pos = troop.goal.unwrap_or(0);
         troop.status = Some(crate::march::MARCH_STATUS_ARRIVAL);
+        self.untrack_troop(key);
 
         let action = arrival_action_for_troop(&troop);
         match action {
@@ -236,6 +244,19 @@ impl MapSectorActor {
         
         if let Some(neighbor_tx) = self.neighbors.get(&next_sector_id) {
             let _ = neighbor_tx.send(SectorMessage::TransferTroop { troop_data: troop }).await;
+        }
+    }
+
+    fn track_troop(&self, troop: BaseTroop) {
+        self.tracked_troops
+            .entry(self.sector_id)
+            .or_default()
+            .push(troop);
+    }
+
+    fn untrack_troop(&self, troop_key: i32) {
+        if let Some(mut entry) = self.tracked_troops.get_mut(&self.sector_id) {
+            entry.retain(|troop| troop.key != troop_key);
         }
     }
 

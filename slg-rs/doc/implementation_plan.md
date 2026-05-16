@@ -1,6 +1,6 @@
 # slg-rs 总体实施计划
 
-> 最后更新：2026-05-12
+> 最后更新：2026-05-16
 > 当前分支：`feature/phase2-home-systems`（Step 7 起在此分支）
 
 ---
@@ -231,12 +231,23 @@ Step 16 安全与上线准备 .......... 待执行
 
 **需求文档**：`doc/requirements/world-systems.md`
 
-**当前进展（2026-05-12）**：
+**当前进展（2026-05-16）**：
 - 已修正 `50001..=50040`、`5121..=5220` World 命令路由归属，避免大地图/行军命令落到 Home。
 - 已补 `MapGrid` 实体索引、坐标边界校验、按类型查询、跨 Grid 移动。
 - 已补确定性行军 API：起止时间计算、状态更新、重复 key/非法速度/非法坐标校验、到达动作分类。
 - `MapSectorActor` 已接入行军开始/到达 AOI 事件，到达后按战斗、采集、侦查、驻防、返回分类触发占位逻辑。
 - 已修复 `TimerWheel` seconds/overflow 下沉到当前 tick 时延后一轮的问题，并补回归测试。
+
+**本轮 P0 进展（2026-05-16）**：
+- `WorldService::Dispatch` 已经把第一批 World 查询命令和派兵命令接通，查询仍然走 `MapGrid` / `MarchingManager` 内存视图。
+- World 派兵命令已从孤立的 `MarchingManager` 写入，改为同时投递到最小 `WorldRuntime` / `SectorActor` sender registry。
+- 创角链路已修复并保持可用，World 侧不再阻断后续业务命令分发。
+
+**剩余 P0 / 未使用项**：
+- `SectorActor` 的 AOI / WAL 到达处理仍是骨架，未做真实到达结算。
+- 真实实体生成与实体生命周期管理未接入。
+- 战斗、采集、侦查等到达业务仍是占位逻辑，未实现结算与结果回写。
+- 其他 World 业务命令仍待分批接入，当前只覆盖第一批查询与派兵链路。
 
 ---
 

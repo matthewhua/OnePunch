@@ -15,6 +15,7 @@ use tonic::{Request, Response, Status};
 pub struct WorldServiceImpl {
     grid: Arc<crate::map::grid::MapGrid>,
     marching_mgr: Arc<crate::march::MarchingManager>,
+    runtime: Arc<crate::runtime::WorldRuntime>,
     next_troop_key: AtomicI32,
 }
 
@@ -26,6 +27,7 @@ impl WorldServiceImpl {
         Self {
             grid,
             marching_mgr,
+            runtime: Arc::new(crate::runtime::WorldRuntime::new()),
             next_troop_key: AtomicI32::new(1),
         }
     }
@@ -49,9 +51,9 @@ impl WorldServiceImpl {
             .map_err(|e| Status::invalid_argument(format!("decode world payload failed: {}", e)))
     }
 
-    fn dispatch_troop(
+    async fn dispatch_troop(
         &self,
-        role_id: i64,
+        _role_id: i64,
         target_pos: i32,
         troop_type: i32,
     ) -> Result<BaseTroop, Status> {
@@ -72,9 +74,17 @@ impl WorldServiceImpl {
             ..Default::default()
         };
 
-        self.marching_mgr
+        let troop = self
+            .marching_mgr
             .start_march(troop, 10.0)
-            .map_err(|e| Status::failed_precondition(format!("start march failed: {}", e)))
+            .map_err(|e| Status::failed_precondition(format!("start march failed: {}", e)))?;
+
+        self.runtime
+            .send_transfer_troop(troop.clone())
+            .await
+            .map_err(|e| Status::failed_precondition(format!("sector dispatch failed: {}", e)))?;
+
+        Ok(troop)
     }
 
     fn troop_type_for_entity(entity_type: Option<i32>) -> i32 {
@@ -95,6 +105,18 @@ impl WorldServiceImpl {
             .collect();
         troops.sort_by_key(|troop| troop.key);
         troops
+    }
+
+    #[cfg(test)]
+    fn sector_troop_count(&self, pos: i32) -> usize {
+        self.runtime
+            .sector_troop_count(crate::runtime::WorldRuntime::sector_id_for_pos(pos))
+    }
+
+    #[cfg(test)]
+    fn sector_troop_keys(&self, pos: i32) -> Vec<i32> {
+        self.runtime
+            .sector_troop_keys(crate::runtime::WorldRuntime::sector_id_for_pos(pos))
     }
 }
 
@@ -176,7 +198,7 @@ impl WorldService for WorldServiceImpl {
                     req.role_id,
                     rq.pos,
                     Self::troop_type_for_entity(rq.r#type),
-                )?;
+                ).await?;
                 self.response(50020, &proto::slg::DispatchTroopRs::default())
             }
             50031 => self.response(50032, &GetPlayerTroopRs {
@@ -197,7 +219,7 @@ impl WorldService for WorldServiceImpl {
                     req.role_id,
                     rq.pos,
                     crate::march::MARCH_TYPE_INTEL_TASK,
-                )?;
+                ).await?;
                 self.response(50038, &proto::slg::DispatchPigeonTroopRs::default())
             }
             50039 => {
@@ -206,7 +228,7 @@ impl WorldService for WorldServiceImpl {
                     req.role_id,
                     rq.pos,
                     crate::march::MARCH_TYPE_SCOUT,
-                )?;
+                ).await?;
                 self.response(50040, &proto::slg::DispatchScoutTroopRs::default())
             }
             _ => {
@@ -247,6 +269,7 @@ mod tests {
     use super::*;
     use prost::Message;
     use proto::slg::{DispatchTroopRs, WorldEntityTypeDefine};
+    use std::time::Duration;
 
     fn service() -> WorldServiceImpl {
         WorldServiceImpl::new(
@@ -260,6 +283,22 @@ mod tests {
             role_id,
             cmd,
             payload: GameMessage::build_response(cmd, body).unwrap(),
+        }
+    }
+
+    async fn wait_for_sector_troop_count(svc: &WorldServiceImpl, pos: i32, expected: usize) {
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(1);
+        loop {
+            if svc.sector_troop_count(pos) == expected {
+                return;
+            }
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "sector troop count did not reach {} for pos {}",
+                expected,
+                pos
+            );
+            tokio::task::yield_now().await;
         }
     }
 
@@ -280,6 +319,7 @@ mod tests {
         assert_eq!(msg.base.cmd, 50020);
         let _: DispatchTroopRs = msg.get_payload().unwrap();
 
+        wait_for_sector_troop_count(&svc, rq.pos, 1).await;
         let troops = svc.all_marching_troops();
         assert_eq!(troops.len(), 1);
         assert_eq!(troops[0].goal, Some(rq.pos));
@@ -290,6 +330,7 @@ mod tests {
     async fn get_player_troop_returns_started_marches() {
         let svc = service();
         svc.dispatch_troop(42, crate::map::grid::xy_to_pos(1, 1), crate::march::MARCH_TYPE_SCOUT)
+            .await
             .unwrap();
 
         let rs = svc.dispatch(Request::new(request(50031, 42, &proto::slg::GetPlayerTroopRq::default())))
@@ -302,6 +343,24 @@ mod tests {
         assert_eq!(msg.base.cmd, 50032);
         assert_eq!(body.troop.len(), 1);
         assert_eq!(body.troop[0].r#type, Some(crate::march::MARCH_TYPE_SCOUT));
+    }
+
+    #[tokio::test]
+    async fn dispatch_scout_routes_into_sector() {
+        let svc = service();
+        let target = crate::map::grid::xy_to_pos(400, 400);
+        let rq = DispatchScoutTroopRq {
+            map: 1,
+            pos: target,
+            r#type: Some(WorldEntityTypeDefine::EntityTypeMine as i32),
+        };
+
+        let rs = svc.dispatch(Request::new(request(50039, 7, &rq))).await.unwrap().into_inner();
+        assert_eq!(rs.code, 0);
+        let msg = GameMessage::decode(rs.payload).unwrap();
+        assert_eq!(msg.base.cmd, 50040);
+        wait_for_sector_troop_count(&svc, target, 1).await;
+        assert_eq!(svc.sector_troop_keys(target), vec![1]);
     }
 
     #[tokio::test]

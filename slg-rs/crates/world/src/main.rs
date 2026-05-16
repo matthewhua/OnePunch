@@ -11,6 +11,7 @@ mod map;
 mod march;
 mod message;
 mod metrics;
+mod runtime;
 pub mod router;
 mod rpc_client;
 mod sector_actor;
@@ -28,7 +29,6 @@ async fn main() -> anyhow::Result<()> {
 
     // 2. 初始化核心组件
     let grid = Arc::new(map::grid::MapGrid::new());
-    let aoi = Arc::new(map::aoi::AoiManager::new());
     let marching_mgr = Arc::new(march::MarchingManager::new());
 
     // 3. 启动行军 Ticker (每 100ms 检查一次)
