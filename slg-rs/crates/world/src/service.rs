@@ -1,7 +1,8 @@
+use dashmap::DashMap;
 use proto::slg::world_service_server::WorldService;
 use proto::slg::{
-    BaseMap, BasePlayerMapData, BaseTroop, DispatchPigeonTroopRq, DispatchRq, DispatchRs,
-    DispatchScoutTroopRq, DispatchTroopRq, EnterWorldMapRq, GetAreaCityFirstKillInfoRq,
+    BaseEntity, BaseMap, BasePlayerMapData, BaseTroop, DispatchPigeonTroopRq, DispatchRq,
+    DispatchRs, DispatchScoutTroopRq, DispatchTroopRq, EnterWorldMapRq, GetAreaCityFirstKillInfoRq,
     GetAreaCityFirstKillInfoRs, GetAreaDetailsRq, GetAreaDetailsRs, GetBlockDetailsRq,
     GetBlockDetailsRs, GetEntityInfoRq, GetEntityInfoRs, GetFightDetailsRq, GetFightDetailsRs,
     GetFightInfoRq, GetFightInfoRs, GetFightListDetailsRq, GetFightListDetailsRs, GetMapDetailsRq,
@@ -28,6 +29,7 @@ pub struct WorldServiceImpl {
     runtime: Arc<crate::runtime::WorldRuntime>,
     garrison_state: Arc<crate::garrison::GarrisonState>,
     assembly_state: Arc<crate::assembly::AssemblyState>,
+    player_positions: DashMap<i64, i32>,
     next_troop_key: AtomicI32,
 }
 
@@ -46,6 +48,7 @@ impl WorldServiceImpl {
             runtime,
             garrison_state,
             assembly_state,
+            player_positions: DashMap::new(),
             next_troop_key: AtomicI32::new(1),
         };
         svc.refresh_default_entities_at(DEFAULT_ENTITY_REFRESH_TIME_MS)
@@ -182,6 +185,44 @@ impl WorldServiceImpl {
             .map(|entity| (entity.key_id.unwrap_or_default(), entity.pos))
     }
 
+    fn move_player_city(&self, role_id: i64, pos: i32) -> Result<BasePlayerMapData, Status> {
+        if !crate::map::grid::is_valid_pos(pos) {
+            return Err(Status::invalid_argument(format!(
+                "invalid world player position: {}",
+                pos
+            )));
+        }
+
+        if let Some(old_pos) = self.player_positions.insert(role_id, pos) {
+            if old_pos != pos {
+                self.grid.remove_entity(old_pos);
+                self.runtime.sync_entity_remove_now(old_pos).map_err(|e| {
+                    Status::internal(format!("sync old player city removal failed: {}", e))
+                })?;
+            }
+        }
+
+        let entity = BaseEntity {
+            pos,
+            entity_type: Some(proto::slg::WorldEntityTypeDefine::EntityTypePlayer as i32),
+            key_id: i32::try_from(role_id).ok(),
+            ..Default::default()
+        };
+        self.grid
+            .upsert_entity(entity.clone())
+            .map_err(|e| Status::failed_precondition(format!("move player city failed: {}", e)))?;
+        self.runtime
+            .sync_entity_upsert_now(entity)
+            .map_err(|e| Status::internal(format!("sync player city failed: {}", e)))?;
+
+        Ok(BasePlayerMapData {
+            map: 1,
+            role_id,
+            pos,
+            ..Default::default()
+        })
+    }
+
     #[cfg(test)]
     fn sector_troop_count(&self, pos: i32) -> usize {
         self.runtime
@@ -269,14 +310,13 @@ impl WorldService for WorldServiceImpl {
             }
             50013 => {
                 let rq: MovePositionRq = self.decode_payload(req.cmd, req.payload)?;
+                let player_data = self.move_player_city(req.role_id, rq.pos.unwrap_or(0))?;
                 self.response(
                     50014,
                     &MovePositionRs {
                         player_data: Some(BasePlayerMapData {
                             map: rq.map,
-                            role_id: req.role_id,
-                            pos: rq.pos.unwrap_or(0),
-                            ..Default::default()
+                            ..player_data
                         }),
                     },
                 )
@@ -708,6 +748,78 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn move_position_updates_player_city_entity() {
+        let svc = service();
+        let first_pos = crate::map::grid::xy_to_pos(400, 400);
+        let second_pos = crate::map::grid::xy_to_pos(460, 400);
+
+        let first: MovePositionRs = dispatch_body(
+            &svc,
+            50013,
+            50014,
+            &MovePositionRq {
+                map: 1,
+                r#type: 2,
+                pos: Some(first_pos),
+            },
+        )
+        .await;
+        assert_eq!(
+            first.player_data.as_ref().map(|data| data.pos),
+            Some(first_pos)
+        );
+        wait_for_sector_entity_positions(&svc, first_pos, vec![first_pos]).await;
+
+        let second: MovePositionRs = dispatch_body(
+            &svc,
+            50013,
+            50014,
+            &MovePositionRq {
+                map: 1,
+                r#type: 2,
+                pos: Some(second_pos),
+            },
+        )
+        .await;
+        assert_eq!(
+            second.player_data.as_ref().map(|data| data.pos),
+            Some(second_pos)
+        );
+
+        let old: GetEntityInfoRs = dispatch_body(
+            &svc,
+            50011,
+            50012,
+            &GetEntityInfoRq {
+                map: 1,
+                pos: first_pos,
+            },
+        )
+        .await;
+        assert!(old.entity.is_none());
+
+        let new: GetEntityInfoRs = dispatch_body(
+            &svc,
+            50011,
+            50012,
+            &GetEntityInfoRq {
+                map: 1,
+                pos: second_pos,
+            },
+        )
+        .await;
+        let entity = new.entity.unwrap();
+        assert_eq!(entity.pos, second_pos);
+        assert_eq!(
+            entity.entity_type,
+            Some(WorldEntityTypeDefine::EntityTypePlayer as i32)
+        );
+        assert_eq!(entity.key_id, Some(42));
+
+        wait_for_sector_entity_positions(&svc, second_pos, vec![second_pos]).await;
     }
 
     #[tokio::test]
