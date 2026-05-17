@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -12,6 +14,16 @@ pub enum BattleOutcome {
     AttackerWin,
     DefenderWin,
     Draw,
+}
+
+impl BattleOutcome {
+    pub fn winner(self) -> Option<BattleSide> {
+        match self {
+            Self::AttackerWin => Some(BattleSide::Attacker),
+            Self::DefenderWin => Some(BattleSide::Defender),
+            Self::Draw => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,6 +43,11 @@ impl BattleInput {
             max_rounds: None,
         }
     }
+
+    pub fn with_max_rounds(mut self, max_rounds: u32) -> Self {
+        self.max_rounds = Some(max_rounds);
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -47,6 +64,22 @@ impl Fighter {
             name: None,
             units,
         }
+    }
+
+    pub fn named(mut self, name: impl Into<String>) -> Self {
+        self.name = Some(name.into());
+        self
+    }
+
+    pub fn total_units(&self) -> u64 {
+        self.units.iter().map(|unit| unit.count).sum()
+    }
+
+    pub fn total_power(&self) -> u64 {
+        self.units
+            .iter()
+            .map(Unit::total_power)
+            .fold(0_u64, u64::saturating_add)
     }
 }
 
@@ -79,6 +112,19 @@ impl Unit {
             defense,
             hp,
         }
+    }
+
+    pub fn with_level(mut self, level: u32) -> Self {
+        self.level = level;
+        self
+    }
+
+    pub fn power_per_unit(&self) -> u64 {
+        unit_power(self.attack, self.defense, self.hp)
+    }
+
+    pub fn total_power(&self) -> u64 {
+        self.count.saturating_mul(self.power_per_unit())
     }
 }
 
@@ -114,6 +160,9 @@ pub struct FighterBattleStats {
     pub initial_units: u64,
     pub remaining_units: u64,
     pub units_lost: u64,
+    pub initial_power: u64,
+    pub remaining_power: u64,
+    pub power_lost: u64,
     pub damage_dealt: u64,
     pub damage_taken: u64,
     pub units: Vec<UnitBattleStats>,
@@ -126,8 +175,63 @@ pub struct UnitBattleStats {
     pub initial_count: u64,
     pub remaining_count: u64,
     pub units_lost: u64,
+    pub initial_power: u64,
+    pub remaining_power: u64,
+    pub power_lost: u64,
     pub damage_dealt: u64,
     pub damage_taken: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BattleSummary {
+    pub battle_id: u64,
+    pub outcome: BattleOutcome,
+    pub winner: Option<BattleSide>,
+    pub rounds: u32,
+    pub total_events: usize,
+    pub attacker: FighterBattleSummary,
+    pub defender: FighterBattleSummary,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FighterBattleSummary {
+    pub fighter_id: u64,
+    pub side: BattleSide,
+    pub initial_units: u64,
+    pub remaining_units: u64,
+    pub units_lost: u64,
+    pub loss_rate_bps: u32,
+    pub initial_power: u64,
+    pub remaining_power: u64,
+    pub power_lost: u64,
+    pub damage_dealt: u64,
+    pub damage_taken: u64,
+}
+
+impl FighterBattleStats {
+    pub fn loss_rate_bps(&self) -> u32 {
+        if self.initial_units == 0 {
+            return 0;
+        }
+
+        ((self.units_lost.saturating_mul(10_000)) / self.initial_units).min(10_000) as u32
+    }
+
+    pub fn summary(&self) -> FighterBattleSummary {
+        FighterBattleSummary {
+            fighter_id: self.fighter_id,
+            side: self.side,
+            initial_units: self.initial_units,
+            remaining_units: self.remaining_units,
+            units_lost: self.units_lost,
+            loss_rate_bps: self.loss_rate_bps(),
+            initial_power: self.initial_power,
+            remaining_power: self.remaining_power,
+            power_lost: self.power_lost,
+            damage_dealt: self.damage_dealt,
+            damage_taken: self.damage_taken,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -139,6 +243,12 @@ pub struct BattleReport {
     pub defender_initial: Vec<UnitSnapshot>,
     pub attacker_remaining: Vec<UnitSnapshot>,
     pub defender_remaining: Vec<UnitSnapshot>,
+}
+
+impl BattleReport {
+    pub fn total_events(&self) -> usize {
+        self.rounds.iter().map(|round| round.events.len()).sum()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -170,6 +280,8 @@ pub struct UnitSnapshot {
 pub enum BattleError {
     #[error("{side:?} fighter has no units")]
     EmptyFighter { side: BattleSide },
+    #[error("{side:?} fighter has duplicate unit id {unit_id}")]
+    DuplicateUnitId { side: BattleSide, unit_id: u64 },
     #[error("{side:?} unit {unit_id} has zero hp")]
     ZeroHp { side: BattleSide, unit_id: u64 },
     #[error("{side:?} unit {unit_id} has zero count")]
@@ -264,6 +376,28 @@ impl BattleEngine {
     }
 }
 
+impl BattleResult {
+    pub fn winner_side(&self) -> Option<BattleSide> {
+        self.outcome.winner()
+    }
+
+    pub fn total_events(&self) -> usize {
+        self.report.total_events()
+    }
+
+    pub fn summary(&self) -> BattleSummary {
+        BattleSummary {
+            battle_id: self.battle_id,
+            outcome: self.outcome,
+            winner: self.winner_side(),
+            rounds: self.rounds,
+            total_events: self.total_events(),
+            attacker: self.attacker.summary(),
+            defender: self.defender.summary(),
+        }
+    }
+}
+
 pub fn resolve_battle(input: &BattleInput) -> Result<BattleResult, BattleError> {
     BattleEngine::default().resolve(input)
 }
@@ -279,7 +413,14 @@ fn validate_fighter(side: BattleSide, fighter: &Fighter) -> Result<(), BattleErr
         return Err(BattleError::EmptyFighter { side });
     }
 
+    let mut unit_ids = HashSet::new();
     for unit in &fighter.units {
+        if !unit_ids.insert(unit.unit_id) {
+            return Err(BattleError::DuplicateUnitId {
+                side,
+                unit_id: unit.unit_id,
+            });
+        }
         if unit.count == 0 {
             return Err(BattleError::ZeroCount {
                 side,
@@ -383,6 +524,8 @@ impl FighterState {
             self.units.into_iter().map(UnitState::into_stats).collect();
         let initial_units = units.iter().map(|unit| unit.initial_count).sum();
         let remaining_units = units.iter().map(|unit| unit.remaining_count).sum();
+        let initial_power = units.iter().map(|unit| unit.initial_power).sum();
+        let remaining_power = units.iter().map(|unit| unit.remaining_power).sum();
         let damage_dealt = units.iter().map(|unit| unit.damage_dealt).sum();
         let damage_taken = units.iter().map(|unit| unit.damage_taken).sum();
 
@@ -392,6 +535,9 @@ impl FighterState {
             initial_units,
             remaining_units,
             units_lost: initial_units.saturating_sub(remaining_units),
+            initial_power,
+            remaining_power,
+            power_lost: initial_power.saturating_sub(remaining_power),
             damage_dealt,
             damage_taken,
             units,
@@ -472,12 +618,19 @@ impl UnitState {
     }
 
     fn into_stats(self) -> UnitBattleStats {
+        let power_per_unit = unit_power(self.attack, self.defense, self.hp);
+        let initial_power = self.initial_count.saturating_mul(power_per_unit);
+        let remaining_power = self.remaining_count.saturating_mul(power_per_unit);
+
         UnitBattleStats {
             unit_id: self.unit_id,
             config_id: self.config_id,
             initial_count: self.initial_count,
             remaining_count: self.remaining_count,
             units_lost: self.initial_count.saturating_sub(self.remaining_count),
+            initial_power,
+            remaining_power,
+            power_lost: initial_power.saturating_sub(remaining_power),
             damage_dealt: self.damage_dealt,
             damage_taken: self.damage_taken,
         }
@@ -490,12 +643,32 @@ struct DamageOutcome {
     units_lost: u64,
 }
 
+fn unit_power(attack: u32, defense: u32, hp: u32) -> u64 {
+    u64::from(attack)
+        .saturating_add(u64::from(defense))
+        .saturating_add(u64::from(hp))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn fighter(id: u64, units: Vec<Unit>) -> Fighter {
         Fighter::new(id, units)
+    }
+
+    #[test]
+    fn fighter_and_unit_helpers_report_power() {
+        let unit = Unit::new(10, 100, 3, 20, 5, 10).with_level(4);
+        assert_eq!(unit.level, 4);
+        assert_eq!(unit.power_per_unit(), 35);
+        assert_eq!(unit.total_power(), 105);
+
+        let fighter = fighter(1, vec![unit, Unit::new(11, 101, 2, 10, 3, 7)]).named("red");
+
+        assert_eq!(fighter.name.as_deref(), Some("red"));
+        assert_eq!(fighter.total_units(), 5);
+        assert_eq!(fighter.total_power(), 145);
     }
 
     #[test]
@@ -514,9 +687,23 @@ mod tests {
         assert_eq!(result.defender.remaining_units, 0);
         assert!(result.attacker.damage_dealt >= result.defender.damage_taken);
         assert_eq!(result.report.outcome, BattleOutcome::AttackerWin);
+        assert_eq!(result.winner_side(), Some(BattleSide::Attacker));
         assert_eq!(result.report.attacker_initial[0].count, 8);
         assert_eq!(result.report.defender_remaining[0].count, 0);
         assert!(!result.report.rounds.is_empty());
+
+        let summary = result.summary();
+        assert_eq!(summary.winner, Some(BattleSide::Attacker));
+        assert_eq!(summary.total_events, result.report.total_events());
+        assert_eq!(summary.defender.loss_rate_bps, 10_000);
+        assert_eq!(summary.defender.remaining_power, 0);
+        assert_eq!(
+            summary.defender.power_lost,
+            result
+                .defender
+                .initial_power
+                .saturating_sub(result.defender.remaining_power)
+        );
     }
 
     #[test]
@@ -572,9 +759,40 @@ mod tests {
     }
 
     #[test]
-    fn rejects_invalid_unit_hp() {
+    fn input_max_rounds_override_engine_rules() {
         let input = BattleInput::new(
             1005,
+            fighter(1, vec![Unit::new(10, 100, 1, 1, 100, 1_000)]),
+            fighter(2, vec![Unit::new(20, 200, 1, 1, 100, 1_000)]),
+        )
+        .with_max_rounds(2);
+        let engine = BattleEngine::new(BattleRules {
+            max_rounds: 10,
+            minimum_damage: 1,
+        });
+
+        let result = engine.resolve(&input).expect("battle should resolve");
+
+        assert_eq!(result.outcome, BattleOutcome::Draw);
+        assert_eq!(result.rounds, 2);
+    }
+
+    #[test]
+    fn rejects_zero_input_max_rounds() {
+        let input = BattleInput::new(
+            1006,
+            fighter(1, vec![Unit::new(10, 100, 1, 1, 1, 1)]),
+            fighter(2, vec![Unit::new(20, 200, 1, 1, 1, 1)]),
+        )
+        .with_max_rounds(0);
+
+        assert_eq!(resolve_battle(&input), Err(BattleError::ZeroMaxRounds));
+    }
+
+    #[test]
+    fn rejects_invalid_unit_hp() {
+        let input = BattleInput::new(
+            1007,
             fighter(1, vec![Unit::new(10, 100, 1, 1, 1, 0)]),
             fighter(2, vec![Unit::new(20, 200, 1, 1, 1, 1)]),
         );
@@ -591,7 +809,7 @@ mod tests {
     #[test]
     fn rejects_zero_unit_count() {
         let input = BattleInput::new(
-            1006,
+            1008,
             fighter(1, vec![Unit::new(10, 100, 0, 1, 1, 1)]),
             fighter(2, vec![Unit::new(20, 200, 1, 1, 1, 1)]),
         );
@@ -599,6 +817,29 @@ mod tests {
         assert_eq!(
             resolve_battle(&input),
             Err(BattleError::ZeroCount {
+                side: BattleSide::Attacker,
+                unit_id: 10,
+            })
+        );
+    }
+
+    #[test]
+    fn rejects_duplicate_unit_ids_per_fighter() {
+        let input = BattleInput::new(
+            1009,
+            fighter(
+                1,
+                vec![
+                    Unit::new(10, 100, 1, 1, 1, 1),
+                    Unit::new(10, 101, 1, 1, 1, 1),
+                ],
+            ),
+            fighter(2, vec![Unit::new(20, 200, 1, 1, 1, 1)]),
+        );
+
+        assert_eq!(
+            resolve_battle(&input),
+            Err(BattleError::DuplicateUnitId {
                 side: BattleSide::Attacker,
                 unit_id: 10,
             })
