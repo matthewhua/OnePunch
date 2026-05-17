@@ -1,7 +1,7 @@
 # Step 13+ 并行执行文档
 
 > 日期：2026-05-17
-> 当前基线：Step 13 outbound/idempotency、地图生命周期、MailSystem、采集生产化、Battle engine skeleton 已合入集成分支。
+> 当前基线：Step 13/14 主链路已合入，Step 15 Home system registry 已合入，下一步进入 Shop/VIP、Chat、Rank/GM 等 Home 运营系统。
 > 目的：把后续大功能切成可多 agent / 多 worktree 并行推进的工作流，同时避免核心文件互相覆盖。
 
 ## 0. 当前集成基线
@@ -9,10 +9,21 @@
 当前可继续派生工作的基线是：
 
 - 本地/远端分支：`integration/step13-collect-return-base`
-- 当前提交：`9ead2da2 merge step13 collect production settlement`
-- 已验证测试：`rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto`
+- 当前提交：`c2f6329b merge step15 home system registry`
+- 已合入：
+  - World outbound idempotency
+  - World map lifecycle
+  - MailSystem baseline
+  - Collect production settlement
+  - ScoutReport mail flow
+  - Battle engine core hardening
+  - World battle integration
+  - Home system registry
+- 已验证测试：
+  - `rtk cargo test --manifest-path Cargo.toml -p home@0.1.0 -p proto`
+  - `rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto`
 
-另一台电脑先同步这个基线：
+Linux 本机同步这个基线：
 
 ```bash
 rtk git -c core.quotepath=false fetch origin
@@ -30,6 +41,53 @@ rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p pr
 ```
 
 之后所有并行 worktree 都从 `integration/step13-collect-return-base` 分支切出，最后统一合回这个集成分支。
+
+## 0.1 Mac 接管流程
+
+Mac 上的主路径使用：
+
+```bash
+cd ~/DEV/javaCode/OnePunch/slg-rs
+```
+
+切到 Mac 后先同步最新集成分支：
+
+```bash
+rtk git -c core.quotepath=false fetch origin
+rtk git -c core.quotepath=false switch integration/step13-collect-return-base
+rtk git -c core.quotepath=false pull --ff-only
+rtk git -c core.quotepath=false status --short --branch
+rtk git -c core.quotepath=false show --no-patch --oneline --decorate HEAD
+rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto
+```
+
+Mac worktree 根目录建议使用：
+
+```bash
+rtk mkdir -p ~/DEV/javaCode/OnePunch-worktrees
+```
+
+新任务统一从最新 integration 派生：
+
+```bash
+rtk git -c core.quotepath=false worktree add \
+  ~/DEV/javaCode/OnePunch-worktrees/<worktree-name> \
+  -b agent/<branch-name> origin/integration/step13-collect-return-base
+```
+
+Mac 成为主工作机后，当前 Linux 窗口只作为参考，不再同时修改热点文件。每个 agent 完成后必须 push 自己的 `agent/*` 分支，再由主工作机合入 `integration/step13-collect-return-base`。
+
+集成分支合并规则：
+
+```bash
+rtk git -c core.quotepath=false fetch origin
+rtk git -c core.quotepath=false switch integration/step13-collect-return-base
+rtk git -c core.quotepath=false pull --ff-only
+rtk git -c core.quotepath=false merge --no-ff origin/agent/<branch-name>
+rtk git -c core.quotepath=false diff --check
+rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto
+rtk git -c core.quotepath=false push origin integration/step13-collect-return-base
+```
 
 ## 1. 并行原则
 
@@ -54,7 +112,7 @@ rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p pr
 ## 2. Worktree 模板
 
 ```bash
-mkdir -p /home/matt/dev/javaCode/OnePunch-worktrees
+rtk mkdir -p /home/matt/dev/javaCode/OnePunch-worktrees
 
 rtk git -c core.quotepath=false worktree add \
   /home/matt/dev/javaCode/OnePunch-worktrees/slg-outbound-idempotency \
@@ -186,97 +244,194 @@ rtk cargo test --manifest-path Cargo.toml -p world -p home@0.1.0 -p proto
 
 如果合并冲突发生在热点文件，只让该 lane owner 处理，不要让多个 agent 同时修同一个冲突。
 
-## 7. 另一台电脑自治任务：ScoutReport
+## 7. 当前待办队列
 
-当前最高收益的下一步是做 ScoutReport 闭环。因为 MailSystem 已经合入，侦查报告可以直接从 World outbound payload 落到 Home 邮件，不需要再拆 MailSystem 前置任务。
+已完成：
 
-在另一台电脑执行：
+1. Step 13 World outbound/idempotency
+2. Step 13 world map lifecycle
+3. Step 13 MailSystem baseline
+4. Step 13 collect production settlement
+5. Step 13 ScoutReport mail flow
+6. Step 14 shared battle engine core
+7. Step 14 World battle integration
+8. Step 15 Home system registry
 
-```bash
-cd /home/matt/dev/javaCode/OnePunch/slg-rs
-rtk git -c core.quotepath=false fetch origin
-rtk git -c core.quotepath=false switch -c integration/step13-collect-return-base origin/integration/step13-collect-return-base 2>/dev/null || rtk git -c core.quotepath=false switch integration/step13-collect-return-base
-rtk git -c core.quotepath=false pull --ff-only
+当前建议顺序：
 
-mkdir -p /home/matt/dev/javaCode/OnePunch-worktrees
-rtk git -c core.quotepath=false worktree add \
-  /home/matt/dev/javaCode/OnePunch-worktrees/slg-scout-report \
-  -b agent/step13-scout-report integration/step13-collect-return-base
+1. `agent/step15-shop-vip`：Shop/VIP 最小闭环，优先做。
+2. `agent/step15-chat`：聊天系统，Shop/VIP 完成后可并行。
+3. `agent/step15-rank-gm`：排行/GM 基线，Shop/VIP 完成后可并行。
+4. `agent/step15-world-query-completion`：World 查询补全，避开 Home 热点文件时可并行。
+5. `agent/step15-battle-report-polish`：战报展示和邮件字段补强，只在没有其他 agent 修改 `mail.rs`/`player_actor.rs` 时做。
 
-cd /home/matt/dev/javaCode/OnePunch-worktrees/slg-scout-report
-rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto
-```
+当前热点文件：
 
-给 autonomous agent 的完整提示词：
+- `crates/home/src/actors/player_actor.rs`
+- `crates/home/src/systems/registry.rs`
+- `crates/home/src/systems/mod.rs`
+- `crates/proto/proto/service.proto`
+- `crates/world/src/outbound.rs`
+- `crates/world/src/sector_actor.rs`
+
+同一时间只允许一个实现型 agent 修改这些文件。其他 agent 可以做只读分析或写不冲突的新模块。
+
+## 8. 下一轮自治任务：Shop/VIP
+
+Mac 上开新对话后，把下面整段给 agent：
 
 ```text
-你在 /home/matt/dev/javaCode/OnePunch-worktrees/slg-scout-report 工作。
-只负责 Step 13 ScoutReport 闭环。
-你不是唯一 agent，不要回退别人改动，不要改无关文件。
-遵守 RTK：所有 shell 命令必须以 rtk 开头。
+你在 ~/DEV/javaCode/OnePunch/slg-rs 工作。先同步最新 integration，并创建独立 worktree：
 
-基线：
-- 当前分支应该是 agent/step13-scout-report。
-- 这个分支必须从 origin/integration/step13-collect-return-base 派生。
-- 基线提交应包含 MailSystem、World outbound idempotency、地图生命周期、采集生产化、battle engine skeleton。
+rtk git -c core.quotepath=false fetch origin
+rtk git -c core.quotepath=false switch integration/step13-collect-return-base
+rtk git -c core.quotepath=false pull --ff-only
+
+rtk mkdir -p ~/DEV/javaCode/OnePunch-worktrees
+rtk git -c core.quotepath=false worktree add \
+  ~/DEV/javaCode/OnePunch-worktrees/slg-shop-vip \
+  -b agent/step15-shop-vip origin/integration/step13-collect-return-base
+
+cd ~/DEV/javaCode/OnePunch-worktrees/slg-shop-vip
+
+任务：实现 Step 15 Shop/VIP 最小闭环。
+
+背景：
+- 最新基线是 origin/integration/step13-collect-return-base。
+- 已合入 Home system registry：crates/home/src/systems/registry.rs。
+- 新 Home 系统命令应该通过 registry 接入，尽量减少 player_actor.rs 改动。
+- 已合入 MailSystem、ScoutReport、World battle integration。
 
 目标：
-1. 把 World 侧 ScoutReportRequested 从占位/简单事件扩展成真实侦查报告 payload。
-2. 报告至少包含目标坐标、目标实体类型/owner、资源/驻军/基础防御或当前已有数据能表达的等价字段。
-3. 通过 World outbound 把 ScoutReport payload 投递给 Home。
-4. Home 收到后调用已合入的 MailSystem 写入侦查报告邮件，避免绕过 MailSystem 直接写 protobuf 字段。
-5. 保持 outbound 幂等语义：重复投递同一个 event_id/event_key 不重复生成邮件。
+1. 新增或补全 ShopSystem 和 VipSystem。
+2. 支持最小商品购买流程：校验配置、扣资源/道具、发奖励。
+3. 支持 VIP 经验/等级基础数据：load/save、登录下发、基础查询。
+4. 通过 Home registry 注册命令路由，不要把大量 match 逻辑加回 player_actor.rs。
+5. 增加测试覆盖购买成功、资源不足、VIP 数据保存/下发。
 
 文件归属：
-- 可以修改：crates/proto/proto/service.proto
-- 可以修改：crates/world/src/outbound.rs
-- 可以修改：crates/world/src/sector_actor.rs
-- 可以修改：crates/home/src/actors/player_actor.rs
-- 可以修改：crates/home/src/systems/mail.rs
-- 可以按现有模式补测试文件或同模块单测。
+- 可以新增/修改：crates/home/src/systems/shop.rs
+- 可以新增/修改：crates/home/src/systems/vip.rs
+- 可以修改：crates/home/src/systems/mod.rs
+- 可以修改：crates/home/src/systems/registry.rs
+- 可以小改：crates/home/src/actors/player_actor.rs，仅限字段初始化/注册所必需
+- 可以使用：crates/shared/src/static_config/shop.rs、crates/shared/src/static_config/vip.rs
+- 尽量不要修改 proto、world、shared battle
 
 限制：
-- 不要做 World battle integration。
-- 不要重构 Home 系统注册。
-- 不要实现 Shop/VIP/Chat/Rank/GM。
-- 不要大改采集结算、地图刷新、MailSystem 已有命令语义；只做 ScoutReport 所需的最小扩展。
+- 不要实现 Chat/Rank/GM。
+- 不要改 ScoutReport/BattleResult/MailSystem 语义。
+- 不要重构 registry 架构，只按现有模式接入。
+- 不要做无关格式化。
+- 你不是唯一 agent，不要回退别人改动。
 
 验收：
-1. 增加或更新测试，覆盖 World 生成 ScoutReport outbound payload。
-2. 增加或更新测试，覆盖 Home 收到 ScoutReport 后创建邮件。
-3. 增加或更新测试，覆盖重复投递不重复创建邮件。
-4. 运行：
-   rtk git -c core.quotepath=false diff --check
-   rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto
+rtk git -c core.quotepath=false diff --check
+rtk cargo test --manifest-path Cargo.toml -p home@0.1.0 -p proto
+rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto
 
-完成后提交：
-rtk git -c core.quotepath=false status --short --branch
+完成后提交并推送：
 rtk git -c core.quotepath=false add -A
-rtk git -c core.quotepath=false commit -m "step13 add scout report mail flow"
+rtk git -c core.quotepath=false commit -m "step15 add shop vip systems"
+rtk git -c core.quotepath=false push -u origin HEAD:refs/heads/agent/step15-shop-vip
 
-最终回答必须列出：
+最终回答列出：
 - 改动文件
 - 测试结果
-- 是否还有需要主集成分支处理的冲突或风险
+- 后续 Chat/Rank/GM 如何接入 registry
+- 剩余风险
 ```
 
-ScoutReport 进行期间，不要让其他 agent 同时修改这些热点文件：`service.proto`、`world/src/outbound.rs`、`world/src/sector_actor.rs`、`home/src/actors/player_actor.rs`、`home/src/systems/mail.rs`。
+Shop/VIP 进行期间，不要让其他实现 agent 修改 `player_actor.rs`、`systems/registry.rs`、`systems/mod.rs`。
 
-可以并行给其他 agent 的只读任务：评估 `World battle integration` 需要接哪些命令和测试，但不得编辑文件。
+## 9. 后续并行提示词草案
 
-## 8. 下一步选择
+### Chat
 
-如果目标是最快把 Step 13 收口，下一步做：
+```text
+你在 ~/DEV/javaCode/OnePunch/slg-rs 工作。从 origin/integration/step13-collect-return-base 创建 worktree：
+~/DEV/javaCode/OnePunch-worktrees/slg-chat
+分支：agent/step15-chat
 
-1. ScoutReport 生成 + 邮件落地
-2. World battle integration 设计审查
-3. Home 系统注册整理
-4. Shop/VIP、Chat、Rank/GM
+任务：实现 Step 15 Chat 最小闭环。
 
-如果目标是尽快启动 Step 14，下一步并行做：
+目标：
+1. 新增 chat actor/system 或最小 Home/Gateway 可路由聊天模块。
+2. 支持私聊/频道/系统消息中的最小可测试子集。
+3. 如果需要 Home 命令，必须通过 systems::registry 接入。
+4. 增加测试覆盖消息发送、非法目标、基础路由。
 
-1. 只读审查 World battle integration
-2. 战报邮件格式补强
-3. 战斗入口命令的兼容性测试草案
+限制：
+- 不要改 Shop/VIP。
+- 不要改 World battle/ScoutReport/MailSystem 语义。
+- 如果必须修改 proto 或 gateway 路由，先保持改动最小并补测试。
 
-真正的 World battle integration 等 ScoutReport owner 释放 `service.proto`、`outbound.rs`、`sector_actor.rs` 后再做。
+验收：
+rtk git -c core.quotepath=false diff --check
+rtk cargo test --manifest-path Cargo.toml -p gateway -p home@0.1.0 -p proto
+rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto
+
+提交：
+rtk git -c core.quotepath=false commit -m "step15 add chat baseline"
+rtk git -c core.quotepath=false push -u origin HEAD:refs/heads/agent/step15-chat
+```
+
+### Rank/GM
+
+```text
+你在 ~/DEV/javaCode/OnePunch/slg-rs 工作。从 origin/integration/step13-collect-return-base 创建 worktree：
+~/DEV/javaCode/OnePunch-worktrees/slg-rank-gm
+分支：agent/step15-rank-gm
+
+任务：实现 Step 15 Rank/GM 基线。
+
+目标：
+1. 建立排行榜快照的最小数据结构和查询入口。
+2. 建立 GM 命令的最小入口，支持只读/受限修改的基础命令。
+3. 如果接入 Home 命令，必须通过 systems::registry。
+4. 补测试覆盖排行榜排序、空数据、非法 GM 命令。
+
+限制：
+- 不要改 Shop/VIP。
+- 不要改 Chat。
+- 不要改 World battle/ScoutReport/MailSystem 语义。
+- 不要引入真实高权限破坏性命令。
+
+验收：
+rtk git -c core.quotepath=false diff --check
+rtk cargo test --manifest-path Cargo.toml -p home@0.1.0 -p shared -p proto
+rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto
+
+提交：
+rtk git -c core.quotepath=false commit -m "step15 add rank gm baseline"
+rtk git -c core.quotepath=false push -u origin HEAD:refs/heads/agent/step15-rank-gm
+```
+
+### World 查询补全
+
+```text
+你在 ~/DEV/javaCode/OnePunch/slg-rs 工作。从 origin/integration/step13-collect-return-base 创建 worktree：
+~/DEV/javaCode/OnePunch-worktrees/slg-world-query-completion
+分支：agent/step15-world-query-completion
+
+任务：补全 World 查询命令，逐步替换兼容空响应。
+
+目标：
+1. 梳理 crates/world/src/service.rs 中仍返回占位/空数据的查询命令。
+2. 优先补全只读查询，不改 battle/scout/collect 语义。
+3. 增加服务层测试，覆盖每个补全命令。
+
+限制：
+- 不要修改 Home registry/Shop/VIP/Chat/Rank/GM。
+- 不要重构 sector actor。
+- 如果必须碰 service.rs，当前任务独占该文件。
+
+验收：
+rtk git -c core.quotepath=false diff --check
+rtk cargo test --manifest-path Cargo.toml -p world -p proto
+rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto
+
+提交：
+rtk git -c core.quotepath=false commit -m "step15 complete world query responses"
+rtk git -c core.quotepath=false push -u origin HEAD:refs/heads/agent/step15-world-query-completion
+```
