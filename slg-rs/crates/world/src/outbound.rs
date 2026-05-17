@@ -1,10 +1,11 @@
 use anyhow::Result;
 use prost::Message;
 use proto::slg::{
-    AwardPb, BaseTroop, WorldCollectReturnedPayload, WorldCollectStartedPayload,
-    WorldGarrisonChangedPayload, WorldOutboundRq, WorldScoutReportRequestedPayload,
-    WorldTroopReturnedPayload,
+    AwardPb, BaseTroop, WorldBattleFighterSummaryPayload, WorldBattleResultPayload,
+    WorldCollectReturnedPayload, WorldCollectStartedPayload, WorldGarrisonChangedPayload,
+    WorldOutboundRq, WorldScoutReportRequestedPayload, WorldTroopReturnedPayload,
 };
+use shared::battle::{BattleOutcome, BattleResult, BattleSide, FighterBattleSummary};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 
@@ -16,6 +17,7 @@ pub const WORLD_OUTBOUND_EVENT_COLLECT_STARTED: i32 = 2;
 pub const WORLD_OUTBOUND_EVENT_TROOP_RETURNED: i32 = 3;
 pub const WORLD_OUTBOUND_EVENT_GARRISON_CHANGED: i32 = 4;
 pub const WORLD_OUTBOUND_EVENT_COLLECT_RETURNED: i32 = 5;
+pub const WORLD_OUTBOUND_EVENT_BATTLE_RESULT: i32 = 6;
 
 /// World entity types mirroring WorldEntityTypeDefine
 pub const ENTITY_TYPE_PLAYER: i32 = 1;
@@ -86,6 +88,16 @@ pub enum WorldOutboundEvent {
         camp: Option<i32>,
         is_arrival: bool,
     },
+    BattleResult {
+        troop_key: i32,
+        march_type: Option<i32>,
+        origin: Option<i32>,
+        target_pos: i32,
+        camp: Option<i32>,
+        result: BattleResult,
+        target_owner_id: Option<i64>,
+        target_entity_type: Option<i32>,
+    },
 }
 
 impl WorldOutboundEvent {
@@ -96,7 +108,8 @@ impl WorldOutboundEvent {
             | Self::CollectStarted { troop_key, .. }
             | Self::CollectReturned { troop_key, .. }
             | Self::TroopReturned { troop_key, .. }
-            | Self::GarrisonChanged { troop_key, .. } => *troop_key,
+            | Self::GarrisonChanged { troop_key, .. }
+            | Self::BattleResult { troop_key, .. } => *troop_key,
         }
     }
 
@@ -107,7 +120,8 @@ impl WorldOutboundEvent {
             | Self::CollectStarted { .. }
             | Self::CollectReturned { .. }
             | Self::TroopReturned { .. }
-            | Self::GarrisonChanged { .. } => WorldOutboundTarget::Home,
+            | Self::GarrisonChanged { .. }
+            | Self::BattleResult { .. } => WorldOutboundTarget::Home,
         }
     }
 
@@ -199,6 +213,24 @@ impl WorldOutboundEvent {
                 optional_i32(*camp),
                 is_arrival
             ),
+            Self::BattleResult {
+                troop_key,
+                march_type,
+                origin,
+                target_pos,
+                camp,
+                result,
+                ..
+            } => format!(
+                "world:battle_result:role={}:troop={}:target={}:battle={}:march_type={}:origin={}:camp={}",
+                role_id,
+                troop_key,
+                target_pos,
+                result.battle_id,
+                optional_i32(*march_type),
+                optional_i32(*origin),
+                optional_i32(*camp)
+            ),
         }
     }
 
@@ -218,22 +250,41 @@ impl WorldOutboundEvent {
                 camp,
                 report,
             } => {
-                let (target_entity_type, target_owner_id, target_camp, target_conf_id, target_is_battle, target_protect_time, scout_time_ms, target_resources, garrison_troops) =
-                    if let Some(r) = report {
-                        (
-                            r.target_entity_type,
-                            r.target_owner_id,
-                            r.target_camp,
-                            r.target_conf_id,
-                            Some(r.target_is_battle),
-                            r.target_protect_time,
-                            Some(r.scout_time_ms),
-                            r.target_resources.clone(),
-                            r.garrison_troops.clone(),
-                        )
-                    } else {
-                        (None, None, None, None, None, None, None, Vec::new(), Vec::new())
-                    };
+                let (
+                    target_entity_type,
+                    target_owner_id,
+                    target_camp,
+                    target_conf_id,
+                    target_is_battle,
+                    target_protect_time,
+                    scout_time_ms,
+                    target_resources,
+                    garrison_troops,
+                ) = if let Some(r) = report {
+                    (
+                        r.target_entity_type,
+                        r.target_owner_id,
+                        r.target_camp,
+                        r.target_conf_id,
+                        Some(r.target_is_battle),
+                        r.target_protect_time,
+                        Some(r.scout_time_ms),
+                        r.target_resources.clone(),
+                        r.garrison_troops.clone(),
+                    )
+                } else {
+                    (
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        Vec::new(),
+                        Vec::new(),
+                    )
+                };
                 (
                     WORLD_OUTBOUND_EVENT_SCOUT_REPORT_REQUESTED,
                     *target_pos,
@@ -259,7 +310,7 @@ impl WorldOutboundEvent {
                         optional_i32(*camp)
                     ),
                 )
-            },
+            }
             Self::CollectStarted {
                 troop_key,
                 target_pos,
@@ -347,6 +398,51 @@ impl WorldOutboundEvent {
                     is_arrival
                 ),
             ),
+            Self::BattleResult {
+                troop_key,
+                march_type,
+                origin,
+                target_pos,
+                camp,
+                result,
+                target_owner_id,
+                target_entity_type,
+            } => {
+                let summary = result.summary();
+                (
+                    WORLD_OUTBOUND_EVENT_BATTLE_RESULT,
+                    *target_pos,
+                    *troop_key,
+                    WorldBattleResultPayload {
+                        battle_id: u64_to_i64_saturating(summary.battle_id),
+                        target_pos: *target_pos,
+                        origin: *origin,
+                        march_type: *march_type,
+                        camp: *camp,
+                        outcome: battle_outcome_name(summary.outcome).to_string(),
+                        winner_side: summary
+                            .winner
+                            .map(battle_side_name)
+                            .unwrap_or("Draw")
+                            .to_string(),
+                        rounds: u32_to_i32_saturating(summary.rounds),
+                        total_events: usize_to_i32_saturating(summary.total_events),
+                        attacker: Some(fighter_summary_payload(&summary.attacker)),
+                        defender: Some(fighter_summary_payload(&summary.defender)),
+                        target_owner_id: *target_owner_id,
+                        target_entity_type: *target_entity_type,
+                    }
+                    .encode_to_vec(),
+                    format!(
+                        "battle_result battle_id={} outcome={} rounds={} attacker_lost={} defender_lost={}",
+                        summary.battle_id,
+                        battle_outcome_name(summary.outcome),
+                        summary.rounds,
+                        summary.attacker.units_lost,
+                        summary.defender.units_lost
+                    ),
+                )
+            }
             Self::BattleStartRequested { .. } => {
                 return Err(anyhow::anyhow!(
                     "battle outbound event cannot be sent to Home"
@@ -385,6 +481,48 @@ fn optional_i32(value: Option<i32>) -> String {
     value
         .map(|value| value.to_string())
         .unwrap_or_else(|| "none".to_string())
+}
+
+fn battle_outcome_name(outcome: BattleOutcome) -> &'static str {
+    match outcome {
+        BattleOutcome::AttackerWin => "AttackerWin",
+        BattleOutcome::DefenderWin => "DefenderWin",
+        BattleOutcome::Draw => "Draw",
+    }
+}
+
+fn battle_side_name(side: BattleSide) -> &'static str {
+    match side {
+        BattleSide::Attacker => "Attacker",
+        BattleSide::Defender => "Defender",
+    }
+}
+
+fn fighter_summary_payload(summary: &FighterBattleSummary) -> WorldBattleFighterSummaryPayload {
+    WorldBattleFighterSummaryPayload {
+        fighter_id: u64_to_i64_saturating(summary.fighter_id),
+        initial_units: u64_to_i64_saturating(summary.initial_units),
+        remaining_units: u64_to_i64_saturating(summary.remaining_units),
+        units_lost: u64_to_i64_saturating(summary.units_lost),
+        initial_power: u64_to_i64_saturating(summary.initial_power),
+        remaining_power: u64_to_i64_saturating(summary.remaining_power),
+        power_lost: u64_to_i64_saturating(summary.power_lost),
+        damage_dealt: u64_to_i64_saturating(summary.damage_dealt),
+        damage_taken: u64_to_i64_saturating(summary.damage_taken),
+        loss_rate_bps: u32_to_i32_saturating(summary.loss_rate_bps),
+    }
+}
+
+fn u64_to_i64_saturating(value: u64) -> i64 {
+    value.min(i64::MAX as u64) as i64
+}
+
+fn u32_to_i32_saturating(value: u32) -> i32 {
+    value.min(i32::MAX as u32) as i32
+}
+
+fn usize_to_i32_saturating(value: usize) -> i32 {
+    value.min(i32::MAX as usize) as i32
 }
 
 pub trait WorldOutboundSink: Send + Sync {
@@ -635,6 +773,7 @@ mod tests {
     use crate::march::{
         MARCH_TYPE_ATK_PLAYER, MARCH_TYPE_GARRISON_CITY, MARCH_TYPE_MINE_COLLECT, MARCH_TYPE_SCOUT,
     };
+    use shared::battle::{resolve_battle, BattleInput, Fighter, Unit};
 
     fn troop(key: i32, troop_type: i32, origin: i32, goal: i32) -> BaseTroop {
         BaseTroop {
@@ -818,6 +957,26 @@ mod tests {
             .target(),
             WorldOutboundTarget::Home
         );
+        let battle_result = resolve_battle(&BattleInput::new(
+            99,
+            Fighter::new(1, vec![Unit::new(1, 1, 10, 12, 5, 10)]),
+            Fighter::new(2, vec![Unit::new(2, 2, 8, 10, 4, 10)]),
+        ))
+        .unwrap();
+        assert_eq!(
+            WorldOutboundEvent::BattleResult {
+                troop_key: 4,
+                march_type: Some(MARCH_TYPE_ATK_PLAYER),
+                origin: Some(10),
+                target_pos: 20,
+                camp: Some(7),
+                result: battle_result,
+                target_owner_id: Some(900_002),
+                target_entity_type: Some(ENTITY_TYPE_PLAYER),
+            }
+            .target(),
+            WorldOutboundTarget::Home
+        );
     }
 
     #[tokio::test]
@@ -955,6 +1114,37 @@ mod tests {
         assert_eq!(returned_payload.formation_id, Some(7));
         assert_eq!(returned_payload.awards.len(), 1);
         assert_eq!(returned_payload.awards[0].count, 100);
+
+        let result = resolve_battle(&BattleInput::new(
+            99,
+            Fighter::new(1, vec![Unit::new(1, 1, 10, 12, 5, 10)]),
+            Fighter::new(2, vec![Unit::new(2, 2, 8, 10, 4, 10)]),
+        ))
+        .unwrap();
+        let battle = WorldOutboundEvent::BattleResult {
+            troop_key: 14,
+            march_type: Some(MARCH_TYPE_ATK_PLAYER),
+            origin: Some(1),
+            target_pos: 6,
+            camp: Some(7),
+            result,
+            target_owner_id: Some(900_002),
+            target_entity_type: Some(ENTITY_TYPE_PLAYER),
+        }
+        .to_home_request(900_001)
+        .unwrap();
+        assert_eq!(battle.event_type, WORLD_OUTBOUND_EVENT_BATTLE_RESULT);
+        assert_eq!(
+            battle.event_key,
+            "world:battle_result:role=900001:troop=14:target=6:battle=99:march_type=2:origin=1:camp=7"
+        );
+        let battle_payload = WorldBattleResultPayload::decode(battle.payload.as_slice()).unwrap();
+        assert_eq!(battle_payload.battle_id, 99);
+        assert_eq!(battle_payload.target_pos, 6);
+        assert_eq!(battle_payload.target_owner_id, Some(900_002));
+        assert_eq!(battle_payload.target_entity_type, Some(ENTITY_TYPE_PLAYER));
+        assert!(battle_payload.attacker.unwrap().initial_units > 0);
+        assert!(battle_payload.defender.unwrap().initial_units > 0);
     }
 
     #[test]

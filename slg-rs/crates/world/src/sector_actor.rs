@@ -11,7 +11,7 @@ use crate::march::{
 use crate::message::SectorMessage;
 use crate::outbound::{
     outbound_events_for_resolution, InMemoryOutboundSink, ScoutReportData, WorldOutboundEvent,
-    WorldOutboundSink, ENTITY_TYPE_MINE,
+    WorldOutboundSink, ENTITY_TYPE_BANDIT, ENTITY_TYPE_CITY, ENTITY_TYPE_MINE, ENTITY_TYPE_PLAYER,
 };
 use crate::supervisor::ActorId;
 use crate::timer_wheel::TimerWheel;
@@ -20,6 +20,7 @@ use anyhow::Result;
 use bytes::Bytes;
 use dashmap::DashMap;
 use proto::slg::{BaseEntity, BaseTroop, GarrisonTroop};
+use shared::battle::{resolve_battle, BattleInput, Fighter, Unit};
 use shared::static_config::WorldConfig;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -535,6 +536,8 @@ impl MapSectorActor {
             }]
         } else if action == ArrivalAction::Scout {
             self.build_scout_report_events(&troop, &resolution, goal_pos)
+        } else if action == ArrivalAction::Battle {
+            self.build_battle_result_events(&troop, &resolution, goal_pos)
         } else {
             outbound_events_for_resolution(&troop, &resolution)
         };
@@ -650,6 +653,54 @@ impl MapSectorActor {
                 error!(error = %err, "Failed to publish world outbound event");
             }
         }
+    }
+
+    fn build_battle_result_events(
+        &self,
+        troop: &BaseTroop,
+        resolution: &crate::arrival::ArrivalResolution,
+        goal_pos: i32,
+    ) -> Vec<WorldOutboundEvent> {
+        let target = self.entities.get(&goal_pos);
+        let input = self.build_battle_input(troop, target, goal_pos);
+        let result = match resolve_battle(&input) {
+            Ok(result) => result,
+            Err(err) => {
+                error!(
+                    troop_key = troop.key,
+                    goal_pos,
+                    error = %err,
+                    "Failed to resolve World battle arrival"
+                );
+                return Vec::new();
+            }
+        };
+
+        vec![WorldOutboundEvent::BattleResult {
+            troop_key: troop.key,
+            march_type: troop.r#type,
+            origin: troop.origin,
+            target_pos: resolution.pos,
+            camp: troop.camp,
+            result,
+            target_owner_id: target.and_then(|entity| entity.key_id.map(i64::from)),
+            target_entity_type: target.and_then(|entity| entity.entity_type),
+        }]
+    }
+
+    fn build_battle_input(
+        &self,
+        troop: &BaseTroop,
+        target: Option<&BaseEntity>,
+        goal_pos: i32,
+    ) -> BattleInput {
+        let battle_id = battle_id_for_arrival(troop.key, goal_pos);
+        let attacker = Fighter::new(u64::from(troop.key as u32), vec![attacker_unit(troop)]);
+        let defender = Fighter::new(
+            defender_fighter_id(target, goal_pos),
+            defender_units_for_target(target, &self.garrison_state.list(Some(goal_pos)), goal_pos),
+        );
+        BattleInput::new(battle_id, attacker, defender)
     }
 
     /// Build scout report events with enriched data from the world state.
@@ -810,6 +861,81 @@ impl MapSectorActor {
     }
 }
 
+fn battle_id_for_arrival(troop_key: i32, target_pos: i32) -> u64 {
+    (u64::from(troop_key as u32) << 32) | u64::from(target_pos as u32)
+}
+
+fn attacker_unit(troop: &BaseTroop) -> Unit {
+    let camp_bonus = troop.camp.unwrap_or_default().unsigned_abs().min(10);
+    Unit::new(
+        u64::from(troop.key as u32),
+        troop.r#type.unwrap_or_default() as u32,
+        100,
+        18 + camp_bonus,
+        8 + camp_bonus / 2,
+        10,
+    )
+}
+
+fn defender_fighter_id(target: Option<&BaseEntity>, goal_pos: i32) -> u64 {
+    target
+        .and_then(|entity| entity.key_id)
+        .map(|key_id| u64::from(key_id as u32))
+        .unwrap_or_else(|| u64::from(goal_pos as u32))
+}
+
+fn defender_units_for_target(
+    target: Option<&BaseEntity>,
+    garrisons: &[GarrisonTroop],
+    goal_pos: i32,
+) -> Vec<Unit> {
+    let mut units = Vec::new();
+    for garrison in garrisons {
+        let troop_key = garrison.troop_key_id.unwrap_or(goal_pos);
+        for (idx, hero) in garrison.troop_hero.iter().enumerate() {
+            let count = hero.army_count.unwrap_or_default().max(0) as u64;
+            if count == 0 {
+                continue;
+            }
+            let level = hero.army_lv.unwrap_or(1).max(1) as u32;
+            units.push(
+                Unit::new(
+                    u64::from(troop_key as u32)
+                        .saturating_mul(1_000)
+                        .saturating_add(idx as u64 + 1),
+                    hero.hero_id.unwrap_or_default() as u32,
+                    count,
+                    12 + level,
+                    7 + level / 2,
+                    10 + level,
+                )
+                .with_level(level),
+            );
+        }
+    }
+    if !units.is_empty() {
+        return units;
+    }
+
+    let (config_id, count, attack, defense, hp) = match target.and_then(|entity| entity.entity_type)
+    {
+        Some(ENTITY_TYPE_PLAYER) => (1, 120, 15, 9, 11),
+        Some(ENTITY_TYPE_BANDIT) => (2, 80, 13, 7, 9),
+        Some(ENTITY_TYPE_CITY) => (4, 160, 14, 12, 12),
+        _ => (0, 90, 12, 8, 10),
+    };
+    vec![Unit::new(
+        u64::from(goal_pos as u32),
+        target
+            .and_then(|entity| entity.conf_id)
+            .unwrap_or(config_id) as u32,
+        count,
+        attack,
+        defense,
+        hp,
+    )]
+}
+
 fn garrison_troop_from_arrival(troop: &BaseTroop) -> GarrisonTroop {
     GarrisonTroop {
         troop_key_id: Some(troop.key),
@@ -917,7 +1043,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn arrival_publishes_battle_event() {
+    async fn arrival_resolves_battle_and_publishes_result_event() {
         let sink = Arc::new(InMemoryOutboundSink::new());
         let (mut actor, _garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
         let origin = xy_to_pos(0, 0);
@@ -936,17 +1062,26 @@ mod tests {
 
         let records = sink.records();
         assert_eq!(records.len(), 1);
-        assert_eq!(records[0].target(), WorldOutboundTarget::Battle);
-        assert_eq!(
-            records[0],
-            WorldOutboundEvent::BattleStartRequested {
+        assert_eq!(records[0].target(), WorldOutboundTarget::Home);
+        match &records[0] {
+            WorldOutboundEvent::BattleResult {
                 troop_key: 1,
                 march_type: Some(MARCH_TYPE_ATK_PLAYER),
-                origin: Some(origin),
-                target_pos: goal,
+                origin: Some(record_origin),
+                target_pos,
                 camp: Some(2),
+                result,
+                ..
+            } => {
+                assert_eq!(*record_origin, origin);
+                assert_eq!(*target_pos, goal);
+                assert_eq!(result.battle_id, battle_id_for_arrival(1, goal));
+                assert!(result.rounds > 0);
+                assert!(result.attacker.initial_units > 0);
+                assert!(result.defender.initial_units > 0);
             }
-        );
+            other => panic!("expected BattleResult, got {:?}", other),
+        }
 
         let _ = tokio::fs::remove_file(wal_path).await;
     }
@@ -1499,7 +1634,10 @@ mod tests {
                 assert_eq!(*camp, Some(1));
 
                 let report = report.as_ref().expect("scout report data must be present");
-                assert_eq!(report.target_entity_type, Some(proto::slg::WorldEntityTypeDefine::EntityTypePlayer as i32));
+                assert_eq!(
+                    report.target_entity_type,
+                    Some(proto::slg::WorldEntityTypeDefine::EntityTypePlayer as i32)
+                );
                 assert_eq!(report.target_owner_id, Some(900_001));
                 assert_eq!(report.target_camp, Some(2));
                 assert_eq!(report.target_conf_id, Some(7));
@@ -1553,9 +1691,15 @@ mod tests {
             _ => panic!("unexpected event"),
         };
 
-        assert_eq!(report.target_entity_type, Some(proto::slg::WorldEntityTypeDefine::EntityTypeMine as i32));
+        assert_eq!(
+            report.target_entity_type,
+            Some(proto::slg::WorldEntityTypeDefine::EntityTypeMine as i32)
+        );
         assert_eq!(report.target_resources.len(), 1);
-        assert_eq!(report.target_resources[0].id, crate::collect::RESOURCE_ID_MEAT);
+        assert_eq!(
+            report.target_resources[0].id,
+            crate::collect::RESOURCE_ID_MEAT
+        );
         assert_eq!(report.target_resources[0].count, 300);
 
         let _ = tokio::fs::remove_file(wal_path).await;

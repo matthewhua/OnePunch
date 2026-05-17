@@ -1,8 +1,9 @@
 use prost::Message;
 use proto::slg::{
     AwardPb, BaseMailPb, FunctionClientBase, GetRoleDataRs, LordDataFunction, RoleLoginRs,
-    WorldCollectReturnedPayload, WorldCollectStartedPayload, WorldGarrisonChangedPayload,
-    WorldOutboundRq, WorldOutboundRs, WorldScoutReportRequestedPayload, WorldTroopReturnedPayload,
+    WorldBattleFighterSummaryPayload, WorldBattleResultPayload, WorldCollectReturnedPayload,
+    WorldCollectStartedPayload, WorldGarrisonChangedPayload, WorldOutboundRq, WorldOutboundRs,
+    WorldScoutReportRequestedPayload, WorldTroopReturnedPayload,
 };
 use shared::persistence::{LordRow, PlayerDao, SaveEntry};
 use shared::static_config::StaticConfig;
@@ -12,7 +13,6 @@ use tokio::sync::{mpsc, oneshot, watch};
 use tracing::{error, info, warn};
 
 use crate::actors::global_event_bus::GlobalEventBus;
-use crate::systems::PlayerSystem;
 use crate::systems::activity::ActivitySystem;
 use crate::systems::backpack::BackpackSystem;
 use crate::systems::building::BuildingSystem;
@@ -23,6 +23,7 @@ use crate::systems::mission::MissionSystem;
 use crate::systems::skin::SkinSystem;
 use crate::systems::tech::TechSystem;
 use crate::systems::world::WorldSystem;
+use crate::systems::PlayerSystem;
 use shared::event::{EventDispatcher, GameEvent, MissionEvent, MissionType, PlayerContext};
 
 /// 存盘间隔（秒）
@@ -36,6 +37,7 @@ const WORLD_OUTBOUND_EVENT_COLLECT_STARTED: i32 = 2;
 const WORLD_OUTBOUND_EVENT_TROOP_RETURNED: i32 = 3;
 const WORLD_OUTBOUND_EVENT_GARRISON_CHANGED: i32 = 4;
 const WORLD_OUTBOUND_EVENT_COLLECT_RETURNED: i32 = 5;
+const WORLD_OUTBOUND_EVENT_BATTLE_RESULT: i32 = 6;
 const WORLD_AWARD_TYPE_LORD_RESOURCE: i32 = 1;
 const WORLD_AWARD_TYPE_ITEM: i32 = 4;
 const LORD_RESOURCE_DIAMOND: i32 = 1;
@@ -762,8 +764,65 @@ impl PlayerActor {
                 }
                 self.apply_world_awards(&payload.awards)
             }
+            DecodedWorldOutbound::BattleResult(payload) => {
+                self.create_battle_report_mail(payload)?;
+                Ok(Vec::new())
+            }
             _ => Ok(Vec::new()),
         }
+    }
+
+    fn create_battle_report_mail(
+        &mut self,
+        payload: &WorldBattleResultPayload,
+    ) -> anyhow::Result<()> {
+        let now_secs = chrono::Utc::now().timestamp();
+        let attacker = payload.attacker.as_ref();
+        let defender = payload.defender.as_ref();
+
+        let mut content_parts = vec![
+            format!("Outcome: {}", payload.outcome),
+            format!("Winner: {}", payload.winner_side),
+            format!("Rounds: {}", payload.rounds),
+            format!("Target Pos: {}", payload.target_pos),
+        ];
+        if let Some(owner_id) = payload.target_owner_id {
+            content_parts.push(format!("Target Owner: {}", owner_id));
+        }
+        if let Some(attacker) = attacker {
+            content_parts.push(format!(
+                "Attacker Losses: {}/{} units, {} power",
+                attacker.units_lost, attacker.initial_units, attacker.power_lost
+            ));
+        }
+        if let Some(defender) = defender {
+            content_parts.push(format!(
+                "Defender Losses: {}/{} units, {} power",
+                defender.units_lost, defender.initial_units, defender.power_lost
+            ));
+        }
+
+        let mut c_param = vec![
+            format!("battle_id:{}", payload.battle_id),
+            format!("target_pos:{}", payload.target_pos),
+            format!("outcome:{}", payload.outcome),
+            format!("winner:{}", payload.winner_side),
+            format!("rounds:{}", payload.rounds),
+        ];
+        push_fighter_mail_params("attacker", attacker, &mut c_param);
+        push_fighter_mail_params("defender", defender, &mut c_param);
+
+        self.mail_system.add_personal_mail(BaseMailPb {
+            template_id: 201,
+            r#type: 0,
+            time: Some(now_secs),
+            title: Some(format!("Battle Report: {}", payload.outcome)),
+            content: Some(content_parts.join("\n")),
+            c_param,
+            ..Default::default()
+        });
+
+        Ok(())
     }
 
     fn create_scout_report_mail(
@@ -775,7 +834,10 @@ impl PlayerActor {
 
         let mut content_parts = Vec::new();
         if let Some(entity_type) = payload.target_entity_type {
-            content_parts.push(format!("Target Type: {} ({})", entity_type_name, entity_type));
+            content_parts.push(format!(
+                "Target Type: {} ({})",
+                entity_type_name, entity_type
+            ));
         }
         if let Some(owner_id) = payload.target_owner_id {
             content_parts.push(format!("Owner ID: {}", owner_id));
@@ -811,8 +873,7 @@ impl PlayerActor {
         let content = content_parts.join("\n");
         let title = format!(
             "Scout Report: {} at pos {}",
-            entity_type_name,
-            payload.target_pos
+            entity_type_name, payload.target_pos
         );
 
         let mut c_param = Vec::new();
@@ -828,10 +889,7 @@ impl PlayerActor {
                 c_param.push(format!("resource_{}:id={},count={}", i, res.id, res.count));
             }
         }
-        c_param.push(format!(
-            "garrison_count:{}",
-            payload.garrison_troops.len()
-        ));
+        c_param.push(format!("garrison_count:{}", payload.garrison_troops.len()));
 
         self.mail_system.add_personal_mail(BaseMailPb {
             template_id: 200,
@@ -933,6 +991,7 @@ enum DecodedWorldOutbound {
     TroopReturned(WorldTroopReturnedPayload),
     GarrisonChanged(WorldGarrisonChangedPayload),
     CollectReturned(WorldCollectReturnedPayload),
+    BattleResult(WorldBattleResultPayload),
 }
 
 impl DecodedWorldOutbound {
@@ -969,6 +1028,16 @@ impl DecodedWorldOutbound {
                 payload.home_pos,
                 payload.awards.len()
             ),
+            Self::BattleResult(payload) => format!(
+                "battle_result battle_id={} target_pos={} outcome={} winner={} rounds={} attacker_lost={} defender_lost={}",
+                payload.battle_id,
+                payload.target_pos,
+                payload.outcome,
+                payload.winner_side,
+                payload.rounds,
+                payload.attacker.as_ref().map(|fighter| fighter.units_lost).unwrap_or_default(),
+                payload.defender.as_ref().map(|fighter| fighter.units_lost).unwrap_or_default()
+            ),
         }
     }
 }
@@ -994,6 +1063,10 @@ fn decode_world_outbound_payload(event: &WorldOutboundRq) -> anyhow::Result<Deco
         WORLD_OUTBOUND_EVENT_COLLECT_RETURNED => {
             let payload = WorldCollectReturnedPayload::decode(event.payload.as_slice())?;
             Ok(DecodedWorldOutbound::CollectReturned(payload))
+        }
+        WORLD_OUTBOUND_EVENT_BATTLE_RESULT => {
+            let payload = WorldBattleResultPayload::decode(event.payload.as_slice())?;
+            Ok(DecodedWorldOutbound::BattleResult(payload))
         }
         other => Err(anyhow::anyhow!(
             "unknown World outbound event_type={}",
@@ -1048,6 +1121,31 @@ fn optional_i64(value: Option<i64>) -> String {
         .unwrap_or_else(|| "none".to_string())
 }
 
+fn push_fighter_mail_params(
+    prefix: &str,
+    fighter: Option<&WorldBattleFighterSummaryPayload>,
+    c_param: &mut Vec<String>,
+) {
+    let Some(fighter) = fighter else {
+        return;
+    };
+    c_param.push(format!("{}_fighter_id:{}", prefix, fighter.fighter_id));
+    c_param.push(format!(
+        "{}_initial_units:{}",
+        prefix, fighter.initial_units
+    ));
+    c_param.push(format!(
+        "{}_remaining_units:{}",
+        prefix, fighter.remaining_units
+    ));
+    c_param.push(format!("{}_units_lost:{}", prefix, fighter.units_lost));
+    c_param.push(format!("{}_power_lost:{}", prefix, fighter.power_lost));
+    c_param.push(format!(
+        "{}_loss_rate_bps:{}",
+        prefix, fighter.loss_rate_bps
+    ));
+}
+
 fn push_function_base(function_base: &mut Vec<FunctionClientBase>, bytes: Vec<u8>) {
     if let Ok(f_base) = FunctionClientBase::decode(bytes.as_slice()) {
         function_base.push(f_base);
@@ -1062,7 +1160,7 @@ fn i64_to_i32_saturating(value: i64) -> i32 {
 mod tests {
     use super::*;
     use proto::slg::{BaseMailPb, GarrisonTroop, GetMailListRq, GetMailListRs, GetRoleDataRq};
-    use shared::msg::{GameMessage, func_type};
+    use shared::msg::{func_type, GameMessage};
     use sqlx::mysql::MySqlPoolOptions;
 
     fn test_lord(role_id: i64) -> LordRow {
@@ -1374,11 +1472,9 @@ mod tests {
         assert!(duplicate.msg.contains("duplicate"));
         assert_eq!(actor.lord.as_ref().unwrap().meat, Some(250));
         assert_eq!(actor.hero_system.formations[0].state, FORMATION_STATE_IDLE);
-        assert!(
-            actor
-                .world_system
-                .has_processed_outbound("id:test-collect-returned-dedup-46")
-        );
+        assert!(actor
+            .world_system
+            .has_processed_outbound("id:test-collect-returned-dedup-46"));
     }
 
     #[tokio::test]
@@ -1467,7 +1563,11 @@ mod tests {
         assert!(mail.title.as_deref().unwrap().contains("Scout Report"));
         assert!(mail.title.as_deref().unwrap().contains("pos 303"));
         assert!(mail.content.as_deref().unwrap().contains("Player"));
-        assert!(mail.content.as_deref().unwrap().contains("Owner ID: 900002"));
+        assert!(mail
+            .content
+            .as_deref()
+            .unwrap()
+            .contains("Owner ID: 900002"));
         assert!(mail.c_param.iter().any(|p| p.contains("pos:303")));
         assert!(actor.mail_system.is_dirty());
     }
@@ -1510,11 +1610,154 @@ mod tests {
         assert!(duplicate.msg.contains("duplicate"));
         // Only one mail should be created
         assert_eq!(actor.mail_system.mails.len(), 1);
-        assert!(
-            actor
-                .world_system
-                .has_processed_outbound("id:test-scout-dedup-200")
-        );
+        assert!(actor
+            .world_system
+            .has_processed_outbound("id:test-scout-dedup-200"));
+    }
+
+    #[tokio::test]
+    async fn world_outbound_battle_result_creates_report_mail() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        let payload = WorldBattleResultPayload {
+            battle_id: 99,
+            target_pos: 606,
+            origin: Some(101),
+            march_type: Some(1),
+            camp: Some(1),
+            outcome: "AttackerWin".to_string(),
+            winner_side: "Attacker".to_string(),
+            rounds: 3,
+            total_events: 5,
+            attacker: Some(WorldBattleFighterSummaryPayload {
+                fighter_id: 11,
+                initial_units: 100,
+                remaining_units: 80,
+                units_lost: 20,
+                initial_power: 3_600,
+                remaining_power: 2_880,
+                power_lost: 720,
+                damage_dealt: 1_200,
+                damage_taken: 600,
+                loss_rate_bps: 2_000,
+            }),
+            defender: Some(WorldBattleFighterSummaryPayload {
+                fighter_id: 22,
+                initial_units: 90,
+                remaining_units: 0,
+                units_lost: 90,
+                initial_power: 2_700,
+                remaining_power: 0,
+                power_lost: 2_700,
+                damage_dealt: 600,
+                damage_taken: 1_200,
+                loss_rate_bps: 10_000,
+            }),
+            target_owner_id: Some(900_002),
+            target_entity_type: Some(1),
+        }
+        .encode_to_vec();
+
+        let rs = actor
+            .handle_world_outbound(WorldOutboundRq {
+                role_id,
+                event_type: WORLD_OUTBOUND_EVENT_BATTLE_RESULT,
+                world_entity_id: 606,
+                troop_key: 400,
+                payload,
+                context: "battle test".to_string(),
+                event_id: "test-battle-result-400".to_string(),
+                event_key: "test:battle_result:400".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(rs.code, 0);
+        assert!(rs.msg.contains("battle_result"));
+        assert_eq!(actor.mail_system.mails.len(), 1);
+        let mail = actor.mail_system.mails.last().unwrap();
+        assert_eq!(mail.template_id, 201);
+        assert!(mail.title.as_deref().unwrap().contains("Battle Report"));
+        assert!(mail.content.as_deref().unwrap().contains("AttackerWin"));
+        assert!(mail.content.as_deref().unwrap().contains("Rounds: 3"));
+        assert!(mail
+            .content
+            .as_deref()
+            .unwrap()
+            .contains("Attacker Losses: 20/100"));
+        assert!(mail
+            .content
+            .as_deref()
+            .unwrap()
+            .contains("Defender Losses: 90/90"));
+        assert!(mail.c_param.iter().any(|p| p == "battle_id:99"));
+        assert!(mail.c_param.iter().any(|p| p == "attacker_units_lost:20"));
+        assert!(actor.mail_system.is_dirty());
+    }
+
+    #[tokio::test]
+    async fn world_outbound_battle_result_duplicate_does_not_create_duplicate_mail() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        let payload = WorldBattleResultPayload {
+            battle_id: 100,
+            target_pos: 707,
+            origin: Some(101),
+            march_type: Some(1),
+            camp: Some(1),
+            outcome: "DefenderWin".to_string(),
+            winner_side: "Defender".to_string(),
+            rounds: 2,
+            total_events: 4,
+            attacker: Some(WorldBattleFighterSummaryPayload {
+                fighter_id: 11,
+                initial_units: 100,
+                remaining_units: 0,
+                units_lost: 100,
+                initial_power: 3_600,
+                remaining_power: 0,
+                power_lost: 3_600,
+                damage_dealt: 500,
+                damage_taken: 1_000,
+                loss_rate_bps: 10_000,
+            }),
+            defender: Some(WorldBattleFighterSummaryPayload {
+                fighter_id: 22,
+                initial_units: 90,
+                remaining_units: 50,
+                units_lost: 40,
+                initial_power: 2_700,
+                remaining_power: 1_500,
+                power_lost: 1_200,
+                damage_dealt: 1_000,
+                damage_taken: 500,
+                loss_rate_bps: 4_444,
+            }),
+            target_owner_id: Some(900_002),
+            target_entity_type: Some(1),
+        }
+        .encode_to_vec();
+        let request = WorldOutboundRq {
+            role_id,
+            event_type: WORLD_OUTBOUND_EVENT_BATTLE_RESULT,
+            world_entity_id: 707,
+            troop_key: 401,
+            payload,
+            context: "battle test".to_string(),
+            event_id: "test-battle-dedup-401".to_string(),
+            event_key: "test:battle_dedup:401".to_string(),
+        };
+
+        let first = actor.handle_world_outbound(request.clone()).await.unwrap();
+        let duplicate = actor.handle_world_outbound(request).await.unwrap();
+
+        assert_eq!(first.code, 0);
+        assert_eq!(duplicate.code, 0);
+        assert!(duplicate.msg.contains("duplicate"));
+        assert_eq!(actor.mail_system.mails.len(), 1);
+        assert!(actor
+            .world_system
+            .has_processed_outbound("id:test-battle-dedup-401"));
     }
 
     #[tokio::test]
@@ -1559,7 +1802,11 @@ mod tests {
         assert_eq!(rs.code, 0);
         assert_eq!(actor.mail_system.mails.len(), 1);
         let mail = actor.mail_system.mails.last().unwrap();
-        assert!(mail.content.as_deref().unwrap().contains("Garrison Troops: 1"));
+        assert!(mail
+            .content
+            .as_deref()
+            .unwrap()
+            .contains("Garrison Troops: 1"));
         assert!(mail.c_param.iter().any(|p| p == "garrison_count:1"));
     }
 }
