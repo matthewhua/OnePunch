@@ -19,10 +19,11 @@ use anyhow::Result;
 use bytes::Bytes;
 use dashmap::DashMap;
 use proto::slg::{BaseEntity, BaseTroop, GarrisonTroop};
+use shared::static_config::WorldConfig;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, oneshot};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 pub struct MapSectorActor {
     pub sector_id: i32,
@@ -45,6 +46,7 @@ pub struct MapSectorActor {
     garrison_state: Arc<crate::garrison::GarrisonState>,
     _assembly_state: Arc<crate::assembly::AssemblyState>,
     collect_state: CollectStateMachine,
+    world_config: Arc<WorldConfig>,
     outbound_sink: Arc<dyn WorldOutboundSink>,
     wal: WriteAheadLog,
 
@@ -104,6 +106,38 @@ impl MapSectorActor {
         tracked_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
         tracked_entities: Arc<DashMap<i32, Vec<BaseEntity>>>,
     ) -> Self {
+        Self::new_with_outbound_and_config(
+            sector_id,
+            rx,
+            base_time_ms,
+            aoi_manager,
+            health_checker,
+            garrison_state,
+            assembly_state,
+            outbound_sink,
+            Arc::new(WorldConfig::default()),
+            wal,
+            shutdown_rx,
+            tracked_troops,
+            tracked_entities,
+        )
+    }
+
+    pub(crate) fn new_with_outbound_and_config(
+        sector_id: i32,
+        rx: mpsc::Receiver<SectorMessage>,
+        base_time_ms: i64,
+        aoi_manager: Arc<AoiManager>,
+        health_checker: Arc<HealthChecker>,
+        garrison_state: Arc<crate::garrison::GarrisonState>,
+        assembly_state: Arc<crate::assembly::AssemblyState>,
+        outbound_sink: Arc<dyn WorldOutboundSink>,
+        world_config: Arc<WorldConfig>,
+        wal: WriteAheadLog,
+        shutdown_rx: broadcast::Receiver<()>,
+        tracked_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
+        tracked_entities: Arc<DashMap<i32, Vec<BaseEntity>>>,
+    ) -> Self {
         Self {
             sector_id,
             entities: HashMap::new(),
@@ -117,6 +151,7 @@ impl MapSectorActor {
             garrison_state,
             _assembly_state: assembly_state,
             collect_state: CollectStateMachine::default(),
+            world_config,
             outbound_sink,
             wal,
             shutdown_rx,
@@ -171,9 +206,10 @@ impl MapSectorActor {
             crate::arrival::ArrivalEffect::CollectStarted => {
                 if let Some(state) = self
                     .collect_state
-                    .on_arrival(troop, resolution, None)
+                    .on_arrival_with_config(troop, resolution, None, &self.world_config)
                     .cloned()
                 {
+                    self.log_collect_config_issues(&state);
                     self.schedule_collect_completion(&state);
                 }
             }
@@ -502,9 +538,10 @@ impl MapSectorActor {
         let formation_id = self.troop_formations.remove(&key);
         let collect_state = self
             .collect_state
-            .on_arrival(&troop, &resolution, formation_id)
+            .on_arrival_with_config(&troop, &resolution, formation_id, &self.world_config)
             .cloned();
         if let Some(state) = collect_state.as_ref() {
+            self.log_collect_config_issues(state);
             self.schedule_collect_completion(state);
         }
         troop.status = Some(crate::march::MARCH_STATUS_ARRIVAL);
@@ -612,6 +649,19 @@ impl MapSectorActor {
         }
     }
 
+    fn log_collect_config_issues(&self, state: &CollectState) {
+        if state.config_issues.is_empty() {
+            return;
+        }
+
+        warn!(
+            troop_key = state.troop_key,
+            target_pos = state.target_pos,
+            issues = ?state.config_issues,
+            "Collect profile used fallback config"
+        );
+    }
+
     async fn transfer_to_neighbor(&mut self, troop: BaseTroop) {
         let goal_pos = troop.goal.unwrap_or(0);
         let next_sector_id = crate::map::grid::pos_to_sector_id(goal_pos);
@@ -706,10 +756,23 @@ mod tests {
     use crate::map::grid::xy_to_pos;
     use crate::march::{MARCH_STATUS_RETREAT, MARCH_TYPE_ATK_PLAYER, MARCH_TYPE_MINE_COLLECT};
     use crate::outbound::WorldOutboundTarget;
+    use shared::static_config::{world::StaticMine, WorldConfig};
+    use std::collections::HashMap;
     use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
     async fn actor_with_sink(
         sink: Arc<InMemoryOutboundSink>,
+    ) -> (
+        MapSectorActor,
+        Arc<crate::garrison::GarrisonState>,
+        std::path::PathBuf,
+    ) {
+        actor_with_sink_and_config(sink, Arc::new(WorldConfig::default())).await
+    }
+
+    async fn actor_with_sink_and_config(
+        sink: Arc<InMemoryOutboundSink>,
+        world_config: Arc<WorldConfig>,
     ) -> (
         MapSectorActor,
         Arc<crate::garrison::GarrisonState>,
@@ -731,7 +794,7 @@ mod tests {
         ));
         let wal = WriteAheadLog::new(&wal_path).await.unwrap();
         let outbound_sink: Arc<dyn WorldOutboundSink> = sink;
-        let actor = MapSectorActor::new_with_outbound(
+        let actor = MapSectorActor::new_with_outbound_and_config(
             0,
             rx,
             0,
@@ -740,12 +803,35 @@ mod tests {
             garrison_state.clone(),
             Arc::new(crate::assembly::AssemblyState::new()),
             outbound_sink,
+            world_config,
             wal,
             shutdown_rx,
             tracked_troops,
             tracked_entities,
         );
         (actor, garrison_state, wal_path)
+    }
+
+    fn static_mine(mine_id: i32, mine_type: i32, reward: &str, speed: i32) -> StaticMine {
+        StaticMine {
+            mine_id,
+            description: None,
+            asset: None,
+            mine_type,
+            lv: 1,
+            weight: 100,
+            reward: Some(reward.to_string()),
+            speed,
+            banner: None,
+            sound: None,
+        }
+    }
+
+    fn world_config_with_mine(mine: StaticMine) -> Arc<WorldConfig> {
+        Arc::new(WorldConfig {
+            mines: HashMap::from([(mine.mine_id, mine)]),
+            ..Default::default()
+        })
     }
 
     #[tokio::test]
@@ -874,6 +960,55 @@ mod tests {
             sink.records(),
             vec![WorldOutboundEvent::CollectStarted {
                 troop_key: 4,
+                target_pos: target,
+                march_type: Some(MARCH_TYPE_MINE_COLLECT),
+                start_time_ms: 12_000,
+            }]
+        );
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn collect_arrival_uses_target_mine_config_for_state() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let config = world_config_with_mine(static_mine(201, 2, "[2,3,300]", 3_600_000));
+        let (mut actor, _garrison_state, wal_path) =
+            actor_with_sink_and_config(sink.clone(), config).await;
+        let target = xy_to_pos(101, 100);
+
+        actor.entities.insert(
+            target,
+            BaseEntity {
+                pos: target,
+                entity_type: Some(proto::slg::WorldEntityTypeDefine::EntityTypeMine as i32),
+                conf_id: Some(201),
+                ..Default::default()
+            },
+        );
+        actor
+            .handle_arrival(BaseTroop {
+                key: 44,
+                r#type: Some(MARCH_TYPE_MINE_COLLECT),
+                origin: Some(xy_to_pos(1, 1)),
+                goal: Some(target),
+                end_time: Some(12_000),
+                ..Default::default()
+            })
+            .await;
+
+        let collect_state = actor.collect_state.get(44).unwrap();
+        assert_eq!(collect_state.collect_end_time_ms, 12_300);
+        assert_eq!(collect_state.collected_amount, 300);
+        assert_eq!(
+            collect_state.resource_type,
+            crate::collect::RESOURCE_ID_MEAT
+        );
+        assert!(collect_state.config_issues.is_empty());
+        assert_eq!(
+            sink.records(),
+            vec![WorldOutboundEvent::CollectStarted {
+                troop_key: 44,
                 target_pos: target,
                 march_type: Some(MARCH_TYPE_MINE_COLLECT),
                 start_time_ms: 12_000,
@@ -1108,6 +1243,7 @@ mod tests {
             resource_type: crate::collect::RESOURCE_ID_MEAT,
             camp: Some(4),
             target: None,
+            config_issues: Vec::new(),
             phase: CollectPhase::Collecting,
         };
         actor
@@ -1192,6 +1328,7 @@ mod tests {
             resource_type: crate::collect::RESOURCE_ID_MEAT,
             camp: Some(4),
             target: None,
+            config_issues: Vec::new(),
             phase: CollectPhase::Returning,
         };
         actor

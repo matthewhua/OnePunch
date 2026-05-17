@@ -5,6 +5,7 @@ use crate::{health::HealthChecker, map::aoi::AoiManager, map::grid, wal::WriteAh
 use anyhow::{anyhow, Result};
 use dashmap::DashMap;
 use proto::slg::{BaseEntity, BaseTroop};
+use shared::static_config::WorldConfig;
 use std::collections::{BTreeSet, HashMap};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -30,6 +31,13 @@ impl WorldRuntime {
     }
 
     pub fn new_with_outbound(outbound_sink: Arc<dyn WorldOutboundSink>) -> Self {
+        Self::new_with_outbound_and_config(outbound_sink, Arc::new(WorldConfig::default()))
+    }
+
+    pub fn new_with_outbound_and_config(
+        outbound_sink: Arc<dyn WorldOutboundSink>,
+        world_config: Arc<WorldConfig>,
+    ) -> Self {
         let base_time_ms = crate::march::now_millis();
         let aoi = Arc::new(AoiManager::new());
         let health = Arc::new(HealthChecker::new(std::time::Duration::from_secs(30)));
@@ -50,12 +58,13 @@ impl WorldRuntime {
             let garrison_state = garrison_state.clone();
             let assembly_state = assembly_state.clone();
             let outbound_sink = outbound_sink.clone();
+            let world_config = world_config.clone();
             let wal_path = sector_wal_path(sector_id);
 
             tokio::spawn(async move {
                 match WriteAheadLog::new(&wal_path).await {
                     Ok(wal) => {
-                        let actor = MapSectorActor::new_with_outbound(
+                        let actor = MapSectorActor::new_with_outbound_and_config(
                             sector_id,
                             rx,
                             base_time_ms,
@@ -64,6 +73,7 @@ impl WorldRuntime {
                             garrison_state,
                             assembly_state,
                             outbound_sink,
+                            world_config,
                             wal,
                             shutdown_rx,
                             tracked_troops,

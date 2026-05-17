@@ -7,8 +7,8 @@
 //! - `s_wall`：城墙配置
 //! - `s_area`：区域配置
 
-use std::collections::HashMap;
 use sqlx::FromRow;
+use std::collections::HashMap;
 
 /// 地图配置（s_map）
 #[derive(Debug, Clone, FromRow)]
@@ -76,6 +76,73 @@ pub struct StaticMine {
     pub sound: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StaticMineReward {
+    pub award_type: i32,
+    pub resource_id: i32,
+    pub amount: i64,
+}
+
+impl StaticMine {
+    pub fn parsed_reward(&self) -> anyhow::Result<StaticMineReward> {
+        let raw = self
+            .reward
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| anyhow::anyhow!("s_mine.mineId={} reward is empty", self.mine_id))?;
+
+        let parts: Vec<i64> = serde_json::from_str(raw).map_err(|err| {
+            anyhow::anyhow!(
+                "s_mine.mineId={} reward parse failed: {}",
+                self.mine_id,
+                err
+            )
+        })?;
+        if parts.len() != 3 {
+            anyhow::bail!(
+                "s_mine.mineId={} reward must be [type,id,count], got {} values",
+                self.mine_id,
+                parts.len()
+            );
+        }
+        if parts[2] <= 0 {
+            anyhow::bail!(
+                "s_mine.mineId={} reward count must be positive, got {}",
+                self.mine_id,
+                parts[2]
+            );
+        }
+
+        Ok(StaticMineReward {
+            award_type: i32::try_from(parts[0]).map_err(|_| {
+                anyhow::anyhow!(
+                    "s_mine.mineId={} reward type is out of i32 range",
+                    self.mine_id
+                )
+            })?,
+            resource_id: i32::try_from(parts[1]).map_err(|_| {
+                anyhow::anyhow!(
+                    "s_mine.mineId={} reward id is out of i32 range",
+                    self.mine_id
+                )
+            })?,
+            amount: parts[2],
+        })
+    }
+
+    pub fn collect_duration_ms_for_amount(&self, amount: i64) -> Option<i64> {
+        if self.speed <= 0 || amount <= 0 {
+            return None;
+        }
+
+        let numerator = i128::from(amount).checked_mul(3_600_000)?;
+        let speed = i128::from(self.speed);
+        let duration_ms = (numerator + speed - 1) / speed;
+        i64::try_from(duration_ms).ok().filter(|value| *value > 0)
+    }
+}
+
 /// 城墙配置（s_wall）
 #[derive(Debug, Clone, FromRow)]
 pub struct StaticWall {
@@ -109,23 +176,33 @@ impl WorldConfig {
             sqlx::query_as::<_, StaticWall>("SELECT * FROM s_wall").fetch_all(pool),
         )?;
 
-        let maps: HashMap<i32, StaticMap> = map_rows
-            .into_iter().map(|r| (r.id, r)).collect();
-        let npcs: HashMap<i32, StaticNpc> = npc_rows
-            .into_iter().map(|r| (r.id, r)).collect();
-        let mines: HashMap<i32, StaticMine> = mine_rows
-            .into_iter().map(|r| (r.mine_id, r)).collect();
-        let walls: HashMap<i32, StaticWall> = wall_rows
-            .into_iter().map(|r| (r.id, r)).collect();
+        let maps: HashMap<i32, StaticMap> = map_rows.into_iter().map(|r| (r.id, r)).collect();
+        let npcs: HashMap<i32, StaticNpc> = npc_rows.into_iter().map(|r| (r.id, r)).collect();
+        let mines: HashMap<i32, StaticMine> =
+            mine_rows.into_iter().map(|r| (r.mine_id, r)).collect();
+        let walls: HashMap<i32, StaticWall> = wall_rows.into_iter().map(|r| (r.id, r)).collect();
 
-        let mut cfg = Self { maps, npcs, mines, walls, ..Default::default() };
+        let mut cfg = Self {
+            maps,
+            npcs,
+            mines,
+            walls,
+            ..Default::default()
+        };
         cfg.build_indexes();
         Ok(cfg)
     }
 
     fn build_indexes(&mut self) {
         for (mid, m) in &self.mines {
-            self.mines_by_type_idx.entry(m.mine_type).or_default().push(*mid);
+            self.mines_by_type_idx
+                .entry(m.mine_type)
+                .or_default()
+                .push(*mid);
         }
+    }
+
+    pub fn mine(&self, mine_id: i32) -> Option<&StaticMine> {
+        self.mines.get(&mine_id)
     }
 }
