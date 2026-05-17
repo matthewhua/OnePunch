@@ -10,8 +10,10 @@ pub mod hero;
 pub mod mail;
 pub mod mission;
 pub mod registry;
+pub mod shop;
 pub mod skin;
 pub mod tech;
+pub mod vip;
 pub mod world;
 
 /// 玩家功能系统 trait

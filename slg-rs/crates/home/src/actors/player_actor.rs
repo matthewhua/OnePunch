@@ -21,8 +21,10 @@ use crate::systems::hero::HeroSystem;
 use crate::systems::mail::MailSystem;
 use crate::systems::mission::MissionSystem;
 use crate::systems::registry::{HomeSystemRegistry, route_home_command};
+use crate::systems::shop::ShopSystem;
 use crate::systems::skin::SkinSystem;
 use crate::systems::tech::TechSystem;
+use crate::systems::vip::VipSystem;
 use crate::systems::world::WorldSystem;
 use shared::event::{EventDispatcher, GameEvent, MissionEvent, MissionType, PlayerContext};
 
@@ -102,6 +104,8 @@ pub struct PlayerActor {
     pub mail_system: MailSystem,
     pub mission_system: MissionSystem,
     pub skin_system: SkinSystem,
+    pub shop_system: ShopSystem,
+    pub vip_system: VipSystem,
     pub world_system: WorldSystem,
 
     // ── 事件 ──
@@ -147,6 +151,8 @@ impl PlayerActor {
             mail_system: MailSystem::new(),
             mission_system: MissionSystem::new(),
             skin_system: SkinSystem::new(),
+            shop_system: ShopSystem::new(),
+            vip_system: VipSystem::new(),
             world_system: WorldSystem::new(),
             event_dispatcher: EventDispatcher::new(),
             ctx: PlayerContext {
@@ -780,8 +786,51 @@ impl PlayerActor {
         Ok(events)
     }
 
+    pub(crate) fn lord_resource_amount(&self, resource_id: i32) -> anyhow::Result<i64> {
+        let lord = self
+            .lord
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("lord data not loaded"))?;
+        match resource_id {
+            LORD_RESOURCE_DIAMOND => Ok(lord.diamond.unwrap_or_default()),
+            LORD_RESOURCE_GOLD => Ok(lord.gold.unwrap_or_default()),
+            LORD_RESOURCE_MEAT => Ok(lord.meat.unwrap_or_default()),
+            LORD_RESOURCE_STAMINA => Ok(lord.stamina.unwrap_or_default()),
+            LORD_RESOURCE_FAME => Ok(i64::from(lord.fame.unwrap_or_default())),
+            other => anyhow::bail!("unsupported lord resource id={}", other),
+        }
+    }
+
+    pub(crate) fn try_consume_lord_resource(
+        &mut self,
+        resource_id: i32,
+        amount: i64,
+    ) -> anyhow::Result<()> {
+        if amount <= 0 {
+            return Ok(());
+        }
+        let have = self.lord_resource_amount(resource_id)?;
+        if have < amount {
+            anyhow::bail!(
+                "not enough lord resource id={}: have={}, need={}",
+                resource_id,
+                have,
+                amount
+            );
+        }
+        self.add_lord_resource(resource_id, -amount)
+    }
+
+    pub(crate) fn grant_lord_resource(
+        &mut self,
+        resource_id: i32,
+        amount: i64,
+    ) -> anyhow::Result<()> {
+        self.add_lord_resource(resource_id, amount)
+    }
+
     fn add_lord_resource(&mut self, resource_id: i32, delta: i64) -> anyhow::Result<()> {
-        if delta <= 0 {
+        if delta == 0 {
             return Ok(());
         }
 
@@ -791,7 +840,12 @@ impl PlayerActor {
             .ok_or_else(|| anyhow::anyhow!("lord data not loaded"))?;
 
         match resource_id {
-            LORD_RESOURCE_DIAMOND => add_i64_option(&mut lord.diamond, delta),
+            LORD_RESOURCE_DIAMOND => {
+                add_i64_option(&mut lord.diamond, delta);
+                if delta < 0 {
+                    add_i64_option(&mut lord.diamond_cost, -delta);
+                }
+            }
             LORD_RESOURCE_GOLD => add_i64_option(&mut lord.gold, delta),
             LORD_RESOURCE_MEAT => add_i64_option(&mut lord.meat, delta),
             LORD_RESOURCE_STAMINA => add_i64_option(&mut lord.stamina, delta),
@@ -1005,9 +1059,13 @@ fn i64_to_i32_saturating(value: i64) -> i32 {
 mod tests {
     use super::*;
     use crate::systems::PlayerSystem;
-    use proto::slg::{BaseMailPb, GetMailListRq, GetMailListRs, GetRoleDataRq};
+    use proto::slg::{
+        BaseMailPb, GetMailListRq, GetMailListRs, GetRoleDataRq, ShopBuyRq, ShopBuyRs,
+    };
     use shared::msg::{GameMessage, func_type};
+    use shared::static_config::shop::{StaticShop, StaticShopProp};
     use sqlx::mysql::MySqlPoolOptions;
+    use std::collections::HashMap;
 
     fn test_lord(role_id: i64) -> LordRow {
         LordRow {
@@ -1101,6 +1159,8 @@ mod tests {
         assert!(function_types.contains(&func_type::SIM));
         assert!(function_types.contains(&func_type::MAIL));
         assert!(function_types.contains(&func_type::MISSION));
+        assert!(function_types.contains(&func_type::SHOP));
+        assert!(function_types.contains(&func_type::VIP));
     }
 
     #[tokio::test]
@@ -1128,6 +1188,158 @@ mod tests {
         assert_eq!(body.mail_pb.len(), 1);
         assert_eq!(body.mail_pb[0].title.as_deref(), Some("Scout report"));
         assert!(actor.mail_system.is_dirty());
+    }
+
+    fn test_shop_config(price: &str) -> shared::static_config::ShopConfig {
+        let mut shops = HashMap::new();
+        shops.insert(
+            1,
+            StaticShop {
+                id: 1,
+                name: Some("basic".to_string()),
+                shop_type: Some(3),
+                show_type: None,
+                show_res: None,
+                limited_time: None,
+                manual_refresh: None,
+                free_refresh: None,
+                refresh_need: None,
+                slot_num: Some(1),
+                refresh_type: None,
+                sort: Some(1),
+                field_configuration: None,
+                group_str: None,
+                function_open: None,
+                form_id: None,
+            },
+        );
+        shared::static_config::ShopConfig {
+            shops,
+            shop_props: vec![StaticShopProp {
+                id: 1001,
+                shop_id: Some(1),
+                dsc: None,
+                show_type: None,
+                prop: Some("[4,2001,2]".to_string()),
+                group_val: None,
+                weight: None,
+                price: Some(price.to_string()),
+                count: None,
+                single_limit: Some(10),
+                discount: None,
+                unlock_time: None,
+                feature_lv: None,
+                sort: Some(1),
+            }],
+            props_by_shop_idx: HashMap::from([(1, vec![0])]),
+        }
+    }
+
+    #[tokio::test]
+    async fn shop_buy_deducts_lord_resource_and_grants_item() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        actor.current_config = Arc::new(StaticConfig {
+            shop: test_shop_config("[1,3,50]"),
+            ..Default::default()
+        });
+        actor
+            .shop_system
+            .ensure_configured(&actor.current_config.shop);
+
+        let request_payload = GameMessage::build_response(
+            7651,
+            &ShopBuyRq {
+                shop_id: 1,
+                slot: 1,
+                buy_count: 1,
+            },
+        )
+        .unwrap();
+        let response_payload = actor
+            .handle_game_command(7651, request_payload)
+            .await
+            .unwrap();
+
+        let response = GameMessage::decode(response_payload).unwrap();
+        assert_eq!(response.base.cmd, 7652);
+        let body: ShopBuyRs = response.get_payload().unwrap();
+        assert_eq!(body.shop_id, Some(1));
+        assert_eq!(body.item.as_ref().unwrap().purchased_count, Some(1));
+        assert_eq!(actor.lord.as_ref().unwrap().meat, Some(150));
+        assert_eq!(actor.backpack_system.get_item_count(2001), 2);
+        assert_eq!(
+            actor.shop_system.find_item(1, 1).unwrap().purchased_count,
+            Some(1)
+        );
+        assert!(actor.lord_dirty);
+        assert!(actor.backpack_system.is_dirty());
+        assert!(actor.shop_system.is_dirty());
+    }
+
+    #[tokio::test]
+    async fn shop_buy_rejects_when_lord_resource_is_not_enough() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        actor.current_config = Arc::new(StaticConfig {
+            shop: test_shop_config("[1,3,500]"),
+            ..Default::default()
+        });
+        actor
+            .shop_system
+            .ensure_configured(&actor.current_config.shop);
+
+        let request_payload = GameMessage::build_response(
+            7651,
+            &ShopBuyRq {
+                shop_id: 1,
+                slot: 1,
+                buy_count: 1,
+            },
+        )
+        .unwrap();
+        let result = actor.handle_game_command(7651, request_payload).await;
+
+        assert!(result.is_err());
+        assert_eq!(actor.lord.as_ref().unwrap().meat, Some(200));
+        assert_eq!(actor.backpack_system.get_item_count(2001), 0);
+        assert_eq!(
+            actor.shop_system.find_item(1, 1).unwrap().purchased_count,
+            Some(0)
+        );
+        assert!(!actor.lord_dirty);
+        assert!(!actor.backpack_system.is_dirty());
+        assert!(!actor.shop_system.is_dirty());
+    }
+
+    #[tokio::test]
+    async fn shop_buy_accepts_legacy_lord_resource_award_type() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        actor.current_config = Arc::new(StaticConfig {
+            shop: test_shop_config("[2,3,50]"),
+            ..Default::default()
+        });
+        actor
+            .shop_system
+            .ensure_configured(&actor.current_config.shop);
+
+        let request_payload = GameMessage::build_response(
+            7651,
+            &ShopBuyRq {
+                shop_id: 1,
+                slot: 1,
+                buy_count: 1,
+            },
+        )
+        .unwrap();
+        actor
+            .handle_game_command(7651, request_payload)
+            .await
+            .unwrap();
+
+        assert_eq!(actor.lord.as_ref().unwrap().meat, Some(150));
+        assert_eq!(actor.backpack_system.get_item_count(2001), 2);
     }
 
     #[tokio::test]
