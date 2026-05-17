@@ -7,6 +7,7 @@ pub mod backpack;
 pub mod building;
 pub mod equip;
 pub mod hero;
+pub mod mail;
 pub mod mission;
 pub mod skin;
 pub mod tech;
