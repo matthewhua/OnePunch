@@ -1,4 +1,7 @@
-use proto::slg::{FunctionClientBase, GetRoleDataRs, LordDataFunction, RoleLoginRs};
+use proto::slg::{
+    FunctionClientBase, GetRoleDataRs, LordDataFunction, RoleLoginRs, WorldOutboundRq,
+    WorldOutboundRs,
+};
 use shared::persistence::{LordRow, PlayerDao, SaveEntry};
 use shared::static_config::StaticConfig;
 use std::sync::Arc;
@@ -50,6 +53,11 @@ pub enum PlayerMessage {
         cmd: u32,
         payload: Vec<u8>,
         reply: oneshot::Sender<anyhow::Result<Vec<u8>>>,
+    },
+    /// World 服务投递的到达/出站事件
+    WorldOutbound {
+        event: WorldOutboundRq,
+        reply: oneshot::Sender<anyhow::Result<WorldOutboundRs>>,
     },
 }
 
@@ -246,6 +254,10 @@ impl PlayerActor {
                         }
                         PlayerMessage::GameCommand { cmd, payload, reply } => {
                             let result = self.handle_game_command(cmd, payload).await;
+                            let _ = reply.send(result);
+                        }
+                        PlayerMessage::WorldOutbound { event, reply } => {
+                            let result = self.handle_world_outbound(event).await;
                             let _ = reply.send(result);
                         }
                     }
@@ -573,6 +585,26 @@ impl PlayerActor {
         }
 
         shared::msg::GameMessage::build_response_from_raw(cmd as i32 + 1, &resp)
+    }
+
+    async fn handle_world_outbound(
+        &mut self,
+        event: WorldOutboundRq,
+    ) -> anyhow::Result<WorldOutboundRs> {
+        info!(
+            role_id = self.role_id,
+            event_type = event.event_type,
+            troop_key = event.troop_key,
+            world_entity_id = event.world_entity_id,
+            payload_len = event.payload.len(),
+            context = %event.context,
+            "PlayerActor received World outbound event"
+        );
+
+        Ok(WorldOutboundRs {
+            code: 0,
+            msg: "ok".to_string(),
+        })
     }
 }
 

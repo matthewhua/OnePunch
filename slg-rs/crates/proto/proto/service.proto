@@ -28,6 +28,9 @@ service HomeService {
     // Gateway 转发业务命令到 PlayerActor
     rpc Dispatch(DispatchRq) returns (DispatchRs);
 
+    // World 到达/出站事件投递到在线 PlayerActor
+    rpc WorldOutbound(WorldOutboundRq) returns (WorldOutboundRs);
+
     // 玩家断线通知，触发 PlayerActor 存盘下线
     rpc PlayerOffline(PlayerOfflineRq) returns (PlayerOfflineRs);
 }
@@ -43,6 +46,22 @@ message DispatchRq {
 message DispatchRs {
     int32 code    = 1;  // 0=成功，非0=错误码
     bytes payload = 2;  // 响应 protobuf payload
+}
+
+// ── WorldOutbound ────────────────────────────────────────────────────────────
+
+message WorldOutboundRq {
+    int64 role_id         = 1;  // 目标玩家角色ID
+    int32 event_type      = 2;  // World 到达/出站事件类型
+    int32 world_entity_id = 3;  // 世界实体/地块/位置ID
+    int32 troop_key       = 4;  // 部队唯一ID
+    bytes payload         = 5;  // 事件扩展 payload，承载后续细化 protobuf
+    string context        = 6;  // 可诊断上下文
+}
+
+message WorldOutboundRs {
+    int32 code = 1;   // 0=成功，非0=错误码
+    string msg = 2;   // 可诊断说明
 }
 
 // ── PlayerOffline ─────────────────────────────────────────────────────────────

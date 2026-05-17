@@ -1,10 +1,15 @@
 use anyhow::Result;
-use proto::slg::BaseTroop;
+use proto::slg::{BaseTroop, WorldOutboundRq};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 
 use crate::arrival::{ArrivalEffect, ArrivalResolution};
 use crate::march::{ArrivalAction, MarchArrival};
+
+pub const WORLD_OUTBOUND_EVENT_SCOUT_REPORT_REQUESTED: i32 = 1;
+pub const WORLD_OUTBOUND_EVENT_COLLECT_STARTED: i32 = 2;
+pub const WORLD_OUTBOUND_EVENT_TROOP_RETURNED: i32 = 3;
+pub const WORLD_OUTBOUND_EVENT_GARRISON_CHANGED: i32 = 4;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WorldOutboundTarget {
@@ -56,6 +61,93 @@ impl WorldOutboundEvent {
             | Self::GarrisonChanged { .. } => WorldOutboundTarget::Home,
         }
     }
+
+    pub fn to_home_request(&self, role_id: i64) -> Result<WorldOutboundRq> {
+        if role_id <= 0 {
+            return Err(anyhow::anyhow!(
+                "role_id is required for Home outbound event: {}",
+                role_id
+            ));
+        }
+
+        let (event_type, world_entity_id, troop_key, context) = match self {
+            Self::ScoutReportRequested {
+                troop_key,
+                origin,
+                target_pos,
+                camp,
+            } => (
+                WORLD_OUTBOUND_EVENT_SCOUT_REPORT_REQUESTED,
+                *target_pos,
+                *troop_key,
+                format!(
+                    "scout_report_requested origin={} camp={}",
+                    optional_i32(*origin),
+                    optional_i32(*camp)
+                ),
+            ),
+            Self::CollectStarted {
+                troop_key,
+                target_pos,
+                march_type,
+                start_time_ms,
+            } => (
+                WORLD_OUTBOUND_EVENT_COLLECT_STARTED,
+                *target_pos,
+                *troop_key,
+                format!(
+                    "collect_started march_type={} start_time_ms={}",
+                    optional_i32(*march_type),
+                    start_time_ms
+                ),
+            ),
+            Self::TroopReturned {
+                troop_key,
+                home_pos,
+                march_type,
+            } => (
+                WORLD_OUTBOUND_EVENT_TROOP_RETURNED,
+                *home_pos,
+                *troop_key,
+                format!("troop_returned march_type={}", optional_i32(*march_type)),
+            ),
+            Self::GarrisonChanged {
+                troop_key,
+                target_pos,
+                camp,
+                is_arrival,
+            } => (
+                WORLD_OUTBOUND_EVENT_GARRISON_CHANGED,
+                *target_pos,
+                *troop_key,
+                format!(
+                    "garrison_changed camp={} is_arrival={}",
+                    optional_i32(*camp),
+                    is_arrival
+                ),
+            ),
+            Self::BattleStartRequested { .. } => {
+                return Err(anyhow::anyhow!(
+                    "battle outbound event cannot be sent to Home"
+                ));
+            }
+        };
+
+        Ok(WorldOutboundRq {
+            role_id,
+            event_type,
+            world_entity_id,
+            troop_key,
+            payload: Vec::new(),
+            context,
+        })
+    }
+}
+
+fn optional_i32(value: Option<i32>) -> String {
+    value
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_string())
 }
 
 pub trait WorldOutboundSink: Send + Sync {
@@ -124,6 +216,37 @@ impl WorldOutboundSink for ChannelOutboundSink {
         self.tx
             .send(event)
             .map_err(|err| anyhow::anyhow!("world outbound receiver dropped: {}", err))
+    }
+}
+
+pub struct HomeOutboundChannelSink<R>
+where
+    R: Fn(&WorldOutboundEvent) -> Option<i64> + Send + Sync,
+{
+    tx: mpsc::UnboundedSender<WorldOutboundRq>,
+    role_resolver: R,
+}
+
+impl<R> HomeOutboundChannelSink<R>
+where
+    R: Fn(&WorldOutboundEvent) -> Option<i64> + Send + Sync,
+{
+    pub fn new(tx: mpsc::UnboundedSender<WorldOutboundRq>, role_resolver: R) -> Self {
+        Self { tx, role_resolver }
+    }
+}
+
+impl<R> WorldOutboundSink for HomeOutboundChannelSink<R>
+where
+    R: Fn(&WorldOutboundEvent) -> Option<i64> + Send + Sync,
+{
+    fn publish(&self, event: WorldOutboundEvent) -> Result<()> {
+        let role_id = (self.role_resolver)(&event)
+            .ok_or_else(|| anyhow::anyhow!("role_id resolver returned none for {:?}", event))?;
+        let request = event.to_home_request(role_id)?;
+        self.tx
+            .send(request)
+            .map_err(|err| anyhow::anyhow!("home outbound request receiver dropped: {}", err))
     }
 }
 
@@ -469,6 +592,47 @@ mod tests {
 
         assert_eq!(home_rx.recv().await, Some(home_event));
         assert_eq!(battle.records(), vec![battle_event]);
+    }
+
+    #[tokio::test]
+    async fn home_channel_sink_builds_world_outbound_request() {
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let sink = HomeOutboundChannelSink::new(tx, |_event| Some(900_001));
+
+        sink.publish(WorldOutboundEvent::TroopReturned {
+            troop_key: 44,
+            home_pos: 101,
+            march_type: Some(MARCH_TYPE_ATK_PLAYER),
+        })
+        .unwrap();
+
+        let request = rx.recv().await.unwrap();
+        assert_eq!(request.role_id, 900_001);
+        assert_eq!(request.event_type, WORLD_OUTBOUND_EVENT_TROOP_RETURNED);
+        assert_eq!(request.world_entity_id, 101);
+        assert_eq!(request.troop_key, 44);
+        assert!(request.payload.is_empty());
+        assert!(request.context.contains("troop_returned"));
+    }
+
+    #[test]
+    fn home_request_rejects_missing_role_or_battle_target() {
+        let home_event = WorldOutboundEvent::CollectStarted {
+            troop_key: 2,
+            target_pos: 21,
+            march_type: Some(MARCH_TYPE_MINE_COLLECT),
+            start_time_ms: 0,
+        };
+        assert!(home_event.to_home_request(0).is_err());
+
+        let battle_event = WorldOutboundEvent::BattleStartRequested {
+            troop_key: 1,
+            march_type: Some(MARCH_TYPE_ATK_PLAYER),
+            origin: Some(10),
+            target_pos: 20,
+            camp: Some(7),
+        };
+        assert!(battle_event.to_home_request(900_001).is_err());
     }
 
     #[test]

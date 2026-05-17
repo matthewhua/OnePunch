@@ -122,7 +122,7 @@ impl MapSectorActor {
             if troop.status == Some(MARCH_STATUS_ARRIVAL) {
                 let resolution =
                     resolve_arrival(&troop, self.entities.get(&troop.goal.unwrap_or(0)));
-                self.collect_state.on_arrival(&troop, &resolution);
+                self.restore_arrived_troop(&troop, &resolution);
                 continue;
             }
 
@@ -133,6 +133,36 @@ impl MapSectorActor {
             self.marching_troops.insert(key, troop);
         }
         Ok(())
+    }
+
+    fn restore_arrived_troop(
+        &mut self,
+        troop: &BaseTroop,
+        resolution: &crate::arrival::ArrivalResolution,
+    ) {
+        match resolution.effect {
+            crate::arrival::ArrivalEffect::CollectStarted => {
+                self.collect_state.on_arrival(troop, resolution);
+            }
+            crate::arrival::ArrivalEffect::GarrisonPlaced => {
+                let goal_pos = troop.goal.unwrap_or(0);
+                if let Err(err) = self
+                    .garrison_state
+                    .place(goal_pos, garrison_troop_from_arrival(troop))
+                {
+                    error!(
+                        troop_key = troop.key,
+                        goal_pos,
+                        error = %err,
+                        "Failed to restore arrived garrison troop"
+                    );
+                }
+            }
+            crate::arrival::ArrivalEffect::BattleRequested
+            | crate::arrival::ArrivalEffect::ScoutReportRequested
+            | crate::arrival::ArrivalEffect::ReturnedHome
+            | crate::arrival::ArrivalEffect::Noop => {}
+        }
     }
 
     pub async fn run(mut self) -> Result<ActorId> {
@@ -358,14 +388,10 @@ impl MapSectorActor {
                 );
             }
             ArrivalAction::Garrison => {
-                if let Err(err) = self.garrison_state.place(
-                    goal_pos,
-                    GarrisonTroop {
-                        troop_key_id: Some(key),
-                        end_time: troop.end_time,
-                        ..Default::default()
-                    },
-                ) {
+                if let Err(err) = self
+                    .garrison_state
+                    .place(goal_pos, garrison_troop_from_arrival(&troop))
+                {
                     error!(
                         troop_key = key,
                         goal_pos,
@@ -473,6 +499,14 @@ impl MapSectorActor {
 
     pub fn set_neighbor(&mut self, sector_id: i32, tx: mpsc::Sender<SectorMessage>) {
         self.neighbors.insert(sector_id, tx);
+    }
+}
+
+fn garrison_troop_from_arrival(troop: &BaseTroop) -> GarrisonTroop {
+    GarrisonTroop {
+        troop_key_id: Some(troop.key),
+        end_time: troop.end_time,
+        ..Default::default()
     }
 }
 
@@ -655,6 +689,119 @@ mod tests {
                 start_time_ms: 12_000,
             }]
         );
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn tick_drives_collect_arrival_state_change() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, _garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
+        let target = xy_to_pos(20, 20);
+
+        actor
+            .accept_transfer(BaseTroop {
+                key: 5,
+                r#type: Some(MARCH_TYPE_MINE_COLLECT),
+                origin: Some(xy_to_pos(1, 1)),
+                goal: Some(target),
+                end_time: Some(100),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+        actor.tick().await;
+
+        assert!(!actor.marching_troops.contains_key(&5));
+        let collect_state = actor.collect_state.get(5).unwrap();
+        assert_eq!(collect_state.target_pos, target);
+        assert_eq!(
+            collect_state.phase,
+            crate::collect::CollectPhase::Collecting
+        );
+        assert_eq!(
+            sink.records(),
+            vec![WorldOutboundEvent::CollectStarted {
+                troop_key: 5,
+                target_pos: target,
+                march_type: Some(MARCH_TYPE_MINE_COLLECT),
+                start_time_ms: 100,
+            }]
+        );
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn tick_drives_garrison_arrival_state_change() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
+        let target = xy_to_pos(21, 21);
+
+        actor
+            .accept_transfer(BaseTroop {
+                key: 6,
+                r#type: Some(crate::march::MARCH_TYPE_GARRISON_CITY),
+                origin: Some(xy_to_pos(1, 1)),
+                goal: Some(target),
+                end_time: Some(100),
+                camp: Some(4),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+        actor.tick().await;
+
+        assert!(!actor.marching_troops.contains_key(&6));
+        let garrisons = garrison_state.list(Some(target));
+        assert_eq!(garrisons.len(), 1);
+        assert_eq!(garrisons[0].troop_key_id, Some(6));
+        assert_eq!(garrisons[0].end_time, Some(100));
+        assert_eq!(
+            sink.records(),
+            vec![WorldOutboundEvent::GarrisonChanged {
+                troop_key: 6,
+                target_pos: target,
+                camp: Some(4),
+                is_arrival: true,
+            }]
+        );
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn recovery_restores_arrived_garrison_without_republishing() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
+        let target = xy_to_pos(22, 22);
+
+        let arrived = BaseTroop {
+            key: 7,
+            r#type: Some(crate::march::MARCH_TYPE_GARRISON_CITY),
+            origin: Some(xy_to_pos(1, 1)),
+            goal: Some(target),
+            status: Some(MARCH_STATUS_ARRIVAL),
+            end_time: Some(200),
+            ..Default::default()
+        };
+        actor
+            .wal
+            .append(&WalEntry::TroopArrived {
+                troop: WalTroop::from(&arrived),
+            })
+            .await
+            .unwrap();
+
+        actor.init_with_recovery().await.unwrap();
+
+        let garrisons = garrison_state.list(Some(target));
+        assert_eq!(garrisons.len(), 1);
+        assert_eq!(garrisons[0].troop_key_id, Some(7));
+        assert_eq!(garrisons[0].end_time, Some(200));
+        assert!(sink.records().is_empty());
 
         let _ = tokio::fs::remove_file(wal_path).await;
     }

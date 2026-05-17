@@ -3,7 +3,7 @@ use crate::managers::player_manager::PlayerManager;
 use proto::slg::home_service_server::HomeService;
 use proto::slg::{
     BeginGameRq, BeginGameRs, CreateRoleRq, CreateRoleRs, DispatchRq, DispatchRs, PlayerOfflineRq,
-    PlayerOfflineRs, RoleLoginRq, RoleLoginRs,
+    PlayerOfflineRs, RoleLoginRq, RoleLoginRs, WorldOutboundRq, WorldOutboundRs,
 };
 use rand::{distributions::Alphanumeric, Rng};
 use sqlx::MySqlPool;
@@ -356,6 +356,72 @@ impl HomeService for HomeServiceImpl {
                 Ok(Response::new(DispatchRs {
                     code: 1,
                     payload: vec![],
+                }))
+            }
+        }
+    }
+
+    /// WorldOutbound：World 服务投递到达/出站事件到在线 PlayerActor。
+    async fn world_outbound(
+        &self,
+        request: Request<WorldOutboundRq>,
+    ) -> Result<Response<WorldOutboundRs>, Status> {
+        let req = request.into_inner();
+        let role_id = req.role_id;
+
+        if role_id <= 0 {
+            warn!(
+                role_id,
+                event_type = req.event_type,
+                troop_key = req.troop_key,
+                "WorldOutbound: invalid role_id"
+            );
+            return Ok(Response::new(WorldOutboundRs {
+                code: 400,
+                msg: format!("invalid role_id={}", role_id),
+            }));
+        }
+
+        let tx = match self.manager.get_by_role(role_id) {
+            Some(tx) => tx,
+            None => {
+                warn!(
+                    role_id,
+                    event_type = req.event_type,
+                    troop_key = req.troop_key,
+                    world_entity_id = req.world_entity_id,
+                    "WorldOutbound: player not online"
+                );
+                return Ok(Response::new(WorldOutboundRs {
+                    code: 404,
+                    msg: format!("Player {} not online", role_id),
+                }));
+            }
+        };
+
+        let event_type = req.event_type;
+        let troop_key = req.troop_key;
+        let (reply_tx, reply_rx) = oneshot::channel();
+        tx.send(PlayerMessage::WorldOutbound {
+            event: req,
+            reply: reply_tx,
+        })
+        .map_err(|_| Status::internal("PlayerActor channel closed during world_outbound"))?;
+
+        let result = reply_rx
+            .await
+            .map_err(|_| Status::internal("PlayerActor did not reply during world_outbound"))?;
+
+        match result {
+            Ok(rs) => Ok(Response::new(rs)),
+            Err(e) => {
+                warn!(
+                    role_id,
+                    event_type, troop_key, "WorldOutbound actor error: {}", e
+                );
+                Ok(Response::new(WorldOutboundRs {
+                    code: 500,
+                    msg: e.to_string(),
                 }))
             }
         }
