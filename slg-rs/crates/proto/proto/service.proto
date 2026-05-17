@@ -110,6 +110,35 @@ message WorldGarrisonChangedPayload {
     bool is_arrival           = 3;  // true=到达驻防
 }
 
+message WorldBattleFighterSummaryPayload {
+    int64 fighter_id          = 1;  // shared battle fighter id
+    int64 initial_units       = 2;  // 初始兵力
+    int64 remaining_units     = 3;  // 剩余兵力
+    int64 units_lost          = 4;  // 损失兵力
+    int64 initial_power       = 5;  // 初始战力
+    int64 remaining_power     = 6;  // 剩余战力
+    int64 power_lost          = 7;  // 损失战力
+    int64 damage_dealt        = 8;  // 造成伤害
+    int64 damage_taken        = 9;  // 承受伤害
+    int32 loss_rate_bps       = 10; // 损失率，万分比
+}
+
+message WorldBattleResultPayload {
+    int64 battle_id           = 1;  // 战斗ID
+    int32 target_pos          = 2;  // 战斗目标坐标
+    optional int32 origin     = 3;  // 进攻方出发坐标
+    optional int32 march_type = 4;  // 原行军类型
+    optional int32 camp       = 5;  // 进攻方阵营
+    string outcome            = 6;  // AttackerWin/DefenderWin/Draw
+    string winner_side        = 7;  // Attacker/Defender/Draw
+    int32 rounds              = 8;  // 回合数
+    int32 total_events        = 9;  // 战斗事件数
+    WorldBattleFighterSummaryPayload attacker = 10;
+    WorldBattleFighterSummaryPayload defender = 11;
+    optional int64 target_owner_id = 12;   // 目标拥有者
+    optional int32 target_entity_type = 13; // 目标实体类型
+}
+
 // ── PlayerOffline ─────────────────────────────────────────────────────────────
 
 message PlayerOfflineRq {
