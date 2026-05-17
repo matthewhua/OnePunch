@@ -1,6 +1,6 @@
 use prost::Message;
 use proto::slg::{
-    AwardPb, FunctionClientBase, GetRoleDataRs, LordDataFunction, RoleLoginRs,
+    AwardPb, BaseMailPb, FunctionClientBase, GetRoleDataRs, LordDataFunction, RoleLoginRs,
     WorldCollectReturnedPayload, WorldCollectStartedPayload, WorldGarrisonChangedPayload,
     WorldOutboundRq, WorldOutboundRs, WorldScoutReportRequestedPayload, WorldTroopReturnedPayload,
 };
@@ -751,6 +751,10 @@ impl PlayerActor {
         event: &DecodedWorldOutbound,
     ) -> anyhow::Result<Vec<GameEvent>> {
         match event {
+            DecodedWorldOutbound::ScoutReportRequested(payload) => {
+                self.create_scout_report_mail(payload)?;
+                Ok(Vec::new())
+            }
             DecodedWorldOutbound::CollectReturned(payload) => {
                 if let Some(formation_id) = payload.formation_id.filter(|id| *id > 0) {
                     self.hero_system
@@ -760,6 +764,86 @@ impl PlayerActor {
             }
             _ => Ok(Vec::new()),
         }
+    }
+
+    fn create_scout_report_mail(
+        &mut self,
+        payload: &WorldScoutReportRequestedPayload,
+    ) -> anyhow::Result<()> {
+        let now_secs = chrono::Utc::now().timestamp();
+        let entity_type_name = entity_type_display_name(payload.target_entity_type);
+
+        let mut content_parts = Vec::new();
+        if let Some(entity_type) = payload.target_entity_type {
+            content_parts.push(format!("Target Type: {} ({})", entity_type_name, entity_type));
+        }
+        if let Some(owner_id) = payload.target_owner_id {
+            content_parts.push(format!("Owner ID: {}", owner_id));
+        }
+        if let Some(camp) = payload.target_camp {
+            content_parts.push(format!("Camp: {}", camp));
+        }
+        if let Some(is_battle) = payload.target_is_battle {
+            if is_battle {
+                content_parts.push("Status: In Battle".to_string());
+            }
+        }
+        if let Some(protect_time) = payload.target_protect_time {
+            if protect_time > 0 && protect_time as i64 > now_secs {
+                let remaining_secs = protect_time as i64 - now_secs;
+                content_parts.push(format!(
+                    "Protection Shield: {}s remaining",
+                    remaining_secs.max(0)
+                ));
+            }
+        }
+        if !payload.target_resources.is_empty() {
+            let total: i64 = payload.target_resources.iter().map(|a| a.count).sum();
+            content_parts.push(format!("Available Resources: {} units", total));
+        }
+        if !payload.garrison_troops.is_empty() {
+            content_parts.push(format!(
+                "Garrison Troops: {} stationed",
+                payload.garrison_troops.len()
+            ));
+        }
+
+        let content = content_parts.join("\n");
+        let title = format!(
+            "Scout Report: {} at pos {}",
+            entity_type_name,
+            payload.target_pos
+        );
+
+        let mut c_param = Vec::new();
+        c_param.push(format!("pos:{}", payload.target_pos));
+        if let Some(t) = payload.target_entity_type {
+            c_param.push(format!("entity_type:{}", t));
+        }
+        if let Some(owner) = payload.target_owner_id {
+            c_param.push(format!("owner:{}", owner));
+        }
+        if !payload.target_resources.is_empty() {
+            for (i, res) in payload.target_resources.iter().enumerate() {
+                c_param.push(format!("resource_{}:id={},count={}", i, res.id, res.count));
+            }
+        }
+        c_param.push(format!(
+            "garrison_count:{}",
+            payload.garrison_troops.len()
+        ));
+
+        self.mail_system.add_personal_mail(BaseMailPb {
+            template_id: 200,
+            r#type: 0,
+            time: Some(now_secs),
+            title: Some(title),
+            content: Some(content),
+            c_param,
+            ..Default::default()
+        });
+
+        Ok(())
     }
 
     fn apply_world_awards(&mut self, awards: &[AwardPb]) -> anyhow::Result<Vec<GameEvent>> {
@@ -828,6 +912,21 @@ impl PlayerActor {
     }
 }
 
+fn entity_type_display_name(entity_type: Option<i32>) -> &'static str {
+    match entity_type {
+        Some(1) => "Player",
+        Some(2) => "Bandit",
+        Some(3) => "Mine",
+        Some(4) => "City",
+        Some(5) => "Multiplayer Bandit",
+        Some(6) => "Pirate Fleet",
+        Some(7) => "Rebels NPC",
+        Some(99) => "Decoration",
+        Some(200) => "Hunting Trap",
+        _ => "Unknown Entity",
+    }
+}
+
 enum DecodedWorldOutbound {
     ScoutReportRequested(WorldScoutReportRequestedPayload),
     CollectStarted(WorldCollectStartedPayload),
@@ -840,10 +939,12 @@ impl DecodedWorldOutbound {
     fn description(&self) -> String {
         match self {
             Self::ScoutReportRequested(payload) => format!(
-                "scout_report_requested target_pos={} origin={} camp={}",
+                "scout_report_requested target_pos={} origin={} camp={} entity_type={} owner={}",
                 payload.target_pos,
                 optional_i32(payload.origin),
-                optional_i32(payload.camp)
+                optional_i32(payload.camp),
+                optional_i32(payload.target_entity_type),
+                optional_i64(payload.target_owner_id),
             ),
             Self::CollectStarted(payload) => format!(
                 "collect_started target_pos={} march_type={} start_time_ms={}",
@@ -941,6 +1042,12 @@ fn optional_i32(value: Option<i32>) -> String {
         .unwrap_or_else(|| "none".to_string())
 }
 
+fn optional_i64(value: Option<i64>) -> String {
+    value
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_string())
+}
+
 fn push_function_base(function_base: &mut Vec<FunctionClientBase>, bytes: Vec<u8>) {
     if let Ok(f_base) = FunctionClientBase::decode(bytes.as_slice()) {
         function_base.push(f_base);
@@ -954,7 +1061,7 @@ fn i64_to_i32_saturating(value: i64) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto::slg::{BaseMailPb, GetMailListRq, GetMailListRs, GetRoleDataRq};
+    use proto::slg::{BaseMailPb, GarrisonTroop, GetMailListRq, GetMailListRs, GetRoleDataRq};
     use shared::msg::{GameMessage, func_type};
     use sqlx::mysql::MySqlPoolOptions;
 
@@ -1312,5 +1419,147 @@ mod tests {
         assert_eq!(rs.code, 0);
         assert_eq!(actor.backpack_system.get_item_count(1001), 2);
         assert!(actor.backpack_system.is_dirty());
+    }
+
+    #[tokio::test]
+    async fn world_outbound_scout_report_creates_mail() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        let payload = WorldScoutReportRequestedPayload {
+            origin: Some(1),
+            target_pos: 303,
+            camp: Some(1),
+            target_entity_type: Some(1), // Player
+            target_owner_id: Some(900_002),
+            target_camp: Some(2),
+            target_conf_id: Some(7),
+            target_is_battle: Some(true),
+            target_protect_time: Some(1_700_000_500),
+            scout_time_ms: Some(1_700_000_000),
+            target_resources: vec![],
+            garrison_troops: vec![],
+        }
+        .encode_to_vec();
+
+        let mail_count_before = actor.mail_system.mails.len();
+
+        let rs = actor
+            .handle_world_outbound(WorldOutboundRq {
+                role_id,
+                event_type: WORLD_OUTBOUND_EVENT_SCOUT_REPORT_REQUESTED,
+                world_entity_id: 303,
+                troop_key: 100,
+                payload,
+                context: "scout test".to_string(),
+                event_id: "test-scout-report-100".to_string(),
+                event_key: "test:scout_report:100".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(rs.code, 0);
+        assert!(rs.msg.contains("scout_report_requested"));
+        assert_eq!(actor.mail_system.mails.len(), mail_count_before + 1);
+
+        let mail = actor.mail_system.mails.last().unwrap();
+        assert_eq!(mail.template_id, 200);
+        assert_eq!(mail.r#type, 0);
+        assert!(mail.title.as_deref().unwrap().contains("Scout Report"));
+        assert!(mail.title.as_deref().unwrap().contains("pos 303"));
+        assert!(mail.content.as_deref().unwrap().contains("Player"));
+        assert!(mail.content.as_deref().unwrap().contains("Owner ID: 900002"));
+        assert!(mail.c_param.iter().any(|p| p.contains("pos:303")));
+        assert!(actor.mail_system.is_dirty());
+    }
+
+    #[tokio::test]
+    async fn world_outbound_scout_report_duplicate_does_not_create_duplicate_mail() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        let payload = WorldScoutReportRequestedPayload {
+            origin: Some(1),
+            target_pos: 404,
+            camp: Some(1),
+            target_entity_type: Some(3), // Mine
+            target_owner_id: None,
+            target_camp: None,
+            target_conf_id: Some(201),
+            target_is_battle: None,
+            target_protect_time: None,
+            scout_time_ms: Some(1_700_000_000),
+            target_resources: vec![],
+            garrison_troops: vec![],
+        }
+        .encode_to_vec();
+        let request = WorldOutboundRq {
+            role_id,
+            event_type: WORLD_OUTBOUND_EVENT_SCOUT_REPORT_REQUESTED,
+            world_entity_id: 404,
+            troop_key: 200,
+            payload,
+            context: "scout test".to_string(),
+            event_id: "test-scout-dedup-200".to_string(),
+            event_key: "test:scout_dedup:200".to_string(),
+        };
+
+        let first = actor.handle_world_outbound(request.clone()).await.unwrap();
+        let duplicate = actor.handle_world_outbound(request).await.unwrap();
+
+        assert_eq!(first.code, 0);
+        assert_eq!(duplicate.code, 0);
+        assert!(duplicate.msg.contains("duplicate"));
+        // Only one mail should be created
+        assert_eq!(actor.mail_system.mails.len(), 1);
+        assert!(
+            actor
+                .world_system
+                .has_processed_outbound("id:test-scout-dedup-200")
+        );
+    }
+
+    #[tokio::test]
+    async fn world_outbound_scout_report_with_garrison_includes_garrison_in_mail() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        let payload = WorldScoutReportRequestedPayload {
+            origin: Some(1),
+            target_pos: 505,
+            camp: Some(1),
+            target_entity_type: Some(1), // Player
+            target_owner_id: Some(900_003),
+            target_camp: Some(2),
+            target_conf_id: None,
+            target_is_battle: Some(false),
+            target_protect_time: None,
+            scout_time_ms: Some(1_700_000_000),
+            target_resources: vec![],
+            garrison_troops: vec![proto::slg::GarrisonTroop {
+                troop_key_id: Some(301),
+                role_id: Some(900_004),
+                end_time: Some(99_000),
+                ..Default::default()
+            }],
+        }
+        .encode_to_vec();
+
+        let rs = actor
+            .handle_world_outbound(WorldOutboundRq {
+                role_id,
+                event_type: WORLD_OUTBOUND_EVENT_SCOUT_REPORT_REQUESTED,
+                world_entity_id: 505,
+                troop_key: 300,
+                payload,
+                context: "scout test".to_string(),
+                event_id: "test-scout-garrison-300".to_string(),
+                event_key: "test:scout_garrison:300".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(rs.code, 0);
+        assert_eq!(actor.mail_system.mails.len(), 1);
+        let mail = actor.mail_system.mails.last().unwrap();
+        assert!(mail.content.as_deref().unwrap().contains("Garrison Troops: 1"));
+        assert!(mail.c_param.iter().any(|p| p == "garrison_count:1"));
     }
 }

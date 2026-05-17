@@ -71,6 +71,16 @@ message WorldScoutReportRequestedPayload {
     optional int32 origin     = 1;  // 侦查发起坐标
     int32 target_pos          = 2;  // 侦查目标坐标
     optional int32 camp       = 3;  // 发起方阵营
+    // Scout report data
+    optional int32 target_entity_type = 4;  // 目标实体类型
+    optional int64 target_owner_id   = 5;  // 目标拥有者玩家ID
+    optional int32 target_camp       = 6;  // 目标阵营
+    optional int32 target_conf_id    = 7;  // 目标配置ID
+    optional bool  target_is_battle  = 8;  // 目标是否在战斗中
+    optional int32 target_protect_time = 9;  // 目标保护罩到期时间
+    optional int64 scout_time_ms     = 10; // 侦查时间毫秒
+    repeated AwardPb target_resources = 11; // 可采集资源(矿点时)
+    repeated GarrisonTroop garrison_troops = 12; // 驻防部队
 }
 
 message WorldCollectStartedPayload {

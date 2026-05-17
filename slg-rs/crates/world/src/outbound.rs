@@ -17,6 +17,26 @@ pub const WORLD_OUTBOUND_EVENT_TROOP_RETURNED: i32 = 3;
 pub const WORLD_OUTBOUND_EVENT_GARRISON_CHANGED: i32 = 4;
 pub const WORLD_OUTBOUND_EVENT_COLLECT_RETURNED: i32 = 5;
 
+/// World entity types mirroring WorldEntityTypeDefine
+pub const ENTITY_TYPE_PLAYER: i32 = 1;
+pub const ENTITY_TYPE_BANDIT: i32 = 2;
+pub const ENTITY_TYPE_MINE: i32 = 3;
+pub const ENTITY_TYPE_CITY: i32 = 4;
+
+/// Scout report data collected from the World side.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ScoutReportData {
+    pub target_entity_type: Option<i32>,
+    pub target_owner_id: Option<i64>,
+    pub target_camp: Option<i32>,
+    pub target_conf_id: Option<i32>,
+    pub target_is_battle: bool,
+    pub target_protect_time: Option<i32>,
+    pub scout_time_ms: i64,
+    pub target_resources: Vec<AwardPb>,
+    pub garrison_troops: Vec<proto::slg::GarrisonTroop>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WorldOutboundTarget {
     Home,
@@ -37,6 +57,7 @@ pub enum WorldOutboundEvent {
         origin: Option<i32>,
         target_pos: i32,
         camp: Option<i32>,
+        report: Option<ScoutReportData>,
     },
     CollectStarted {
         troop_key: i32,
@@ -112,6 +133,7 @@ impl WorldOutboundEvent {
                 origin,
                 target_pos,
                 camp,
+                ..
             } => format!(
                 "world:scout_report_requested:role={}:troop={}:target={}:origin={}:camp={}",
                 role_id,
@@ -194,22 +216,50 @@ impl WorldOutboundEvent {
                 origin,
                 target_pos,
                 camp,
-            } => (
-                WORLD_OUTBOUND_EVENT_SCOUT_REPORT_REQUESTED,
-                *target_pos,
-                *troop_key,
-                WorldScoutReportRequestedPayload {
-                    origin: *origin,
-                    target_pos: *target_pos,
-                    camp: *camp,
-                }
-                .encode_to_vec(),
-                format!(
-                    "scout_report_requested origin={} camp={}",
-                    optional_i32(*origin),
-                    optional_i32(*camp)
-                ),
-            ),
+                report,
+            } => {
+                let (target_entity_type, target_owner_id, target_camp, target_conf_id, target_is_battle, target_protect_time, scout_time_ms, target_resources, garrison_troops) =
+                    if let Some(r) = report {
+                        (
+                            r.target_entity_type,
+                            r.target_owner_id,
+                            r.target_camp,
+                            r.target_conf_id,
+                            Some(r.target_is_battle),
+                            r.target_protect_time,
+                            Some(r.scout_time_ms),
+                            r.target_resources.clone(),
+                            r.garrison_troops.clone(),
+                        )
+                    } else {
+                        (None, None, None, None, None, None, None, Vec::new(), Vec::new())
+                    };
+                (
+                    WORLD_OUTBOUND_EVENT_SCOUT_REPORT_REQUESTED,
+                    *target_pos,
+                    *troop_key,
+                    WorldScoutReportRequestedPayload {
+                        origin: *origin,
+                        target_pos: *target_pos,
+                        camp: *camp,
+                        target_entity_type,
+                        target_owner_id,
+                        target_camp,
+                        target_conf_id,
+                        target_is_battle,
+                        target_protect_time,
+                        scout_time_ms,
+                        target_resources,
+                        garrison_troops,
+                    }
+                    .encode_to_vec(),
+                    format!(
+                        "scout_report_requested origin={} camp={}",
+                        optional_i32(*origin),
+                        optional_i32(*camp)
+                    ),
+                )
+            },
             Self::CollectStarted {
                 troop_key,
                 target_pos,
@@ -522,6 +572,7 @@ pub fn outbound_events_for_resolution(
             origin: troop.origin,
             target_pos: resolution.pos,
             camp: troop.camp,
+            report: None,
         }],
         ArrivalEffect::GarrisonPlaced => vec![WorldOutboundEvent::GarrisonChanged {
             troop_key: troop.key,
@@ -562,6 +613,7 @@ pub fn outbound_events_for_action(
             origin: troop.origin,
             target_pos: pos,
             camp: troop.camp,
+            report: None,
         }],
         ArrivalAction::Garrison => vec![WorldOutboundEvent::GarrisonChanged {
             troop_key: troop.key,
@@ -604,6 +656,7 @@ mod tests {
             origin: Some(1),
             target_pos: 2,
             camp: Some(7),
+            report: None,
         })
         .unwrap();
         sink.publish(WorldOutboundEvent::TroopReturned {
@@ -621,6 +674,7 @@ mod tests {
                     origin: Some(1),
                     target_pos: 2,
                     camp: Some(7),
+                    report: None,
                 },
                 WorldOutboundEvent::TroopReturned {
                     troop_key: 11,
@@ -679,6 +733,7 @@ mod tests {
                     origin: Some(10),
                     target_pos: 22,
                     camp: Some(7),
+                    report: None,
                 },
             ]
         );
@@ -828,6 +883,7 @@ mod tests {
             origin: Some(1),
             target_pos: 2,
             camp: Some(7),
+            report: None,
         }
         .to_home_request(900_001)
         .unwrap();

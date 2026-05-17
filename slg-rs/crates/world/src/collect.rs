@@ -9,9 +9,9 @@ pub const DEFAULT_COLLECT_RESOURCE_AMOUNT: i64 = 100;
 pub const AWARD_TYPE_LORD_RESOURCE: i32 = 1;
 pub const RESOURCE_ID_GOLD: i32 = 2;
 pub const RESOURCE_ID_MEAT: i32 = 3;
-const STATIC_MINE_REWARD_TYPE_RESOURCE: i32 = 2;
-const MINE_TYPE_GRAIN: i32 = 2;
-const MINE_TYPE_GOLD_INGOT: i32 = 4;
+pub const STATIC_MINE_REWARD_TYPE_RESOURCE: i32 = 2;
+pub const MINE_TYPE_GRAIN: i32 = 2;
+pub const MINE_TYPE_GOLD_INGOT: i32 = 4;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CollectProfile {
