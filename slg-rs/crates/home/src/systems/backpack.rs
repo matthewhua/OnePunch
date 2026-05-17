@@ -115,7 +115,7 @@ impl BackpackSystem {
         }
     }
 
-    fn add_award(&mut self, award: AwardPb) {
+    pub fn add_award(&mut self, award: AwardPb) {
         if award.count <= 0 {
             return;
         }
@@ -137,7 +137,7 @@ impl BackpackSystem {
         self.dirty = true;
     }
 
-    fn apply_awards(&mut self, awards: &[AwardPb]) -> Vec<AwardPb> {
+    pub fn apply_awards(&mut self, awards: &[AwardPb]) -> Vec<AwardPb> {
         let mut changed = Vec::new();
         for award in awards {
             if award.r#type == ITEM_AWARD_TYPE {

@@ -113,6 +113,14 @@ impl WorldRuntime {
     }
 
     pub async fn send_transfer_troop(&self, troop: BaseTroop) -> Result<()> {
+        self.send_transfer_troop_with_formation(troop, None).await
+    }
+
+    pub async fn send_transfer_troop_with_formation(
+        &self,
+        troop: BaseTroop,
+        formation_id: Option<i32>,
+    ) -> Result<()> {
         let sector_id = troop
             .goal
             .ok_or_else(|| anyhow!("troop goal is required for sector routing"))?;
@@ -122,7 +130,11 @@ impl WorldRuntime {
             .get(&sector_id)
             .ok_or_else(|| anyhow!("sector sender {} not found", sector_id))?;
         sender
-            .send(SectorMessage::TransferTroop { troop_data: troop })
+            .send(SectorMessage::TransferTroop {
+                troop_data: troop,
+                formation_id,
+                collect_state: None,
+            })
             .await
             .map_err(|_| anyhow!("sector {} receiver dropped", sector_id))
     }

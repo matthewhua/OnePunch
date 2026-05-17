@@ -52,13 +52,29 @@ pub struct MarchingTroop {
 pub struct MarchingManager {
     // TroopKey -> Troop
     pub troops: DashMap<i32, MarchingTroop>,
+    troop_owners: DashMap<i32, i64>,
 }
 
 impl MarchingManager {
     pub fn new() -> Self {
         Self {
             troops: DashMap::new(),
+            troop_owners: DashMap::new(),
         }
+    }
+
+    pub fn set_troop_owner(&self, troop_key: i32, role_id: i64) {
+        self.troop_owners.insert(troop_key, role_id);
+    }
+
+    pub fn troop_owner(&self, troop_key: i32) -> Option<i64> {
+        self.troop_owners
+            .get(&troop_key)
+            .map(|owner| *owner.value())
+    }
+
+    pub fn clear_troop_owner(&self, troop_key: i32) {
+        self.troop_owners.remove(&troop_key);
     }
 
     /// 发起行军
@@ -407,5 +423,16 @@ mod tests {
         assert!(manager
             .start_march_at(troop(2, MARCH_TYPE_ATK_PLAYER, -1, goal), 1.0, 1_000)
             .is_err());
+    }
+
+    #[test]
+    fn tracks_troop_owner_for_outbound_resolution() {
+        let manager = MarchingManager::new();
+
+        manager.set_troop_owner(7, 900_001);
+        assert_eq!(manager.troop_owner(7), Some(900_001));
+
+        manager.clear_troop_owner(7);
+        assert_eq!(manager.troop_owner(7), None);
     }
 }

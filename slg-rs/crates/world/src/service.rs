@@ -129,10 +129,17 @@ impl WorldServiceImpl {
 
     async fn dispatch_troop(
         &self,
-        _role_id: i64,
+        role_id: i64,
         target_pos: i32,
         troop_type: i32,
+        formation_id: Option<i32>,
     ) -> Result<BaseTroop, Status> {
+        if role_id <= 0 {
+            return Err(Status::invalid_argument(format!(
+                "invalid world role_id: {}",
+                role_id
+            )));
+        }
         if !crate::map::grid::is_valid_pos(target_pos) {
             return Err(Status::invalid_argument(format!(
                 "invalid world target position: {}",
@@ -154,9 +161,10 @@ impl WorldServiceImpl {
             .marching_mgr
             .start_march(troop, 10.0)
             .map_err(|e| Status::failed_precondition(format!("start march failed: {}", e)))?;
+        self.marching_mgr.set_troop_owner(troop.key, role_id);
 
         self.runtime
-            .send_transfer_troop(troop.clone())
+            .send_transfer_troop_with_formation(troop.clone(), formation_id)
             .await
             .map_err(|e| Status::failed_precondition(format!("sector dispatch failed: {}", e)))?;
 
@@ -416,7 +424,12 @@ impl WorldService for WorldServiceImpl {
             50019 => {
                 let rq: DispatchTroopRq = self.decode_payload(req.cmd, req.payload)?;
                 let _troop = self
-                    .dispatch_troop(req.role_id, rq.pos, Self::troop_type_for_entity(rq.r#type))
+                    .dispatch_troop(
+                        req.role_id,
+                        rq.pos,
+                        Self::troop_type_for_entity(rq.r#type),
+                        Some(rq.formation_id),
+                    )
                     .await?;
                 self.response(50020, &proto::slg::DispatchTroopRs::default())
             }
@@ -490,14 +503,19 @@ impl WorldService for WorldServiceImpl {
             50037 => {
                 let rq: DispatchPigeonTroopRq = self.decode_payload(req.cmd, req.payload)?;
                 let _troop = self
-                    .dispatch_troop(req.role_id, rq.pos, crate::march::MARCH_TYPE_INTEL_TASK)
+                    .dispatch_troop(
+                        req.role_id,
+                        rq.pos,
+                        crate::march::MARCH_TYPE_INTEL_TASK,
+                        None,
+                    )
                     .await?;
                 self.response(50038, &proto::slg::DispatchPigeonTroopRs::default())
             }
             50039 => {
                 let rq: DispatchScoutTroopRq = self.decode_payload(req.cmd, req.payload)?;
                 let _troop = self
-                    .dispatch_troop(req.role_id, rq.pos, crate::march::MARCH_TYPE_SCOUT)
+                    .dispatch_troop(req.role_id, rq.pos, crate::march::MARCH_TYPE_SCOUT, None)
                     .await?;
                 self.response(50040, &proto::slg::DispatchScoutTroopRs::default())
             }
@@ -820,6 +838,7 @@ mod tests {
             42,
             crate::map::grid::xy_to_pos(1, 1),
             crate::march::MARCH_TYPE_SCOUT,
+            None,
         )
         .await
         .unwrap();
@@ -878,6 +897,20 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn dispatch_troop_registers_owner_for_outbound_resolution() {
+        let svc = service();
+        let role_id = 900_001;
+        let target = crate::map::grid::xy_to_pos(50, 50);
+
+        let troop = svc
+            .dispatch_troop(role_id, target, crate::march::MARCH_TYPE_SCOUT, Some(7))
+            .await
+            .unwrap();
+
+        assert_eq!(svc.marching_mgr.troop_owner(troop.key), Some(role_id));
     }
 
     #[tokio::test]

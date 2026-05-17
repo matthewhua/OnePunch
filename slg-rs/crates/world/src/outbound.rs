@@ -1,5 +1,10 @@
 use anyhow::Result;
-use proto::slg::{BaseTroop, WorldOutboundRq};
+use prost::Message;
+use proto::slg::{
+    AwardPb, BaseTroop, WorldCollectReturnedPayload, WorldCollectStartedPayload,
+    WorldGarrisonChangedPayload, WorldOutboundRq, WorldScoutReportRequestedPayload,
+    WorldTroopReturnedPayload,
+};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 
@@ -10,6 +15,7 @@ pub const WORLD_OUTBOUND_EVENT_SCOUT_REPORT_REQUESTED: i32 = 1;
 pub const WORLD_OUTBOUND_EVENT_COLLECT_STARTED: i32 = 2;
 pub const WORLD_OUTBOUND_EVENT_TROOP_RETURNED: i32 = 3;
 pub const WORLD_OUTBOUND_EVENT_GARRISON_CHANGED: i32 = 4;
+pub const WORLD_OUTBOUND_EVENT_COLLECT_RETURNED: i32 = 5;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WorldOutboundTarget {
@@ -17,7 +23,7 @@ pub enum WorldOutboundTarget {
     Battle,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum WorldOutboundEvent {
     BattleStartRequested {
         troop_key: i32,
@@ -38,6 +44,16 @@ pub enum WorldOutboundEvent {
         march_type: Option<i32>,
         start_time_ms: i64,
     },
+    CollectReturned {
+        troop_key: i32,
+        target_pos: i32,
+        home_pos: i32,
+        march_type: Option<i32>,
+        formation_id: Option<i32>,
+        awards: Vec<AwardPb>,
+        collect_start_time_ms: i64,
+        collect_end_time_ms: i64,
+    },
     TroopReturned {
         troop_key: i32,
         home_pos: i32,
@@ -52,11 +68,23 @@ pub enum WorldOutboundEvent {
 }
 
 impl WorldOutboundEvent {
+    pub fn troop_key(&self) -> i32 {
+        match self {
+            Self::BattleStartRequested { troop_key, .. }
+            | Self::ScoutReportRequested { troop_key, .. }
+            | Self::CollectStarted { troop_key, .. }
+            | Self::CollectReturned { troop_key, .. }
+            | Self::TroopReturned { troop_key, .. }
+            | Self::GarrisonChanged { troop_key, .. } => *troop_key,
+        }
+    }
+
     pub fn target(&self) -> WorldOutboundTarget {
         match self {
             Self::BattleStartRequested { .. } => WorldOutboundTarget::Battle,
             Self::ScoutReportRequested { .. }
             | Self::CollectStarted { .. }
+            | Self::CollectReturned { .. }
             | Self::TroopReturned { .. }
             | Self::GarrisonChanged { .. } => WorldOutboundTarget::Home,
         }
@@ -70,7 +98,7 @@ impl WorldOutboundEvent {
             ));
         }
 
-        let (event_type, world_entity_id, troop_key, context) = match self {
+        let (event_type, world_entity_id, troop_key, payload, context) = match self {
             Self::ScoutReportRequested {
                 troop_key,
                 origin,
@@ -80,6 +108,12 @@ impl WorldOutboundEvent {
                 WORLD_OUTBOUND_EVENT_SCOUT_REPORT_REQUESTED,
                 *target_pos,
                 *troop_key,
+                WorldScoutReportRequestedPayload {
+                    origin: *origin,
+                    target_pos: *target_pos,
+                    camp: *camp,
+                }
+                .encode_to_vec(),
                 format!(
                     "scout_report_requested origin={} camp={}",
                     optional_i32(*origin),
@@ -95,10 +129,46 @@ impl WorldOutboundEvent {
                 WORLD_OUTBOUND_EVENT_COLLECT_STARTED,
                 *target_pos,
                 *troop_key,
+                WorldCollectStartedPayload {
+                    target_pos: *target_pos,
+                    march_type: *march_type,
+                    start_time_ms: *start_time_ms,
+                }
+                .encode_to_vec(),
                 format!(
                     "collect_started march_type={} start_time_ms={}",
                     optional_i32(*march_type),
                     start_time_ms
+                ),
+            ),
+            Self::CollectReturned {
+                troop_key,
+                target_pos,
+                home_pos,
+                march_type,
+                formation_id,
+                awards,
+                collect_start_time_ms,
+                collect_end_time_ms,
+            } => (
+                WORLD_OUTBOUND_EVENT_COLLECT_RETURNED,
+                *target_pos,
+                *troop_key,
+                WorldCollectReturnedPayload {
+                    target_pos: *target_pos,
+                    home_pos: *home_pos,
+                    march_type: *march_type,
+                    formation_id: *formation_id,
+                    awards: awards.clone(),
+                    collect_start_time_ms: *collect_start_time_ms,
+                    collect_end_time_ms: *collect_end_time_ms,
+                }
+                .encode_to_vec(),
+                format!(
+                    "collect_returned target_pos={} home_pos={} awards={}",
+                    target_pos,
+                    home_pos,
+                    awards.len()
                 ),
             ),
             Self::TroopReturned {
@@ -109,6 +179,11 @@ impl WorldOutboundEvent {
                 WORLD_OUTBOUND_EVENT_TROOP_RETURNED,
                 *home_pos,
                 *troop_key,
+                WorldTroopReturnedPayload {
+                    home_pos: *home_pos,
+                    march_type: *march_type,
+                }
+                .encode_to_vec(),
                 format!("troop_returned march_type={}", optional_i32(*march_type)),
             ),
             Self::GarrisonChanged {
@@ -120,6 +195,12 @@ impl WorldOutboundEvent {
                 WORLD_OUTBOUND_EVENT_GARRISON_CHANGED,
                 *target_pos,
                 *troop_key,
+                WorldGarrisonChangedPayload {
+                    target_pos: *target_pos,
+                    camp: *camp,
+                    is_arrival: *is_arrival,
+                }
+                .encode_to_vec(),
                 format!(
                     "garrison_changed camp={} is_arrival={}",
                     optional_i32(*camp),
@@ -138,7 +219,7 @@ impl WorldOutboundEvent {
             event_type,
             world_entity_id,
             troop_key,
-            payload: Vec::new(),
+            payload,
             context,
         })
     }
@@ -562,6 +643,20 @@ mod tests {
             .target(),
             WorldOutboundTarget::Home
         );
+        assert_eq!(
+            WorldOutboundEvent::CollectReturned {
+                troop_key: 3,
+                target_pos: 21,
+                home_pos: 10,
+                march_type: Some(MARCH_TYPE_MINE_COLLECT),
+                formation_id: Some(7),
+                awards: Vec::new(),
+                collect_start_time_ms: 0,
+                collect_end_time_ms: 500,
+            }
+            .target(),
+            WorldOutboundTarget::Home
+        );
     }
 
     #[tokio::test]
@@ -611,8 +706,82 @@ mod tests {
         assert_eq!(request.event_type, WORLD_OUTBOUND_EVENT_TROOP_RETURNED);
         assert_eq!(request.world_entity_id, 101);
         assert_eq!(request.troop_key, 44);
-        assert!(request.payload.is_empty());
+        let payload = WorldTroopReturnedPayload::decode(request.payload.as_slice()).unwrap();
+        assert_eq!(payload.home_pos, 101);
+        assert_eq!(payload.march_type, Some(MARCH_TYPE_ATK_PLAYER));
         assert!(request.context.contains("troop_returned"));
+    }
+
+    #[test]
+    fn home_requests_encode_typed_non_combat_payloads() {
+        let scout = WorldOutboundEvent::ScoutReportRequested {
+            troop_key: 10,
+            origin: Some(1),
+            target_pos: 2,
+            camp: Some(7),
+        }
+        .to_home_request(900_001)
+        .unwrap();
+        let scout_payload =
+            WorldScoutReportRequestedPayload::decode(scout.payload.as_slice()).unwrap();
+        assert_eq!(scout_payload.origin, Some(1));
+        assert_eq!(scout_payload.target_pos, 2);
+        assert_eq!(scout_payload.camp, Some(7));
+
+        let collect = WorldOutboundEvent::CollectStarted {
+            troop_key: 11,
+            target_pos: 3,
+            march_type: Some(MARCH_TYPE_MINE_COLLECT),
+            start_time_ms: 12_000,
+        }
+        .to_home_request(900_001)
+        .unwrap();
+        let collect_payload =
+            WorldCollectStartedPayload::decode(collect.payload.as_slice()).unwrap();
+        assert_eq!(collect_payload.target_pos, 3);
+        assert_eq!(collect_payload.march_type, Some(MARCH_TYPE_MINE_COLLECT));
+        assert_eq!(collect_payload.start_time_ms, 12_000);
+
+        let garrison = WorldOutboundEvent::GarrisonChanged {
+            troop_key: 12,
+            target_pos: 4,
+            camp: Some(2),
+            is_arrival: true,
+        }
+        .to_home_request(900_001)
+        .unwrap();
+        let garrison_payload =
+            WorldGarrisonChangedPayload::decode(garrison.payload.as_slice()).unwrap();
+        assert_eq!(garrison_payload.target_pos, 4);
+        assert_eq!(garrison_payload.camp, Some(2));
+        assert!(garrison_payload.is_arrival);
+
+        let returned = WorldOutboundEvent::CollectReturned {
+            troop_key: 13,
+            target_pos: 5,
+            home_pos: 1,
+            march_type: Some(MARCH_TYPE_MINE_COLLECT),
+            formation_id: Some(7),
+            awards: vec![AwardPb {
+                r#type: crate::collect::AWARD_TYPE_LORD_RESOURCE,
+                id: crate::collect::RESOURCE_ID_MEAT,
+                count: 100,
+                safe: Some(true),
+                ..Default::default()
+            }],
+            collect_start_time_ms: 12_000,
+            collect_end_time_ms: 12_500,
+        }
+        .to_home_request(900_001)
+        .unwrap();
+        assert_eq!(returned.event_type, WORLD_OUTBOUND_EVENT_COLLECT_RETURNED);
+        let returned_payload =
+            WorldCollectReturnedPayload::decode(returned.payload.as_slice()).unwrap();
+        assert_eq!(returned_payload.target_pos, 5);
+        assert_eq!(returned_payload.home_pos, 1);
+        assert_eq!(returned_payload.formation_id, Some(7));
+        assert_eq!(returned_payload.awards.len(), 1);
+        assert_eq!(returned_payload.awards[0].count, 100);
     }
 
     #[test]

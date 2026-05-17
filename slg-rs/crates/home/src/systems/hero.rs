@@ -63,6 +63,18 @@ impl HeroSystem {
         self.dirty = true;
     }
 
+    pub fn set_formation_state(&mut self, formation_id: i32, state: i32) -> bool {
+        let Some(formation) = self.formations.iter_mut().find(|f| f.id == formation_id) else {
+            return false;
+        };
+        if formation.state == state {
+            return false;
+        }
+        formation.state = state;
+        self.dirty = true;
+        true
+    }
+
     /// 将领升级，返回触发的游戏事件列表
     pub fn level_up(&mut self, role_id: i64, hero_id: i32) -> Result<Vec<GameEvent>> {
         let hero = self.heroes.get_mut(&hero_id)
@@ -358,5 +370,41 @@ impl shared::msg::ToFunctionClientBaseBytes for HeroSystem {
         use shared::msg::{func_type, func_tag};
         let func = self.to_proto();
         shared::msg::build_function_base_bytes_pub(func_type::HERO, func_tag::HERO, &func)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn set_formation_state_changes_state_and_marks_dirty() {
+        let mut system = HeroSystem::new();
+        system.formations.push(Formation {
+            id: 7,
+            state: 1,
+            hero_id: vec![101],
+            ..Default::default()
+        });
+
+        assert!(system.set_formation_state(7, 0));
+        assert_eq!(system.formations[0].state, 0);
+        assert!(system.dirty);
+    }
+
+    #[test]
+    fn set_formation_state_noops_when_state_is_same_or_missing() {
+        let mut system = HeroSystem::new();
+        system.formations.push(Formation {
+            id: 7,
+            state: 0,
+            hero_id: vec![101],
+            ..Default::default()
+        });
+
+        assert!(!system.set_formation_state(7, 0));
+        assert!(!system.dirty);
+        assert!(!system.set_formation_state(8, 0));
+        assert!(!system.dirty);
     }
 }

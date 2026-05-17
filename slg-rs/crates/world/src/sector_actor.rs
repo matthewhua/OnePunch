@@ -1,15 +1,20 @@
 use crate::arrival::resolve_arrival;
-use crate::collect::CollectStateMachine;
+use crate::collect::{
+    CollectCompletion, CollectPhase, CollectState, CollectStateMachine,
+    DEFAULT_COLLECT_RETURN_DURATION_MS,
+};
 use crate::health::HealthChecker;
 use crate::map::aoi::{AoiEvent, AoiManager};
-use crate::march::{arrival_action_for_troop, ArrivalAction, MARCH_STATUS_ARRIVAL};
+use crate::march::{
+    arrival_action_for_troop, ArrivalAction, MARCH_STATUS_ARRIVAL, MARCH_STATUS_RETREAT,
+};
 use crate::message::SectorMessage;
 use crate::outbound::{
     outbound_events_for_resolution, InMemoryOutboundSink, WorldOutboundEvent, WorldOutboundSink,
 };
 use crate::supervisor::ActorId;
 use crate::timer_wheel::TimerWheel;
-use crate::wal::{WalEntity, WalEntry, WalReplayState, WalTroop, WriteAheadLog};
+use crate::wal::{WalCollectState, WalEntity, WalEntry, WalReplayState, WalTroop, WriteAheadLog};
 use anyhow::Result;
 use bytes::Bytes;
 use dashmap::DashMap;
@@ -25,8 +30,10 @@ pub struct MapSectorActor {
     entities: HashMap<i32, BaseEntity>,
     /// 行军部队
     marching_troops: HashMap<i32, BaseTroop>,
+    /// troop_key → formation_id
+    troop_formations: HashMap<i32, i32>,
     /// 定时任务
-    timer_wheel: TimerWheel<i32>,
+    timer_wheel: TimerWheel<SectorTimerEvent>,
 
     /// 消息与通讯
     rx: mpsc::Receiver<SectorMessage>,
@@ -45,6 +52,12 @@ pub struct MapSectorActor {
     shutdown_rx: broadcast::Receiver<()>,
     tracked_troops: Arc<DashMap<i32, Vec<BaseTroop>>>,
     tracked_entities: Arc<DashMap<i32, Vec<BaseEntity>>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SectorTimerEvent {
+    MarchArrive { troop_key: i32 },
+    CollectComplete { troop_key: i32 },
 }
 
 impl MapSectorActor {
@@ -95,6 +108,7 @@ impl MapSectorActor {
             sector_id,
             entities: HashMap::new(),
             marching_troops: HashMap::new(),
+            troop_formations: HashMap::new(),
             timer_wheel: TimerWheel::new(base_time_ms),
             rx,
             neighbors: HashMap::new(),
@@ -114,21 +128,34 @@ impl MapSectorActor {
     /// 启动时恢复数据
     pub async fn init_with_recovery(&mut self) -> Result<()> {
         let entries = self.wal.recover().await?;
-        let state = WalReplayState::from_entries(&entries);
-        self.entities = state.entities;
+        let mut state = WalReplayState::from_entries(&entries);
+        self.entities = std::mem::take(&mut state.entities);
         self.track_entities_snapshot();
 
-        for (key, troop) in state.troops {
+        for (key, troop) in std::mem::take(&mut state.troops) {
+            let collect_state = state.collect_states.remove(&key);
             if troop.status == Some(MARCH_STATUS_ARRIVAL) {
-                let resolution =
-                    resolve_arrival(&troop, self.entities.get(&troop.goal.unwrap_or(0)));
-                self.restore_arrived_troop(&troop, &resolution);
+                match collect_state {
+                    Some(state) if state.phase == CollectPhase::Collecting => {
+                        self.restore_collect_state(state);
+                    }
+                    Some(_) => {}
+                    None => {
+                        let resolution =
+                            resolve_arrival(&troop, self.entities.get(&troop.goal.unwrap_or(0)));
+                        self.restore_arrived_troop(&troop, &resolution);
+                    }
+                }
                 continue;
             }
 
+            if let Some(collect_state) = collect_state {
+                self.restore_collect_state(collect_state);
+            }
             self.track_troop(troop.clone());
             if let Some(end_time) = troop.end_time {
-                self.timer_wheel.schedule(end_time, key);
+                self.timer_wheel
+                    .schedule(end_time, SectorTimerEvent::MarchArrive { troop_key: key });
             }
             self.marching_troops.insert(key, troop);
         }
@@ -142,7 +169,13 @@ impl MapSectorActor {
     ) {
         match resolution.effect {
             crate::arrival::ArrivalEffect::CollectStarted => {
-                self.collect_state.on_arrival(troop, resolution);
+                if let Some(state) = self
+                    .collect_state
+                    .on_arrival(troop, resolution, None)
+                    .cloned()
+                {
+                    self.schedule_collect_completion(&state);
+                }
             }
             crate::arrival::ArrivalEffect::GarrisonPlaced => {
                 let goal_pos = troop.goal.unwrap_or(0);
@@ -162,6 +195,25 @@ impl MapSectorActor {
             | crate::arrival::ArrivalEffect::ScoutReportRequested
             | crate::arrival::ArrivalEffect::ReturnedHome
             | crate::arrival::ArrivalEffect::Noop => {}
+        }
+    }
+
+    fn restore_collect_state(&mut self, state: CollectState) {
+        if let Some(formation_id) = state.formation_id.filter(|id| *id > 0) {
+            self.troop_formations.insert(state.troop_key, formation_id);
+        }
+        self.schedule_collect_completion(&state);
+        self.collect_state.insert(state);
+    }
+
+    fn schedule_collect_completion(&mut self, state: &CollectState) {
+        if state.phase == CollectPhase::Collecting {
+            self.timer_wheel.schedule(
+                state.collect_end_time_ms,
+                SectorTimerEvent::CollectComplete {
+                    troop_key: state.troop_key,
+                },
+            );
         }
     }
 
@@ -211,8 +263,13 @@ impl MapSectorActor {
                 self.handle_player_command(role_id, cmd, payload, reply)
                     .await?;
             }
-            SectorMessage::TransferTroop { troop_data } => {
-                self.accept_transfer(troop_data).await?;
+            SectorMessage::TransferTroop {
+                troop_data,
+                formation_id,
+                collect_state,
+            } => {
+                self.accept_transfer(troop_data, formation_id, collect_state)
+                    .await?;
             }
             SectorMessage::UpdateTroop { troop_data } => {
                 self.update_troop(troop_data).await?;
@@ -248,20 +305,41 @@ impl MapSectorActor {
         Ok(())
     }
 
-    async fn accept_transfer(&mut self, troop: BaseTroop) -> Result<()> {
+    async fn accept_transfer(
+        &mut self,
+        troop: BaseTroop,
+        formation_id: Option<i32>,
+        collect_state: Option<CollectState>,
+    ) -> Result<()> {
         // 先写日志
-        self.wal
-            .append(&WalEntry::TroopUpdated {
-                troop: WalTroop::from(&troop),
-            })
-            .await?;
+        if let Some(collect_state) = collect_state.as_ref() {
+            self.wal
+                .append(&WalEntry::CollectTroopUpdated {
+                    troop: WalTroop::from(&troop),
+                    state: WalCollectState::from(collect_state),
+                })
+                .await?;
+        } else {
+            self.wal
+                .append(&WalEntry::TroopUpdated {
+                    troop: WalTroop::from(&troop),
+                })
+                .await?;
+        }
 
         // 内存处理
         let key = troop.key;
+        if let Some(collect_state) = collect_state {
+            self.collect_state.insert(collect_state);
+        }
+        if let Some(formation_id) = formation_id.filter(|id| *id > 0) {
+            self.troop_formations.insert(key, formation_id);
+        }
         self.marching_troops.insert(key, troop.clone());
         self.track_troop(troop.clone());
         if let Some(end_time) = troop.end_time {
-            self.timer_wheel.schedule(end_time, key);
+            self.timer_wheel
+                .schedule(end_time, SectorTimerEvent::MarchArrive { troop_key: key });
         }
 
         // AOI
@@ -284,7 +362,8 @@ impl MapSectorActor {
         self.marching_troops.insert(key, troop.clone());
         self.track_troop(troop.clone());
         if let Some(end_time) = troop.end_time {
-            self.timer_wheel.schedule(end_time, key);
+            self.timer_wheel
+                .schedule(end_time, SectorTimerEvent::MarchArrive { troop_key: key });
         }
 
         let pos = troop.origin.or(troop.goal).unwrap_or(0);
@@ -298,6 +377,7 @@ impl MapSectorActor {
     fn remove_troop(&mut self, troop_key: i32) {
         self.marching_troops.remove(&troop_key);
         self.collect_state.remove(troop_key);
+        self.troop_formations.remove(&troop_key);
         self.untrack_troop(troop_key);
     }
 
@@ -320,28 +400,79 @@ impl MapSectorActor {
     }
 
     async fn tick(&mut self) {
-        let expired_keys = self.timer_wheel.advance();
-        for key in expired_keys {
-            let is_due = self
-                .marching_troops
-                .get(&key)
-                .and_then(|troop| troop.end_time)
-                .map(|end_time| end_time <= self.timer_wheel.current_time_ms())
-                .unwrap_or(false);
-            if !is_due {
-                continue;
-            }
-
-            if let Some(troop) = self.marching_troops.remove(&key) {
-                self.untrack_troop(troop.key);
-                let goal_pos = troop.goal.unwrap_or(0);
-                if crate::map::grid::pos_to_sector_id(goal_pos) == self.sector_id {
-                    self.handle_arrival(troop).await;
-                } else {
-                    self.transfer_to_neighbor(troop).await;
+        let expired_events = self.timer_wheel.advance();
+        for event in expired_events {
+            match event {
+                SectorTimerEvent::MarchArrive { troop_key } => {
+                    self.handle_march_timer(troop_key).await;
+                }
+                SectorTimerEvent::CollectComplete { troop_key } => {
+                    self.handle_collect_complete(troop_key).await;
                 }
             }
         }
+    }
+
+    async fn handle_march_timer(&mut self, key: i32) {
+        let is_due = self
+            .marching_troops
+            .get(&key)
+            .and_then(|troop| troop.end_time)
+            .map(|end_time| end_time <= self.timer_wheel.current_time_ms())
+            .unwrap_or(false);
+        if !is_due {
+            return;
+        }
+
+        if let Some(troop) = self.marching_troops.remove(&key) {
+            self.untrack_troop(troop.key);
+            let goal_pos = troop.goal.unwrap_or(0);
+            if crate::map::grid::pos_to_sector_id(goal_pos) == self.sector_id {
+                self.handle_arrival(troop).await;
+            } else {
+                self.transfer_to_neighbor(troop).await;
+            }
+        }
+    }
+
+    async fn handle_collect_complete(&mut self, troop_key: i32) {
+        let now_ms = self.timer_wheel.current_time_ms();
+        let Some(completion) = self.collect_state.complete(troop_key, now_ms) else {
+            return;
+        };
+
+        let troop = return_troop_from_collect_completion(&completion, now_ms);
+        let wal_entry = self
+            .collect_state
+            .get(troop_key)
+            .map(|state| WalEntry::CollectTroopUpdated {
+                troop: WalTroop::from(&troop),
+                state: WalCollectState::from(state),
+            })
+            .unwrap_or_else(|| WalEntry::TroopUpdated {
+                troop: WalTroop::from(&troop),
+            });
+        if let Err(err) = self.wal.append(&wal_entry).await {
+            error!(
+                troop_key,
+                error = %err,
+                "Failed to persist collect return troop"
+            );
+        }
+
+        self.marching_troops.insert(troop_key, troop.clone());
+        self.track_troop(troop.clone());
+        if let Some(formation_id) = completion.formation_id.filter(|id| *id > 0) {
+            self.troop_formations.insert(troop_key, formation_id);
+        }
+        if let Some(end_time) = troop.end_time {
+            self.timer_wheel
+                .schedule(end_time, SectorTimerEvent::MarchArrive { troop_key });
+        }
+
+        self.aoi_manager
+            .broadcast_area(completion.target_pos, AoiEvent::MarchStart { troop })
+            .await;
     }
 
     async fn handle_arrival(&mut self, mut troop: BaseTroop) {
@@ -349,15 +480,50 @@ impl MapSectorActor {
         let goal_pos = troop.goal.unwrap_or(0);
         let action = arrival_action_for_troop(&troop);
         let resolution = resolve_arrival(&troop, self.entities.get(&goal_pos));
-        let outbound_events = outbound_events_for_resolution(&troop, &resolution);
-        let collect_state = self.collect_state.on_arrival(&troop, &resolution).cloned();
+        let collect_return = if action == ArrivalAction::Return {
+            self.collect_state.finish_return(key)
+        } else {
+            None
+        };
+        let outbound_events = if let Some(state) = collect_return.as_ref() {
+            vec![WorldOutboundEvent::CollectReturned {
+                troop_key: key,
+                target_pos: state.target_pos,
+                home_pos: goal_pos,
+                march_type: state.march_type,
+                formation_id: state.formation_id,
+                awards: vec![state.award()],
+                collect_start_time_ms: state.start_time_ms,
+                collect_end_time_ms: state.collect_end_time_ms,
+            }]
+        } else {
+            outbound_events_for_resolution(&troop, &resolution)
+        };
+        let formation_id = self.troop_formations.remove(&key);
+        let collect_state = self
+            .collect_state
+            .on_arrival(&troop, &resolution, formation_id)
+            .cloned();
+        if let Some(state) = collect_state.as_ref() {
+            self.schedule_collect_completion(state);
+        }
         troop.status = Some(crate::march::MARCH_STATUS_ARRIVAL);
-        let _ = self
-            .wal
-            .append(&WalEntry::TroopArrived {
+        let wal_entry = if let Some(state) = collect_state.as_ref() {
+            WalEntry::CollectTroopArrived {
                 troop: WalTroop::from(&troop),
-            })
-            .await;
+                state: WalCollectState::from(state),
+            }
+        } else if collect_return.is_some() {
+            WalEntry::CollectReturnFinished {
+                troop: WalTroop::from(&troop),
+                troop_key: key,
+            }
+        } else {
+            WalEntry::TroopArrived {
+                troop: WalTroop::from(&troop),
+            }
+        };
+        let _ = self.wal.append(&wal_entry).await;
         self.untrack_troop(key);
 
         match action {
@@ -410,6 +576,7 @@ impl MapSectorActor {
                 info!(
                     troop_key = key,
                     goal_pos,
+                    collect_return = collect_return.is_some(),
                     effect = ?resolution.effect,
                     "Troop returned to origin"
                 );
@@ -448,6 +615,11 @@ impl MapSectorActor {
     async fn transfer_to_neighbor(&mut self, troop: BaseTroop) {
         let goal_pos = troop.goal.unwrap_or(0);
         let next_sector_id = crate::map::grid::pos_to_sector_id(goal_pos);
+        let collect_state = self.collect_state.remove(troop.key);
+        let formation_id = self
+            .troop_formations
+            .remove(&troop.key)
+            .or_else(|| collect_state.as_ref().and_then(|state| state.formation_id));
 
         // 记录转移日志
         let _ = self
@@ -460,7 +632,11 @@ impl MapSectorActor {
 
         if let Some(neighbor_tx) = self.neighbors.get(&next_sector_id) {
             let _ = neighbor_tx
-                .send(SectorMessage::TransferTroop { troop_data: troop })
+                .send(SectorMessage::TransferTroop {
+                    troop_data: troop,
+                    formation_id,
+                    collect_state,
+                })
                 .await;
         }
     }
@@ -506,6 +682,20 @@ fn garrison_troop_from_arrival(troop: &BaseTroop) -> GarrisonTroop {
     GarrisonTroop {
         troop_key_id: Some(troop.key),
         end_time: troop.end_time,
+        ..Default::default()
+    }
+}
+
+fn return_troop_from_collect_completion(completion: &CollectCompletion, now_ms: i64) -> BaseTroop {
+    BaseTroop {
+        key: completion.troop_key,
+        r#type: completion.march_type,
+        origin: Some(completion.target_pos),
+        goal: Some(completion.origin_pos),
+        status: Some(MARCH_STATUS_RETREAT),
+        start_time: Some(now_ms),
+        end_time: Some(now_ms + DEFAULT_COLLECT_RETURN_DURATION_MS),
+        camp: completion.camp,
         ..Default::default()
     }
 }
@@ -700,14 +890,18 @@ mod tests {
         let target = xy_to_pos(20, 20);
 
         actor
-            .accept_transfer(BaseTroop {
-                key: 5,
-                r#type: Some(MARCH_TYPE_MINE_COLLECT),
-                origin: Some(xy_to_pos(1, 1)),
-                goal: Some(target),
-                end_time: Some(100),
-                ..Default::default()
-            })
+            .accept_transfer(
+                BaseTroop {
+                    key: 5,
+                    r#type: Some(MARCH_TYPE_MINE_COLLECT),
+                    origin: Some(xy_to_pos(1, 1)),
+                    goal: Some(target),
+                    end_time: Some(100),
+                    ..Default::default()
+                },
+                Some(7),
+                None,
+            )
             .await
             .unwrap();
 
@@ -716,6 +910,7 @@ mod tests {
         assert!(!actor.marching_troops.contains_key(&5));
         let collect_state = actor.collect_state.get(5).unwrap();
         assert_eq!(collect_state.target_pos, target);
+        assert_eq!(collect_state.formation_id, Some(7));
         assert_eq!(
             collect_state.phase,
             crate::collect::CollectPhase::Collecting
@@ -734,21 +929,100 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn tick_drives_collect_completion_return_and_result_event() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, _garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
+        let origin = xy_to_pos(1, 1);
+        let target = xy_to_pos(20, 20);
+
+        actor
+            .accept_transfer(
+                BaseTroop {
+                    key: 55,
+                    r#type: Some(MARCH_TYPE_MINE_COLLECT),
+                    origin: Some(origin),
+                    goal: Some(target),
+                    end_time: Some(100),
+                    ..Default::default()
+                },
+                Some(7),
+                None,
+            )
+            .await
+            .unwrap();
+
+        actor.tick().await;
+        assert_eq!(
+            actor.collect_state.get(55).map(|state| state.phase),
+            Some(crate::collect::CollectPhase::Collecting)
+        );
+
+        for _ in 0..5 {
+            actor.tick().await;
+        }
+        let return_troop = actor.marching_troops.get(&55).unwrap();
+        assert_eq!(return_troop.origin, Some(target));
+        assert_eq!(return_troop.goal, Some(origin));
+        assert_eq!(return_troop.status, Some(MARCH_STATUS_RETREAT));
+        assert_eq!(
+            actor.collect_state.get(55).map(|state| state.phase),
+            Some(crate::collect::CollectPhase::Returning)
+        );
+
+        actor.tick().await;
+        assert!(!actor.marching_troops.contains_key(&55));
+        assert!(actor.collect_state.get(55).is_none());
+        assert_eq!(
+            sink.records(),
+            vec![
+                WorldOutboundEvent::CollectStarted {
+                    troop_key: 55,
+                    target_pos: target,
+                    march_type: Some(MARCH_TYPE_MINE_COLLECT),
+                    start_time_ms: 100,
+                },
+                WorldOutboundEvent::CollectReturned {
+                    troop_key: 55,
+                    target_pos: target,
+                    home_pos: origin,
+                    march_type: Some(MARCH_TYPE_MINE_COLLECT),
+                    formation_id: Some(7),
+                    awards: vec![proto::slg::AwardPb {
+                        r#type: crate::collect::AWARD_TYPE_LORD_RESOURCE,
+                        id: crate::collect::RESOURCE_ID_MEAT,
+                        count: crate::collect::DEFAULT_COLLECT_RESOURCE_AMOUNT,
+                        safe: Some(true),
+                        ..Default::default()
+                    }],
+                    collect_start_time_ms: 100,
+                    collect_end_time_ms: 100 + crate::collect::DEFAULT_COLLECT_DURATION_MS,
+                },
+            ]
+        );
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
     async fn tick_drives_garrison_arrival_state_change() {
         let sink = Arc::new(InMemoryOutboundSink::new());
         let (mut actor, garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
         let target = xy_to_pos(21, 21);
 
         actor
-            .accept_transfer(BaseTroop {
-                key: 6,
-                r#type: Some(crate::march::MARCH_TYPE_GARRISON_CITY),
-                origin: Some(xy_to_pos(1, 1)),
-                goal: Some(target),
-                end_time: Some(100),
-                camp: Some(4),
-                ..Default::default()
-            })
+            .accept_transfer(
+                BaseTroop {
+                    key: 6,
+                    r#type: Some(crate::march::MARCH_TYPE_GARRISON_CITY),
+                    origin: Some(xy_to_pos(1, 1)),
+                    goal: Some(target),
+                    end_time: Some(100),
+                    camp: Some(4),
+                    ..Default::default()
+                },
+                None,
+                None,
+            )
             .await
             .unwrap();
 
@@ -802,6 +1076,158 @@ mod tests {
         assert_eq!(garrisons[0].troop_key_id, Some(7));
         assert_eq!(garrisons[0].end_time, Some(200));
         assert!(sink.records().is_empty());
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn recovery_restores_collecting_timer_and_returns_with_reward() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, _garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
+        let origin = xy_to_pos(1, 1);
+        let target = xy_to_pos(23, 23);
+        let arrived = BaseTroop {
+            key: 8,
+            r#type: Some(MARCH_TYPE_MINE_COLLECT),
+            origin: Some(origin),
+            goal: Some(target),
+            status: Some(MARCH_STATUS_ARRIVAL),
+            end_time: Some(100),
+            camp: Some(4),
+            ..Default::default()
+        };
+        let collect_state = CollectState {
+            troop_key: 8,
+            origin_pos: origin,
+            target_pos: target,
+            march_type: Some(MARCH_TYPE_MINE_COLLECT),
+            formation_id: Some(7),
+            start_time_ms: 100,
+            collect_end_time_ms: 600,
+            collected_amount: crate::collect::DEFAULT_COLLECT_RESOURCE_AMOUNT,
+            resource_type: crate::collect::RESOURCE_ID_MEAT,
+            camp: Some(4),
+            target: None,
+            phase: CollectPhase::Collecting,
+        };
+        actor
+            .wal
+            .append(&WalEntry::CollectTroopArrived {
+                troop: WalTroop::from(&arrived),
+                state: WalCollectState::from(&collect_state),
+            })
+            .await
+            .unwrap();
+
+        actor.init_with_recovery().await.unwrap();
+        assert_eq!(
+            actor.collect_state.get(8).map(|state| state.phase),
+            Some(CollectPhase::Collecting)
+        );
+        assert_eq!(actor.troop_formations.get(&8), Some(&7));
+
+        for _ in 0..6 {
+            actor.tick().await;
+        }
+        assert_eq!(
+            actor.collect_state.get(8).map(|state| state.phase),
+            Some(CollectPhase::Returning)
+        );
+        assert_eq!(
+            actor.marching_troops.get(&8).and_then(|troop| troop.status),
+            Some(MARCH_STATUS_RETREAT)
+        );
+
+        actor.tick().await;
+        assert!(actor.collect_state.get(8).is_none());
+        assert_eq!(
+            sink.records(),
+            vec![WorldOutboundEvent::CollectReturned {
+                troop_key: 8,
+                target_pos: target,
+                home_pos: origin,
+                march_type: Some(MARCH_TYPE_MINE_COLLECT),
+                formation_id: Some(7),
+                awards: vec![proto::slg::AwardPb {
+                    r#type: crate::collect::AWARD_TYPE_LORD_RESOURCE,
+                    id: crate::collect::RESOURCE_ID_MEAT,
+                    count: crate::collect::DEFAULT_COLLECT_RESOURCE_AMOUNT,
+                    safe: Some(true),
+                    ..Default::default()
+                }],
+                collect_start_time_ms: 100,
+                collect_end_time_ms: 600,
+            }]
+        );
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn recovery_restores_collect_return_troop_with_state() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, _garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
+        let origin = xy_to_pos(1, 1);
+        let target = xy_to_pos(24, 24);
+        let returning_troop = BaseTroop {
+            key: 9,
+            r#type: Some(MARCH_TYPE_MINE_COLLECT),
+            origin: Some(target),
+            goal: Some(origin),
+            status: Some(MARCH_STATUS_RETREAT),
+            start_time: Some(600),
+            end_time: Some(700),
+            camp: Some(4),
+            ..Default::default()
+        };
+        let collect_state = CollectState {
+            troop_key: 9,
+            origin_pos: origin,
+            target_pos: target,
+            march_type: Some(MARCH_TYPE_MINE_COLLECT),
+            formation_id: Some(7),
+            start_time_ms: 100,
+            collect_end_time_ms: 600,
+            collected_amount: crate::collect::DEFAULT_COLLECT_RESOURCE_AMOUNT,
+            resource_type: crate::collect::RESOURCE_ID_MEAT,
+            camp: Some(4),
+            target: None,
+            phase: CollectPhase::Returning,
+        };
+        actor
+            .wal
+            .append(&WalEntry::CollectTroopUpdated {
+                troop: WalTroop::from(&returning_troop),
+                state: WalCollectState::from(&collect_state),
+            })
+            .await
+            .unwrap();
+
+        actor.init_with_recovery().await.unwrap();
+        for _ in 0..7 {
+            actor.tick().await;
+        }
+
+        assert!(actor.collect_state.get(9).is_none());
+        assert_eq!(
+            sink.records(),
+            vec![WorldOutboundEvent::CollectReturned {
+                troop_key: 9,
+                target_pos: target,
+                home_pos: origin,
+                march_type: Some(MARCH_TYPE_MINE_COLLECT),
+                formation_id: Some(7),
+                awards: vec![proto::slg::AwardPb {
+                    r#type: crate::collect::AWARD_TYPE_LORD_RESOURCE,
+                    id: crate::collect::RESOURCE_ID_MEAT,
+                    count: crate::collect::DEFAULT_COLLECT_RESOURCE_AMOUNT,
+                    safe: Some(true),
+                    ..Default::default()
+                }],
+                collect_start_time_ms: 100,
+                collect_end_time_ms: 600,
+            }]
+        );
 
         let _ = tokio::fs::remove_file(wal_path).await;
     }

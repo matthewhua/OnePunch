@@ -1,6 +1,8 @@
+use prost::Message;
 use proto::slg::{
-    FunctionClientBase, GetRoleDataRs, LordDataFunction, RoleLoginRs, WorldOutboundRq,
-    WorldOutboundRs,
+    AwardPb, FunctionClientBase, GetRoleDataRs, LordDataFunction, RoleLoginRs,
+    WorldCollectReturnedPayload, WorldCollectStartedPayload, WorldGarrisonChangedPayload,
+    WorldOutboundRq, WorldOutboundRs, WorldScoutReportRequestedPayload, WorldTroopReturnedPayload,
 };
 use shared::persistence::{LordRow, PlayerDao, SaveEntry};
 use shared::static_config::StaticConfig;
@@ -19,7 +21,7 @@ use crate::systems::mission::MissionSystem;
 use crate::systems::skin::SkinSystem;
 use crate::systems::tech::TechSystem;
 use crate::systems::PlayerSystem;
-use shared::event::{EventDispatcher, GameEvent, PlayerContext};
+use shared::event::{EventDispatcher, GameEvent, MissionEvent, MissionType, PlayerContext};
 
 /// 存盘间隔（秒）
 const SAVE_INTERVAL_SECS: u64 = 300;
@@ -27,6 +29,19 @@ const SAVE_INTERVAL_SECS: u64 = 300;
 const SAVE_TIMEOUT_SECS: u64 = 10;
 /// 紧急存盘目录
 const EMERGENCY_SAVE_DIR: &str = "./emergency_saves";
+const WORLD_OUTBOUND_EVENT_SCOUT_REPORT_REQUESTED: i32 = 1;
+const WORLD_OUTBOUND_EVENT_COLLECT_STARTED: i32 = 2;
+const WORLD_OUTBOUND_EVENT_TROOP_RETURNED: i32 = 3;
+const WORLD_OUTBOUND_EVENT_GARRISON_CHANGED: i32 = 4;
+const WORLD_OUTBOUND_EVENT_COLLECT_RETURNED: i32 = 5;
+const WORLD_AWARD_TYPE_LORD_RESOURCE: i32 = 1;
+const WORLD_AWARD_TYPE_ITEM: i32 = 4;
+const LORD_RESOURCE_DIAMOND: i32 = 1;
+const LORD_RESOURCE_GOLD: i32 = 2;
+const LORD_RESOURCE_MEAT: i32 = 3;
+const LORD_RESOURCE_STAMINA: i32 = 4;
+const LORD_RESOURCE_FAME: i32 = 5;
+const FORMATION_STATE_IDLE: i32 = 0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PlayerState {
@@ -306,6 +321,7 @@ impl PlayerActor {
 
         // 2. 存盘 p_data（功能模块 blob）
         let mut entries: Vec<SaveEntry> = Vec::new();
+        let mut saved_columns: Vec<&'static str> = Vec::new();
 
         let systems: Vec<&mut dyn PlayerSystem> = vec![
             &mut self.activity_system,
@@ -322,11 +338,12 @@ impl PlayerActor {
             if force_all || system.is_dirty() {
                 match system.save_to_bin() {
                     Ok(data) => {
+                        let column = system.column_name();
                         entries.push(SaveEntry {
-                            column: system.column_name(),
+                            column,
                             data,
                         });
-                        system.clear_dirty();
+                        saved_columns.push(column);
                     }
                     Err(e) => {
                         error!(
@@ -353,6 +370,9 @@ impl PlayerActor {
 
         match save_result {
             Ok(Ok(())) => {
+                for column in saved_columns {
+                    self.clear_system_dirty(column);
+                }
                 self.save_fail_count = 0;
                 info!(
                     role_id = self.role_id,
@@ -392,6 +412,32 @@ impl PlayerActor {
                     );
                 }
             }
+        }
+    }
+
+    fn clear_system_dirty(&mut self, column: &str) {
+        if column == self.activity_system.column_name() {
+            self.activity_system.clear_dirty();
+        } else if column == self.hero_system.column_name() {
+            self.hero_system.clear_dirty();
+        } else if column == self.backpack_system.column_name() {
+            self.backpack_system.clear_dirty();
+        } else if column == self.building_system.column_name() {
+            self.building_system.clear_dirty();
+        } else if column == self.tech_system.column_name() {
+            self.tech_system.clear_dirty();
+        } else if column == self.equip_system.column_name() {
+            self.equip_system.clear_dirty();
+        } else if column == self.mission_system.column_name() {
+            self.mission_system.clear_dirty();
+        } else if column == self.skin_system.column_name() {
+            self.skin_system.clear_dirty();
+        } else {
+            warn!(
+                role_id = self.role_id,
+                column,
+                "Unknown p_data column saved"
+            );
         }
     }
 
@@ -591,26 +637,245 @@ impl PlayerActor {
         &mut self,
         event: WorldOutboundRq,
     ) -> anyhow::Result<WorldOutboundRs> {
+        if event.role_id != self.role_id {
+            warn!(
+                actor_role_id = self.role_id,
+                event_role_id = event.role_id,
+                event_type = event.event_type,
+                troop_key = event.troop_key,
+                "PlayerActor rejected World outbound event for a different role"
+            );
+            return Ok(WorldOutboundRs {
+                code: 403,
+                msg: format!(
+                    "role_id mismatch: actor={} event={}",
+                    self.role_id, event.role_id
+                ),
+            });
+        }
+
+        let decoded = match decode_world_outbound_payload(&event) {
+            Ok(decoded) => decoded,
+            Err(err) => {
+                warn!(
+                    role_id = self.role_id,
+                    event_type = event.event_type,
+                    troop_key = event.troop_key,
+                    error = %err,
+                    "PlayerActor rejected invalid World outbound payload"
+                );
+                return Ok(WorldOutboundRs {
+                    code: 400,
+                    msg: err.to_string(),
+                });
+            }
+        };
+        let decoded_msg = decoded.description();
+
+        match self.apply_world_outbound(&decoded) {
+            Ok(events) => {
+                for event in events {
+                    self.dispatch_event(&event);
+                }
+            }
+            Err(err) => {
+                warn!(
+                    role_id = self.role_id,
+                    event_type = event.event_type,
+                    troop_key = event.troop_key,
+                    error = %err,
+                    "PlayerActor failed to apply World outbound event"
+                );
+                return Ok(WorldOutboundRs {
+                    code: 500,
+                    msg: err.to_string(),
+                });
+            }
+        }
+
         info!(
             role_id = self.role_id,
             event_type = event.event_type,
             troop_key = event.troop_key,
             world_entity_id = event.world_entity_id,
             payload_len = event.payload.len(),
+            decoded = %decoded_msg,
             context = %event.context,
             "PlayerActor received World outbound event"
         );
 
         Ok(WorldOutboundRs {
             code: 0,
-            msg: "ok".to_string(),
+            msg: decoded_msg,
         })
+    }
+
+    fn apply_world_outbound(
+        &mut self,
+        event: &DecodedWorldOutbound,
+    ) -> anyhow::Result<Vec<GameEvent>> {
+        match event {
+            DecodedWorldOutbound::CollectReturned(payload) => {
+                if let Some(formation_id) = payload.formation_id.filter(|id| *id > 0) {
+                    self.hero_system
+                        .set_formation_state(formation_id, FORMATION_STATE_IDLE);
+                }
+                self.apply_world_awards(&payload.awards)
+            }
+            _ => Ok(Vec::new()),
+        }
+    }
+
+    fn apply_world_awards(&mut self, awards: &[AwardPb]) -> anyhow::Result<Vec<GameEvent>> {
+        let mut events = Vec::new();
+
+        for award in awards {
+            if award.count <= 0 {
+                continue;
+            }
+
+            match award.r#type {
+                WORLD_AWARD_TYPE_LORD_RESOURCE => {
+                    self.add_lord_resource(award.id, award.count)?;
+                    events.push(GameEvent::Mission(MissionEvent::new(
+                        self.role_id,
+                        MissionType::GatherResource,
+                        vec![award.id as i64, award.count],
+                    )));
+                }
+                WORLD_AWARD_TYPE_ITEM => {
+                    self.backpack_system.add_award(award.clone());
+                    events.push(GameEvent::ItemGain {
+                        role_id: self.role_id,
+                        prop_id: award.id,
+                        count: award.count,
+                    });
+                }
+                other => {
+                    warn!(
+                        role_id = self.role_id,
+                        award_type = other,
+                        award_id = award.id,
+                        "Ignoring unsupported World award type"
+                    );
+                }
+            }
+        }
+
+        Ok(events)
+    }
+
+    fn add_lord_resource(&mut self, resource_id: i32, delta: i64) -> anyhow::Result<()> {
+        if delta <= 0 {
+            return Ok(());
+        }
+
+        let lord = self
+            .lord
+            .as_mut()
+            .ok_or_else(|| anyhow::anyhow!("lord data not loaded"))?;
+
+        match resource_id {
+            LORD_RESOURCE_DIAMOND => add_i64_option(&mut lord.diamond, delta),
+            LORD_RESOURCE_GOLD => add_i64_option(&mut lord.gold, delta),
+            LORD_RESOURCE_MEAT => add_i64_option(&mut lord.meat, delta),
+            LORD_RESOURCE_STAMINA => add_i64_option(&mut lord.stamina, delta),
+            LORD_RESOURCE_FAME => {
+                let current = lord.fame.unwrap_or_default() as i64;
+                lord.fame = Some((current + delta).clamp(i32::MIN as i64, i32::MAX as i64) as i32);
+            }
+            other => anyhow::bail!("unsupported lord resource id={}", other),
+        }
+
+        self.lord_dirty = true;
+        Ok(())
     }
 }
 
-fn push_function_base(function_base: &mut Vec<FunctionClientBase>, bytes: Vec<u8>) {
-    use prost::Message;
+enum DecodedWorldOutbound {
+    ScoutReportRequested(WorldScoutReportRequestedPayload),
+    CollectStarted(WorldCollectStartedPayload),
+    TroopReturned(WorldTroopReturnedPayload),
+    GarrisonChanged(WorldGarrisonChangedPayload),
+    CollectReturned(WorldCollectReturnedPayload),
+}
 
+impl DecodedWorldOutbound {
+    fn description(&self) -> String {
+        match self {
+            Self::ScoutReportRequested(payload) => format!(
+                "scout_report_requested target_pos={} origin={} camp={}",
+                payload.target_pos,
+                optional_i32(payload.origin),
+                optional_i32(payload.camp)
+            ),
+            Self::CollectStarted(payload) => format!(
+                "collect_started target_pos={} march_type={} start_time_ms={}",
+                payload.target_pos,
+                optional_i32(payload.march_type),
+                payload.start_time_ms
+            ),
+            Self::TroopReturned(payload) => format!(
+                "troop_returned home_pos={} march_type={}",
+                payload.home_pos,
+                optional_i32(payload.march_type)
+            ),
+            Self::GarrisonChanged(payload) => format!(
+                "garrison_changed target_pos={} camp={} is_arrival={}",
+                payload.target_pos,
+                optional_i32(payload.camp),
+                payload.is_arrival
+            ),
+            Self::CollectReturned(payload) => format!(
+                "collect_returned target_pos={} home_pos={} awards={}",
+                payload.target_pos,
+                payload.home_pos,
+                payload.awards.len()
+            ),
+        }
+    }
+}
+
+fn decode_world_outbound_payload(event: &WorldOutboundRq) -> anyhow::Result<DecodedWorldOutbound> {
+    match event.event_type {
+        WORLD_OUTBOUND_EVENT_SCOUT_REPORT_REQUESTED => {
+            let payload = WorldScoutReportRequestedPayload::decode(event.payload.as_slice())?;
+            Ok(DecodedWorldOutbound::ScoutReportRequested(payload))
+        }
+        WORLD_OUTBOUND_EVENT_COLLECT_STARTED => {
+            let payload = WorldCollectStartedPayload::decode(event.payload.as_slice())?;
+            Ok(DecodedWorldOutbound::CollectStarted(payload))
+        }
+        WORLD_OUTBOUND_EVENT_TROOP_RETURNED => {
+            let payload = WorldTroopReturnedPayload::decode(event.payload.as_slice())?;
+            Ok(DecodedWorldOutbound::TroopReturned(payload))
+        }
+        WORLD_OUTBOUND_EVENT_GARRISON_CHANGED => {
+            let payload = WorldGarrisonChangedPayload::decode(event.payload.as_slice())?;
+            Ok(DecodedWorldOutbound::GarrisonChanged(payload))
+        }
+        WORLD_OUTBOUND_EVENT_COLLECT_RETURNED => {
+            let payload = WorldCollectReturnedPayload::decode(event.payload.as_slice())?;
+            Ok(DecodedWorldOutbound::CollectReturned(payload))
+        }
+        other => Err(anyhow::anyhow!(
+            "unknown World outbound event_type={}",
+            other
+        )),
+    }
+}
+
+fn add_i64_option(value: &mut Option<i64>, delta: i64) {
+    *value = Some(value.unwrap_or_default().saturating_add(delta));
+}
+
+fn optional_i32(value: Option<i32>) -> String {
+    value
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_string())
+}
+
+fn push_function_base(function_base: &mut Vec<FunctionClientBase>, bytes: Vec<u8>) {
     if let Ok(f_base) = FunctionClientBase::decode(bytes.as_slice()) {
         function_base.push(f_base);
     }
@@ -718,5 +983,178 @@ mod tests {
         assert!(function_types.contains(&func_type::BAG));
         assert!(function_types.contains(&func_type::SIM));
         assert!(function_types.contains(&func_type::MISSION));
+    }
+
+    #[tokio::test]
+    async fn world_outbound_decodes_typed_collect_payload() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        let payload = WorldCollectStartedPayload {
+            target_pos: 202,
+            march_type: Some(3),
+            start_time_ms: 12_000,
+        }
+        .encode_to_vec();
+
+        let rs = actor
+            .handle_world_outbound(WorldOutboundRq {
+                role_id,
+                event_type: WORLD_OUTBOUND_EVENT_COLLECT_STARTED,
+                world_entity_id: 202,
+                troop_key: 44,
+                payload,
+                context: "test".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(rs.code, 0);
+        assert!(rs.msg.contains("collect_started"));
+        assert!(rs.msg.contains("target_pos=202"));
+    }
+
+    #[tokio::test]
+    async fn world_outbound_rejects_invalid_payload() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+
+        let rs = actor
+            .handle_world_outbound(WorldOutboundRq {
+                role_id,
+                event_type: WORLD_OUTBOUND_EVENT_TROOP_RETURNED,
+                world_entity_id: 101,
+                troop_key: 45,
+                payload: vec![0x80],
+                context: "test".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(rs.code, 400);
+        assert!(rs.msg.contains("invalid"));
+    }
+
+    #[tokio::test]
+    async fn world_outbound_rejects_role_id_mismatch_before_applying_rewards() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        let payload = WorldCollectReturnedPayload {
+            target_pos: 202,
+            home_pos: 101,
+            march_type: Some(3),
+            formation_id: None,
+            awards: vec![AwardPb {
+                r#type: WORLD_AWARD_TYPE_LORD_RESOURCE,
+                id: LORD_RESOURCE_MEAT,
+                count: 50,
+                safe: Some(true),
+                ..Default::default()
+            }],
+            collect_start_time_ms: 12_000,
+            collect_end_time_ms: 12_500,
+        }
+        .encode_to_vec();
+
+        let rs = actor
+            .handle_world_outbound(WorldOutboundRq {
+                role_id: role_id + 1,
+                event_type: WORLD_OUTBOUND_EVENT_COLLECT_RETURNED,
+                world_entity_id: 202,
+                troop_key: 46,
+                payload,
+                context: "test".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(rs.code, 403);
+        assert!(rs.msg.contains("role_id mismatch"));
+        assert_eq!(actor.lord.as_ref().unwrap().meat, Some(200));
+        assert!(!actor.lord_dirty);
+    }
+
+    #[tokio::test]
+    async fn world_outbound_collect_returned_applies_lord_resource_and_formation() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        actor.hero_system.formations.push(proto::slg::Formation {
+            id: 7,
+            state: 1,
+            hero_id: vec![101],
+            ..Default::default()
+        });
+        let payload = WorldCollectReturnedPayload {
+            target_pos: 202,
+            home_pos: 101,
+            march_type: Some(3),
+            formation_id: Some(7),
+            awards: vec![AwardPb {
+                r#type: WORLD_AWARD_TYPE_LORD_RESOURCE,
+                id: LORD_RESOURCE_MEAT,
+                count: 50,
+                safe: Some(true),
+                ..Default::default()
+            }],
+            collect_start_time_ms: 12_000,
+            collect_end_time_ms: 12_500,
+        }
+        .encode_to_vec();
+
+        let rs = actor
+            .handle_world_outbound(WorldOutboundRq {
+                role_id,
+                event_type: WORLD_OUTBOUND_EVENT_COLLECT_RETURNED,
+                world_entity_id: 202,
+                troop_key: 46,
+                payload,
+                context: "test".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(rs.code, 0);
+        assert!(rs.msg.contains("collect_returned"));
+        assert_eq!(actor.lord.as_ref().unwrap().meat, Some(250));
+        assert!(actor.lord_dirty);
+        assert_eq!(actor.hero_system.formations[0].state, FORMATION_STATE_IDLE);
+        assert!(actor.hero_system.is_dirty());
+    }
+
+    #[tokio::test]
+    async fn world_outbound_collect_returned_applies_item_award() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        let payload = WorldCollectReturnedPayload {
+            target_pos: 202,
+            home_pos: 101,
+            march_type: Some(3),
+            formation_id: None,
+            awards: vec![AwardPb {
+                r#type: WORLD_AWARD_TYPE_ITEM,
+                id: 1001,
+                count: 2,
+                safe: Some(true),
+                ..Default::default()
+            }],
+            collect_start_time_ms: 12_000,
+            collect_end_time_ms: 12_500,
+        }
+        .encode_to_vec();
+
+        let rs = actor
+            .handle_world_outbound(WorldOutboundRq {
+                role_id,
+                event_type: WORLD_OUTBOUND_EVENT_COLLECT_RETURNED,
+                world_entity_id: 202,
+                troop_key: 47,
+                payload,
+                context: "test".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(rs.code, 0);
+        assert_eq!(actor.backpack_system.get_item_count(1001), 2);
+        assert!(actor.backpack_system.is_dirty());
     }
 }

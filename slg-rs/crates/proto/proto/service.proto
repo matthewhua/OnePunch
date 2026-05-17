@@ -4,6 +4,7 @@ package slg;
 
 import "Rpc.proto";
 import "World.proto";
+import "Common.proto";
 
 import "Game.proto";
 
@@ -62,6 +63,39 @@ message WorldOutboundRq {
 message WorldOutboundRs {
     int32 code = 1;   // 0=成功，非0=错误码
     string msg = 2;   // 可诊断说明
+}
+
+message WorldScoutReportRequestedPayload {
+    optional int32 origin     = 1;  // 侦查发起坐标
+    int32 target_pos          = 2;  // 侦查目标坐标
+    optional int32 camp       = 3;  // 发起方阵营
+}
+
+message WorldCollectStartedPayload {
+    int32 target_pos          = 1;  // 采集目标坐标
+    optional int32 march_type = 2;  // 行军类型
+    int64 start_time_ms       = 3;  // 开始采集时间
+}
+
+message WorldTroopReturnedPayload {
+    int32 home_pos            = 1;  // 返回目标坐标
+    optional int32 march_type = 2;  // 原行军类型
+}
+
+message WorldCollectReturnedPayload {
+    int32 target_pos                 = 1;  // 采集目标坐标
+    int32 home_pos                   = 2;  // 返回目标坐标
+    optional int32 march_type        = 3;  // 原行军类型
+    optional int32 formation_id      = 4;  // 出征编队
+    repeated AwardPb awards          = 5;  // 采集带回奖励
+    int64 collect_start_time_ms      = 6;  // 开始采集时间
+    int64 collect_end_time_ms        = 7;  // 完成采集时间
+}
+
+message WorldGarrisonChangedPayload {
+    int32 target_pos          = 1;  // 驻防目标坐标
+    optional int32 camp       = 2;  // 部队阵营
+    bool is_arrival           = 3;  // true=到达驻防
 }
 
 // ── PlayerOffline ─────────────────────────────────────────────────────────────
