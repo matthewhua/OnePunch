@@ -23,7 +23,15 @@ pub struct EntitySpawnRule {
 
 #[derive(Debug, Default)]
 pub struct EntityLifecycleManager {
-    expires_at_ms: HashMap<i32, u64>,
+    expirations: HashMap<i32, TrackedExpiration>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TrackedExpiration {
+    expires_at_ms: u64,
+    entity_type: Option<i32>,
+    conf_id: Option<i32>,
+    key_id: Option<i32>,
 }
 
 impl EntitySpawnRule {
@@ -96,7 +104,13 @@ impl EntityLifecycleManager {
         rule: &EntitySpawnRule,
         now_ms: u64,
     ) -> Result<Vec<BaseEntity>> {
-        let existing = grid.search_entities(Some(rule.entity_type), Some(rule.conf_id));
+        let candidates = rule.candidate_positions()?;
+        let candidate_positions: HashSet<i32> = candidates.iter().copied().collect();
+        let existing = grid
+            .search_entities(Some(rule.entity_type), Some(rule.conf_id))
+            .into_iter()
+            .filter(|entity| candidate_positions.contains(&entity.pos))
+            .collect::<Vec<_>>();
         if existing.len() >= rule.count {
             return Ok(Vec::new());
         }
@@ -106,7 +120,6 @@ impl EntityLifecycleManager {
             .into_iter()
             .map(|entity| entity.pos)
             .collect();
-        let candidates = rule.candidate_positions()?;
         let missing = rule.count - existing.len();
         let mut spawned = Vec::with_capacity(missing);
 
@@ -124,8 +137,7 @@ impl EntityLifecycleManager {
             };
             grid.upsert_entity(entity.clone())?;
             if let Some(ttl_ms) = rule.ttl_ms {
-                self.expires_at_ms
-                    .insert(pos, now_ms.saturating_add(ttl_ms));
+                self.track_expiration(&entity, now_ms.saturating_add(ttl_ms));
             }
             spawned.push(entity);
 
@@ -139,22 +151,52 @@ impl EntityLifecycleManager {
 
     pub fn expire_at(&mut self, grid: &MapGrid, now_ms: u64) -> Vec<BaseEntity> {
         let mut expired_positions: Vec<i32> = self
-            .expires_at_ms
+            .expirations
             .iter()
-            .filter_map(|(pos, expires_at)| (*expires_at <= now_ms).then_some(*pos))
+            .filter_map(|(pos, expiration)| (expiration.expires_at_ms <= now_ms).then_some(*pos))
             .collect();
         expired_positions.sort_unstable();
 
         let mut removed = Vec::with_capacity(expired_positions.len());
         for pos in expired_positions {
-            self.expires_at_ms.remove(&pos);
-            if let Some(entity) = grid.remove_entity(pos) {
-                removed.push(entity);
+            let Some(expiration) = self.expirations.remove(&pos) else {
+                continue;
+            };
+            let Some(current) = grid.get_entity(pos) else {
+                continue;
+            };
+            if expiration.matches(&current) {
+                if let Some(entity) = grid.remove_entity(pos) {
+                    removed.push(entity);
+                }
             }
         }
 
         removed.sort_by_key(|entity| entity.pos);
         removed
+    }
+
+    pub fn adopt_existing_at(
+        &mut self,
+        grid: &MapGrid,
+        rules: &[EntitySpawnRule],
+        now_ms: u64,
+    ) -> Result<()> {
+        for rule in rules {
+            let Some(ttl_ms) = rule.ttl_ms else {
+                continue;
+            };
+            let candidate_positions: HashSet<i32> =
+                rule.candidate_positions()?.into_iter().collect();
+            for entity in grid.search_entities(Some(rule.entity_type), Some(rule.conf_id)) {
+                if candidate_positions.contains(&entity.pos)
+                    && !self.expirations.contains_key(&entity.pos)
+                {
+                    self.track_expiration(&entity, now_ms.saturating_add(ttl_ms));
+                }
+            }
+        }
+        Ok(())
     }
 
     pub fn refresh_at(
@@ -163,6 +205,7 @@ impl EntityLifecycleManager {
         rules: &[EntitySpawnRule],
         now_ms: u64,
     ) -> Result<EntityRefreshReport> {
+        self.adopt_existing_at(grid, rules, now_ms)?;
         let expired = self.expire_at(grid, now_ms);
         let mut spawned = Vec::new();
         for rule in rules {
@@ -171,6 +214,26 @@ impl EntityLifecycleManager {
         spawned.sort_by_key(|entity| entity.pos);
 
         Ok(EntityRefreshReport { expired, spawned })
+    }
+
+    fn track_expiration(&mut self, entity: &BaseEntity, expires_at_ms: u64) {
+        self.expirations.insert(
+            entity.pos,
+            TrackedExpiration {
+                expires_at_ms,
+                entity_type: entity.entity_type,
+                conf_id: entity.conf_id,
+                key_id: entity.key_id,
+            },
+        );
+    }
+}
+
+impl TrackedExpiration {
+    fn matches(&self, entity: &BaseEntity) -> bool {
+        self.entity_type == entity.entity_type
+            && self.conf_id == entity.conf_id
+            && self.key_id == entity.key_id
     }
 }
 
@@ -267,6 +330,79 @@ mod tests {
         assert_eq!(report.expired.len(), 3);
         assert_eq!(report.spawned.len(), 3);
         assert_eq!(grid.search_entities(Some(7), Some(701)).len(), 3);
+    }
+
+    #[test]
+    fn spawn_missing_counts_only_entities_in_rule_positions() {
+        let grid = MapGrid::new();
+        let mut lifecycle = EntityLifecycleManager::new();
+        grid.upsert_entity(BaseEntity {
+            pos: xy_to_pos(99, 0),
+            entity_type: Some(7),
+            key_id: Some(99),
+            conf_id: Some(701),
+            ..Default::default()
+        })
+        .unwrap();
+
+        let spawned = lifecycle.spawn_missing(&grid, &rule(None), 0).unwrap();
+
+        assert_eq!(spawned.len(), 3);
+        assert_eq!(grid.search_entities(Some(7), Some(701)).len(), 4);
+    }
+
+    #[test]
+    fn expire_at_does_not_remove_replaced_entity_at_tracked_position() {
+        let grid = MapGrid::new();
+        let mut lifecycle = EntityLifecycleManager::new();
+        lifecycle.spawn_missing(&grid, &rule(Some(100)), 0).unwrap();
+        let replaced_pos = xy_to_pos(1, 0);
+        grid.upsert_entity(BaseEntity {
+            pos: replaced_pos,
+            entity_type: Some(9),
+            key_id: Some(900),
+            conf_id: Some(901),
+            ..Default::default()
+        })
+        .unwrap();
+
+        let expired = lifecycle.expire_at(&grid, 100);
+
+        assert_eq!(expired.len(), 2);
+        assert_eq!(
+            grid.get_entity(replaced_pos)
+                .map(|entity| entity.entity_type),
+            Some(Some(9))
+        );
+    }
+
+    #[test]
+    fn refresh_adopts_existing_entities_for_ttl_after_recovery() {
+        let grid = MapGrid::new();
+        let mut lifecycle = EntityLifecycleManager::new();
+        for pos in [xy_to_pos(1, 0), xy_to_pos(2, 0), xy_to_pos(4, 0)] {
+            grid.upsert_entity(BaseEntity {
+                pos,
+                entity_type: Some(7),
+                key_id: Some(deterministic_key_id(7, 701, pos)),
+                conf_id: Some(701),
+                ..Default::default()
+            })
+            .unwrap();
+        }
+
+        let first = lifecycle
+            .refresh_at(&grid, &[rule(Some(100))], 1_000)
+            .unwrap();
+        assert!(first.expired.is_empty());
+        assert!(first.spawned.is_empty());
+
+        let second = lifecycle
+            .refresh_at(&grid, &[rule(Some(100))], 1_100)
+            .unwrap();
+
+        assert_eq!(second.expired.len(), 3);
+        assert_eq!(second.spawned.len(), 3);
     }
 
     #[test]

@@ -25,6 +25,7 @@ const DEFAULT_MINE_CONF_ID: i32 = 401;
 pub struct WorldServiceImpl {
     grid: Arc<crate::map::grid::MapGrid>,
     entity_lifecycle: Mutex<crate::map::lifecycle::EntityLifecycleManager>,
+    entity_spawn_rules: Vec<crate::map::lifecycle::EntitySpawnRule>,
     marching_mgr: Arc<crate::march::MarchingManager>,
     runtime: Arc<crate::runtime::WorldRuntime>,
     garrison_state: Arc<crate::garrison::GarrisonState>,
@@ -51,6 +52,20 @@ impl WorldServiceImpl {
         marching_mgr: Arc<crate::march::MarchingManager>,
         outbound_sink: Arc<dyn crate::outbound::WorldOutboundSink>,
     ) -> Self {
+        Self::new_with_outbound_and_spawn_rules(
+            grid,
+            marching_mgr,
+            outbound_sink,
+            default_entity_spawn_rules(),
+        )
+    }
+
+    fn new_with_outbound_and_spawn_rules(
+        grid: Arc<crate::map::grid::MapGrid>,
+        marching_mgr: Arc<crate::march::MarchingManager>,
+        outbound_sink: Arc<dyn crate::outbound::WorldOutboundSink>,
+        entity_spawn_rules: Vec<crate::map::lifecycle::EntitySpawnRule>,
+    ) -> Self {
         let runtime = Arc::new(crate::runtime::WorldRuntime::new_with_outbound(
             outbound_sink,
         ));
@@ -59,6 +74,7 @@ impl WorldServiceImpl {
         let svc = Self {
             grid,
             entity_lifecycle: Mutex::new(crate::map::lifecycle::EntityLifecycleManager::new()),
+            entity_spawn_rules,
             marching_mgr,
             runtime,
             garrison_state,
@@ -102,27 +118,26 @@ impl WorldServiceImpl {
         &self,
         now_ms: u64,
     ) -> Result<crate::map::lifecycle::EntityRefreshReport, Status> {
-        let rules = default_entity_spawn_rules();
         let mut lifecycle = self
             .entity_lifecycle
             .lock()
             .map_err(|_| Status::internal("world entity lifecycle lock poisoned"))?;
         let report = lifecycle
-            .refresh_at(&self.grid, &rules, now_ms)
+            .refresh_at(&self.grid, &self.entity_spawn_rules, now_ms)
             .map_err(|e| {
                 Status::internal(format!("refresh default world entities failed: {}", e))
             })?;
-        for entity in &report.spawned {
-            self.runtime
-                .sync_entity_upsert_now(entity.clone())
-                .map_err(|e| Status::internal(format!("sync world entity failed: {}", e)))?;
-        }
         for entity in &report.expired {
             self.runtime
                 .sync_entity_remove_now(entity.pos)
                 .map_err(|e| {
                     Status::internal(format!("sync world entity removal failed: {}", e))
                 })?;
+        }
+        for entity in &report.spawned {
+            self.runtime
+                .sync_entity_upsert_now(entity.clone())
+                .map_err(|e| Status::internal(format!("sync world entity failed: {}", e)))?;
         }
         Ok(report)
     }
@@ -689,6 +704,17 @@ mod tests {
         )
     }
 
+    fn service_with_spawn_rules(
+        rules: Vec<crate::map::lifecycle::EntitySpawnRule>,
+    ) -> WorldServiceImpl {
+        WorldServiceImpl::new_with_outbound_and_spawn_rules(
+            Arc::new(crate::map::grid::MapGrid::new()),
+            Arc::new(crate::march::MarchingManager::new()),
+            Arc::new(crate::outbound::InMemoryOutboundSink::new()),
+            rules,
+        )
+    }
+
     fn request<T: prost::Message>(cmd: i32, role_id: i64, body: &T) -> DispatchRq {
         DispatchRq {
             role_id,
@@ -1181,6 +1207,90 @@ mod tests {
         assert!(report.expired.is_empty());
         assert!(report.spawned.is_empty());
         assert_eq!(after, before);
+    }
+
+    #[tokio::test]
+    async fn default_entity_refresh_expires_then_respawns_configured_ttl_entities() {
+        let pos = crate::map::grid::xy_to_pos(120, 120);
+        let svc =
+            service_with_spawn_rules(vec![crate::map::lifecycle::EntitySpawnRule::at_positions(
+                WorldEntityTypeDefine::EntityTypeMine as i32,
+                DEFAULT_MINE_CONF_ID,
+                1,
+                vec![pos],
+                Some(500),
+            )]);
+
+        assert_eq!(svc.grid.search_entities(None, None).len(), 1);
+
+        let early = svc.refresh_default_entities_at(499).unwrap();
+        assert!(early.expired.is_empty());
+        assert!(early.spawned.is_empty());
+
+        let report = svc.refresh_default_entities_at(500).unwrap();
+
+        assert_eq!(
+            report
+                .expired
+                .iter()
+                .map(|entity| entity.pos)
+                .collect::<Vec<_>>(),
+            vec![pos]
+        );
+        assert_eq!(
+            report
+                .spawned
+                .iter()
+                .map(|entity| entity.pos)
+                .collect::<Vec<_>>(),
+            vec![pos]
+        );
+        assert_eq!(svc.grid.search_entities(None, None).len(), 1);
+        wait_for_sector_entity_positions(&svc, pos, vec![pos]).await;
+    }
+
+    #[tokio::test]
+    async fn default_entity_refresh_adopts_recovered_ttl_entities_before_expiring() {
+        let pos = crate::map::grid::xy_to_pos(121, 120);
+        let mut svc = service_with_spawn_rules(Vec::new());
+        svc.entity_spawn_rules = vec![crate::map::lifecycle::EntitySpawnRule::at_positions(
+            WorldEntityTypeDefine::EntityTypeMine as i32,
+            DEFAULT_MINE_CONF_ID,
+            1,
+            vec![pos],
+            Some(500),
+        )];
+        svc.grid
+            .upsert_entity(BaseEntity {
+                pos,
+                entity_type: Some(WorldEntityTypeDefine::EntityTypeMine as i32),
+                key_id: Some(9_001),
+                conf_id: Some(DEFAULT_MINE_CONF_ID),
+                ..Default::default()
+            })
+            .unwrap();
+
+        let adopted = svc.refresh_default_entities_at(1_000).unwrap();
+        assert!(adopted.expired.is_empty());
+        assert!(adopted.spawned.is_empty());
+
+        let expired = svc.refresh_default_entities_at(1_500).unwrap();
+        assert_eq!(
+            expired
+                .expired
+                .iter()
+                .map(|entity| entity.pos)
+                .collect::<Vec<_>>(),
+            vec![pos]
+        );
+        assert_eq!(
+            expired
+                .spawned
+                .iter()
+                .map(|entity| entity.pos)
+                .collect::<Vec<_>>(),
+            vec![pos]
+        );
     }
 
     #[tokio::test]
