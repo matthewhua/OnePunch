@@ -1,38 +1,32 @@
 # Step 13+ 并行执行文档
 
 > 日期：2026-05-17
-> 当前基线：Step 13 World 核心系统进行中，采集返回回写基线已完成。
+> 当前基线：Step 13 outbound/idempotency、地图生命周期、MailSystem、采集生产化、Battle engine skeleton 已合入集成分支。
 > 目的：把后续大功能切成可多 agent / 多 worktree 并行推进的工作流，同时避免核心文件互相覆盖。
 
-## 0. 先固化当前基线
+## 0. 当前集成基线
 
-当前主 worktree 还有未提交代码变更，并且已有一组文档归档变更处于 staged 状态。不要直接从当前 `master` 派多个 worktree 开干，否则新 worktree 会从旧 HEAD 出发，拿不到采集返回回写基线。
+当前可继续派生工作的基线是：
 
-建议先在主 worktree 完成两个基线提交：第一个提交当前 staged docs，第二个提交 Step 13 采集返回代码基线。
+- 本地/远端分支：`integration/step13-collect-return-base`
+- 当前提交：`9ead2da2 merge step13 collect production settlement`
+- 已验证测试：`rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto`
+
+另一台电脑先同步这个基线：
 
 ```bash
-rtk git -c core.quotepath=false status --short --branch
-rtk git -c core.quotepath=false diff --check
-rtk cargo test --manifest-path Cargo.toml -p world -p home@0.1.0 -p proto
+rtk git -c core.quotepath=false fetch origin
+rtk git -c core.quotepath=false switch integration/step13-collect-return-base
+rtk git -c core.quotepath=false pull --ff-only
+rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto
+```
 
-rtk git -c core.quotepath=false switch -c integration/step13-collect-return-base
-rtk git -c core.quotepath=false commit -m "docs: refresh step 13 plan"
+如果本地还没有这个分支，用：
 
-rtk git -c core.quotepath=false add \
-  crates/home/src/actors/player_actor.rs \
-  crates/home/src/systems/backpack.rs \
-  crates/home/src/systems/hero.rs \
-  crates/proto/proto/service.proto \
-  crates/world/src/collect.rs \
-  crates/world/src/main.rs \
-  crates/world/src/march/mod.rs \
-  crates/world/src/message.rs \
-  crates/world/src/outbound.rs \
-  crates/world/src/runtime.rs \
-  crates/world/src/sector_actor.rs \
-  crates/world/src/service.rs \
-  crates/world/src/wal.rs
-rtk git -c core.quotepath=false commit -m "step13 collect return outbound baseline"
+```bash
+rtk git -c core.quotepath=false fetch origin
+rtk git -c core.quotepath=false switch -c integration/step13-collect-return-base origin/integration/step13-collect-return-base
+rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto
 ```
 
 之后所有并行 worktree 都从 `integration/step13-collect-return-base` 分支切出，最后统一合回这个集成分支。
@@ -192,19 +186,97 @@ rtk cargo test --manifest-path Cargo.toml -p world -p home@0.1.0 -p proto
 
 如果合并冲突发生在热点文件，只让该 lane owner 处理，不要让多个 agent 同时修同一个冲突。
 
-## 7. 下一步选择
+## 7. 另一台电脑自治任务：ScoutReport
+
+当前最高收益的下一步是做 ScoutReport 闭环。因为 MailSystem 已经合入，侦查报告可以直接从 World outbound payload 落到 Home 邮件，不需要再拆 MailSystem 前置任务。
+
+在另一台电脑执行：
+
+```bash
+cd /home/matt/dev/javaCode/OnePunch/slg-rs
+rtk git -c core.quotepath=false fetch origin
+rtk git -c core.quotepath=false switch -c integration/step13-collect-return-base origin/integration/step13-collect-return-base 2>/dev/null || rtk git -c core.quotepath=false switch integration/step13-collect-return-base
+rtk git -c core.quotepath=false pull --ff-only
+
+mkdir -p /home/matt/dev/javaCode/OnePunch-worktrees
+rtk git -c core.quotepath=false worktree add \
+  /home/matt/dev/javaCode/OnePunch-worktrees/slg-scout-report \
+  -b agent/step13-scout-report integration/step13-collect-return-base
+
+cd /home/matt/dev/javaCode/OnePunch-worktrees/slg-scout-report
+rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto
+```
+
+给 autonomous agent 的完整提示词：
+
+```text
+你在 /home/matt/dev/javaCode/OnePunch-worktrees/slg-scout-report 工作。
+只负责 Step 13 ScoutReport 闭环。
+你不是唯一 agent，不要回退别人改动，不要改无关文件。
+遵守 RTK：所有 shell 命令必须以 rtk 开头。
+
+基线：
+- 当前分支应该是 agent/step13-scout-report。
+- 这个分支必须从 origin/integration/step13-collect-return-base 派生。
+- 基线提交应包含 MailSystem、World outbound idempotency、地图生命周期、采集生产化、battle engine skeleton。
+
+目标：
+1. 把 World 侧 ScoutReportRequested 从占位/简单事件扩展成真实侦查报告 payload。
+2. 报告至少包含目标坐标、目标实体类型/owner、资源/驻军/基础防御或当前已有数据能表达的等价字段。
+3. 通过 World outbound 把 ScoutReport payload 投递给 Home。
+4. Home 收到后调用已合入的 MailSystem 写入侦查报告邮件，避免绕过 MailSystem 直接写 protobuf 字段。
+5. 保持 outbound 幂等语义：重复投递同一个 event_id/event_key 不重复生成邮件。
+
+文件归属：
+- 可以修改：crates/proto/proto/service.proto
+- 可以修改：crates/world/src/outbound.rs
+- 可以修改：crates/world/src/sector_actor.rs
+- 可以修改：crates/home/src/actors/player_actor.rs
+- 可以修改：crates/home/src/systems/mail.rs
+- 可以按现有模式补测试文件或同模块单测。
+
+限制：
+- 不要做 World battle integration。
+- 不要重构 Home 系统注册。
+- 不要实现 Shop/VIP/Chat/Rank/GM。
+- 不要大改采集结算、地图刷新、MailSystem 已有命令语义；只做 ScoutReport 所需的最小扩展。
+
+验收：
+1. 增加或更新测试，覆盖 World 生成 ScoutReport outbound payload。
+2. 增加或更新测试，覆盖 Home 收到 ScoutReport 后创建邮件。
+3. 增加或更新测试，覆盖重复投递不重复创建邮件。
+4. 运行：
+   rtk git -c core.quotepath=false diff --check
+   rtk cargo test --manifest-path Cargo.toml -p shared -p world -p home@0.1.0 -p proto
+
+完成后提交：
+rtk git -c core.quotepath=false status --short --branch
+rtk git -c core.quotepath=false add -A
+rtk git -c core.quotepath=false commit -m "step13 add scout report mail flow"
+
+最终回答必须列出：
+- 改动文件
+- 测试结果
+- 是否还有需要主集成分支处理的冲突或风险
+```
+
+ScoutReport 进行期间，不要让其他 agent 同时修改这些热点文件：`service.proto`、`world/src/outbound.rs`、`world/src/sector_actor.rs`、`home/src/actors/player_actor.rs`、`home/src/systems/mail.rs`。
+
+可以并行给其他 agent 的只读任务：评估 `World battle integration` 需要接哪些命令和测试，但不得编辑文件。
+
+## 8. 下一步选择
 
 如果目标是最快把 Step 13 收口，下一步做：
 
-1. Outbound 幂等投递
-2. 地图实体生命周期
-3. 采集生产化
-4. 侦查报告 + MailSystem
+1. ScoutReport 生成 + 邮件落地
+2. World battle integration 设计审查
+3. Home 系统注册整理
+4. Shop/VIP、Chat、Rank/GM
 
 如果目标是尽快启动 Step 14，下一步并行做：
 
-1. Battle engine skeleton
-2. MailSystem 最小骨架
-3. Outbound 幂等投递
+1. 只读审查 World battle integration
+2. 战报邮件格式补强
+3. 战斗入口命令的兼容性测试草案
 
-真正的 World battle integration 必须等这三项至少有可用接口后再做。
+真正的 World battle integration 等 ScoutReport owner 释放 `service.proto`、`outbound.rs`、`sector_actor.rs` 后再做。
