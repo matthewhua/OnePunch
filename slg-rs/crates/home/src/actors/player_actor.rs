@@ -5,7 +5,7 @@ use proto::slg::{
     WorldCollectStartedPayload, WorldGarrisonChangedPayload, WorldOutboundRq, WorldOutboundRs,
     WorldScoutReportRequestedPayload, WorldTroopReturnedPayload,
 };
-use shared::persistence::{LordRow, PlayerDao, SaveEntry};
+use shared::persistence::{LordRow, PlayerDao};
 use shared::static_config::StaticConfig;
 use std::sync::Arc;
 use std::time::Duration;
@@ -20,10 +20,10 @@ use crate::systems::equip::EquipSystem;
 use crate::systems::hero::HeroSystem;
 use crate::systems::mail::MailSystem;
 use crate::systems::mission::MissionSystem;
+use crate::systems::registry::{HomeSystemRegistry, route_home_command};
 use crate::systems::skin::SkinSystem;
 use crate::systems::tech::TechSystem;
 use crate::systems::world::WorldSystem;
-use crate::systems::PlayerSystem;
 use shared::event::{EventDispatcher, GameEvent, MissionEvent, MissionType, PlayerContext};
 
 /// 存盘间隔（秒）
@@ -175,7 +175,7 @@ impl PlayerActor {
                 .as_ref()
                 .map(|data| !data.is_empty())
                 .unwrap_or(false);
-            self.load_system_from_row(&row);
+            self.load_registered_systems_from_row(&row);
             mission_blob_loaded
         } else {
             false
@@ -194,36 +194,6 @@ impl PlayerActor {
         Ok(())
     }
 
-    /// 将 PlayerDataRow 中的各列分发到对应系统
-    fn load_system_from_row(&mut self, row: &shared::persistence::PlayerDataRow) {
-        let systems: Vec<(&mut dyn PlayerSystem, Option<&Vec<u8>>)> = vec![
-            (&mut self.activity_system, row.activity_func.as_ref()),
-            (&mut self.hero_system, row.hero_func.as_ref()),
-            (&mut self.backpack_system, row.backpack_func.as_ref()),
-            (&mut self.building_system, row.sim_func.as_ref()),
-            (&mut self.tech_system, row.technology_func.as_ref()),
-            (&mut self.equip_system, row.equip_func.as_ref()),
-            (&mut self.mail_system, row.mail_func.as_ref()),
-            (&mut self.mission_system, row.mission_func.as_ref()),
-            (&mut self.skin_system, row.skin_func.as_ref()),
-        ];
-
-        for (system, data_opt) in systems {
-            if let Some(data) = data_opt {
-                if !data.is_empty() {
-                    if let Err(e) = system.load_from_bin(data) {
-                        warn!(
-                            role_id = self.role_id,
-                            col = system.column_name(),
-                            "Failed to deserialize, using default: {}",
-                            e
-                        );
-                    }
-                }
-            }
-        }
-    }
-
     pub async fn run(mut self) {
         info!(role_id = self.role_id, "PlayerActor started");
 
@@ -234,15 +204,7 @@ impl PlayerActor {
         self.state = PlayerState::Loading;
 
         // 触发各系统 on_login
-        self.activity_system.on_login();
-        self.hero_system.on_login();
-        self.backpack_system.on_login();
-        self.building_system.on_login();
-        self.tech_system.on_login();
-        self.equip_system.on_login();
-        self.mail_system.on_login();
-        self.mission_system.on_login();
-        self.skin_system.on_login();
+        self.on_registered_systems_login();
 
         let mut save_interval = tokio::time::interval(Duration::from_secs(SAVE_INTERVAL_SECS));
         save_interval.tick().await; // 跳过第一次立即触发
@@ -301,10 +263,7 @@ impl PlayerActor {
     }
 
     fn on_tick(&mut self) {
-        self.activity_system.tick();
-        self.hero_system.tick();
-        self.building_system.tick();
-        self.skin_system.tick();
+        self.tick_registered_systems();
 
         // 科技研究完成检测
         let now = chrono::Utc::now().timestamp();
@@ -330,40 +289,7 @@ impl PlayerActor {
         }
 
         // 2. 存盘 p_data（功能模块 blob）
-        let mut entries: Vec<SaveEntry> = Vec::new();
-        let mut saved_columns: Vec<&'static str> = Vec::new();
-
-        let systems: Vec<&mut dyn PlayerSystem> = vec![
-            &mut self.activity_system,
-            &mut self.hero_system,
-            &mut self.backpack_system,
-            &mut self.building_system,
-            &mut self.tech_system,
-            &mut self.equip_system,
-            &mut self.mail_system,
-            &mut self.mission_system,
-            &mut self.skin_system,
-        ];
-
-        for system in systems {
-            if force_all || system.is_dirty() {
-                match system.save_to_bin() {
-                    Ok(data) => {
-                        let column = system.column_name();
-                        entries.push(SaveEntry { column, data });
-                        saved_columns.push(column);
-                    }
-                    Err(e) => {
-                        error!(
-                            role_id = self.role_id,
-                            col = system.column_name(),
-                            "Serialize failed: {}",
-                            e
-                        );
-                    }
-                }
-            }
-        }
+        let (entries, saved_columns) = self.collect_registered_save_entries(force_all);
 
         if entries.is_empty() {
             return;
@@ -424,25 +350,7 @@ impl PlayerActor {
     }
 
     fn clear_system_dirty(&mut self, column: &str) {
-        if column == self.activity_system.column_name() {
-            self.activity_system.clear_dirty();
-        } else if column == self.hero_system.column_name() {
-            self.hero_system.clear_dirty();
-        } else if column == self.backpack_system.column_name() {
-            self.backpack_system.clear_dirty();
-        } else if column == self.building_system.column_name() {
-            self.building_system.clear_dirty();
-        } else if column == self.tech_system.column_name() {
-            self.tech_system.clear_dirty();
-        } else if column == self.equip_system.column_name() {
-            self.equip_system.clear_dirty();
-        } else if column == self.mail_system.column_name() {
-            self.mail_system.clear_dirty();
-        } else if column == self.mission_system.column_name() {
-            self.mission_system.clear_dirty();
-        } else if column == self.skin_system.column_name() {
-            self.skin_system.clear_dirty();
-        } else {
+        if !self.clear_registered_system_dirty(column) {
             warn!(
                 role_id = self.role_id,
                 column, "Unknown p_data column saved"
@@ -498,42 +406,7 @@ impl PlayerActor {
                 Self::lord_data_function(lord).to_function_base_bytes(),
             );
         }
-        push_function_base(
-            &mut function_base,
-            self.activity_system.to_function_base_bytes(),
-        );
-        push_function_base(
-            &mut function_base,
-            self.hero_system.to_function_base_bytes(),
-        );
-        push_function_base(
-            &mut function_base,
-            self.backpack_system.to_function_base_bytes(),
-        );
-        push_function_base(
-            &mut function_base,
-            self.building_system.to_function_base_bytes(),
-        );
-        push_function_base(
-            &mut function_base,
-            self.tech_system.to_function_base_bytes(),
-        );
-        push_function_base(
-            &mut function_base,
-            self.equip_system.to_function_base_bytes(),
-        );
-        push_function_base(
-            &mut function_base,
-            self.mail_system.to_function_base_bytes(),
-        );
-        push_function_base(
-            &mut function_base,
-            self.mission_system.to_function_base_bytes(),
-        );
-        push_function_base(
-            &mut function_base,
-            self.skin_system.to_function_base_bytes(),
-        );
+        self.append_registered_function_bases(&mut function_base);
 
         GetRoleDataRs {
             function_base,
@@ -569,23 +442,15 @@ impl PlayerActor {
         }
     }
 
-    /// 按 cmd 范围将业务命令路由到对应系统处理，返回序列化后的响应 payload。
+    /// 将业务命令路由到已注册 Home 系统处理，返回序列化后的响应 payload。
     ///
-    /// cmd 范围对应关系（与 proto 文件保持一致）：
-    /// - 1101-1200  Game（登录/任务相关）→ mission_system
-    /// - 1501-1603  Simulate（建筑/模拟经营）→ building_system
-    /// - 2001-2500  Hero（将领）→ hero_system
-    /// - 4001-4004  Bag（背包）→ backpack_system
-    /// - 4201-4208  Technology（科技）→ tech_system
-    /// - 4801-5100  Equip（装备）→ equip_system
-    /// - 6001-6026  Mail（邮件）→ mail_system
-    /// - 8001-10000 Activity（活动）→ activity_system
+    /// 命令范围注册在 `systems::registry::HOME_COMMAND_ROUTES`，避免新增 Home system
+    /// 继续扩大 PlayerActor 的分发 match。
     pub async fn handle_game_command(
         &mut self,
         cmd: u32,
         payload: Vec<u8>,
     ) -> anyhow::Result<Vec<u8>> {
-        use crate::systems::PlayerSystem;
         let config = self.current_config.clone();
         let payload = if let Ok(msg) = shared::msg::GameMessage::decode(payload.clone()) {
             if msg.base.cmd == cmd as i32 {
@@ -604,50 +469,22 @@ impl PlayerActor {
             );
         }
 
+        if route_home_command(cmd).is_none() {
+            warn!(
+                role_id = self.role_id,
+                cmd, "Unhandled cmd, no system matched"
+            );
+        }
+
         // 调用对应系统，获取响应 payload 和需要分发的事件
-        let (resp, events) = match cmd {
-            1101..=1200 => self
-                .mission_system
-                .handle_command_with_events(cmd, &payload, &config),
-            1501..=1603 => self
-                .building_system
-                .handle_command_with_events(cmd, &payload, &config),
-            2001..=2500 => self
-                .hero_system
-                .handle_command_with_events(cmd, &payload, &config),
-            4001..=4004 => self.backpack_system.handle_command_with_events_for_role(
-                self.role_id,
-                cmd,
-                &payload,
-                &config,
-            ),
-            4201..=4208 => self
-                .tech_system
-                .handle_command_with_events(cmd, &payload, &config),
-            4801..=5100 => self
-                .equip_system
-                .handle_command_with_events(cmd, &payload, &config),
-            6001..=6026 => self
-                .mail_system
-                .handle_command_with_events(cmd, &payload, &config),
-            8001..=10000 => self
-                .activity_system
-                .handle_command_with_events(cmd, &payload, &config),
-            _ => {
-                warn!(
-                    role_id = self.role_id,
-                    cmd, "Unhandled cmd, no system matched"
-                );
-                return Err(anyhow::anyhow!("Unknown cmd: {}", cmd));
-            }
-        }?;
+        let result = self.dispatch_registered_command(cmd, &payload, &config)?;
 
         // 分发系统产生的游戏事件（驱动任务/活动进度）
-        for event in events {
+        for event in result.events {
             self.dispatch_event(&event);
         }
 
-        shared::msg::GameMessage::build_response_from_raw(cmd as i32 + 1, &resp)
+        shared::msg::GameMessage::build_response_from_raw(cmd as i32 + 1, &result.response_payload)
     }
 
     async fn handle_world_outbound(
@@ -1035,8 +872,16 @@ impl DecodedWorldOutbound {
                 payload.outcome,
                 payload.winner_side,
                 payload.rounds,
-                payload.attacker.as_ref().map(|fighter| fighter.units_lost).unwrap_or_default(),
-                payload.defender.as_ref().map(|fighter| fighter.units_lost).unwrap_or_default()
+                payload
+                    .attacker
+                    .as_ref()
+                    .map(|fighter| fighter.units_lost)
+                    .unwrap_or_default(),
+                payload
+                    .defender
+                    .as_ref()
+                    .map(|fighter| fighter.units_lost)
+                    .unwrap_or_default()
             ),
         }
     }
@@ -1159,8 +1004,9 @@ fn i64_to_i32_saturating(value: i64) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto::slg::{BaseMailPb, GarrisonTroop, GetMailListRq, GetMailListRs, GetRoleDataRq};
-    use shared::msg::{func_type, GameMessage};
+    use crate::systems::PlayerSystem;
+    use proto::slg::{BaseMailPb, GetMailListRq, GetMailListRs, GetRoleDataRq};
+    use shared::msg::{GameMessage, func_type};
     use sqlx::mysql::MySqlPoolOptions;
 
     fn test_lord(role_id: i64) -> LordRow {
@@ -1472,9 +1318,11 @@ mod tests {
         assert!(duplicate.msg.contains("duplicate"));
         assert_eq!(actor.lord.as_ref().unwrap().meat, Some(250));
         assert_eq!(actor.hero_system.formations[0].state, FORMATION_STATE_IDLE);
-        assert!(actor
-            .world_system
-            .has_processed_outbound("id:test-collect-returned-dedup-46"));
+        assert!(
+            actor
+                .world_system
+                .has_processed_outbound("id:test-collect-returned-dedup-46")
+        );
     }
 
     #[tokio::test]
@@ -1563,11 +1411,12 @@ mod tests {
         assert!(mail.title.as_deref().unwrap().contains("Scout Report"));
         assert!(mail.title.as_deref().unwrap().contains("pos 303"));
         assert!(mail.content.as_deref().unwrap().contains("Player"));
-        assert!(mail
-            .content
-            .as_deref()
-            .unwrap()
-            .contains("Owner ID: 900002"));
+        assert!(
+            mail.content
+                .as_deref()
+                .unwrap()
+                .contains("Owner ID: 900002")
+        );
         assert!(mail.c_param.iter().any(|p| p.contains("pos:303")));
         assert!(actor.mail_system.is_dirty());
     }
@@ -1610,9 +1459,11 @@ mod tests {
         assert!(duplicate.msg.contains("duplicate"));
         // Only one mail should be created
         assert_eq!(actor.mail_system.mails.len(), 1);
-        assert!(actor
-            .world_system
-            .has_processed_outbound("id:test-scout-dedup-200"));
+        assert!(
+            actor
+                .world_system
+                .has_processed_outbound("id:test-scout-dedup-200")
+        );
     }
 
     #[tokio::test]
@@ -1680,16 +1531,18 @@ mod tests {
         assert!(mail.title.as_deref().unwrap().contains("Battle Report"));
         assert!(mail.content.as_deref().unwrap().contains("AttackerWin"));
         assert!(mail.content.as_deref().unwrap().contains("Rounds: 3"));
-        assert!(mail
-            .content
-            .as_deref()
-            .unwrap()
-            .contains("Attacker Losses: 20/100"));
-        assert!(mail
-            .content
-            .as_deref()
-            .unwrap()
-            .contains("Defender Losses: 90/90"));
+        assert!(
+            mail.content
+                .as_deref()
+                .unwrap()
+                .contains("Attacker Losses: 20/100")
+        );
+        assert!(
+            mail.content
+                .as_deref()
+                .unwrap()
+                .contains("Defender Losses: 90/90")
+        );
         assert!(mail.c_param.iter().any(|p| p == "battle_id:99"));
         assert!(mail.c_param.iter().any(|p| p == "attacker_units_lost:20"));
         assert!(actor.mail_system.is_dirty());
@@ -1755,9 +1608,11 @@ mod tests {
         assert_eq!(duplicate.code, 0);
         assert!(duplicate.msg.contains("duplicate"));
         assert_eq!(actor.mail_system.mails.len(), 1);
-        assert!(actor
-            .world_system
-            .has_processed_outbound("id:test-battle-dedup-401"));
+        assert!(
+            actor
+                .world_system
+                .has_processed_outbound("id:test-battle-dedup-401")
+        );
     }
 
     #[tokio::test]
@@ -1802,11 +1657,12 @@ mod tests {
         assert_eq!(rs.code, 0);
         assert_eq!(actor.mail_system.mails.len(), 1);
         let mail = actor.mail_system.mails.last().unwrap();
-        assert!(mail
-            .content
-            .as_deref()
-            .unwrap()
-            .contains("Garrison Troops: 1"));
+        assert!(
+            mail.content
+                .as_deref()
+                .unwrap()
+                .contains("Garrison Troops: 1")
+        );
         assert!(mail.c_param.iter().any(|p| p == "garrison_count:1"));
     }
 }

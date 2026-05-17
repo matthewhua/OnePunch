@@ -9,6 +9,7 @@ pub mod equip;
 pub mod hero;
 pub mod mail;
 pub mod mission;
+pub mod registry;
 pub mod skin;
 pub mod tech;
 pub mod world;
