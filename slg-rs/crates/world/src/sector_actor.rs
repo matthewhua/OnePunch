@@ -10,7 +10,8 @@ use crate::march::{
 };
 use crate::message::SectorMessage;
 use crate::outbound::{
-    outbound_events_for_resolution, InMemoryOutboundSink, WorldOutboundEvent, WorldOutboundSink,
+    outbound_events_for_resolution, InMemoryOutboundSink, ScoutReportData, WorldOutboundEvent,
+    WorldOutboundSink, ENTITY_TYPE_MINE,
 };
 use crate::supervisor::ActorId;
 use crate::timer_wheel::TimerWheel;
@@ -532,6 +533,8 @@ impl MapSectorActor {
                 collect_start_time_ms: state.start_time_ms,
                 collect_end_time_ms: state.collect_end_time_ms,
             }]
+        } else if action == ArrivalAction::Scout {
+            self.build_scout_report_events(&troop, &resolution, goal_pos)
         } else {
             outbound_events_for_resolution(&troop, &resolution)
         };
@@ -647,6 +650,85 @@ impl MapSectorActor {
                 error!(error = %err, "Failed to publish world outbound event");
             }
         }
+    }
+
+    /// Build scout report events with enriched data from the world state.
+    fn build_scout_report_events(
+        &self,
+        troop: &BaseTroop,
+        resolution: &crate::arrival::ArrivalResolution,
+        goal_pos: i32,
+    ) -> Vec<WorldOutboundEvent> {
+        let entity = self.entities.get(&goal_pos);
+        let target_resources = self.collect_target_resources(entity);
+        let garrison_troops = self.garrison_state.list(Some(goal_pos));
+        let now_ms = self.timer_wheel.current_time_ms();
+
+        let report = ScoutReportData {
+            target_entity_type: entity.and_then(|e| e.entity_type),
+            target_owner_id: entity.and_then(|e| e.key_id.map(i64::from)),
+            target_camp: entity.and_then(|e| e.camp),
+            target_conf_id: entity.and_then(|e| e.conf_id),
+            target_is_battle: entity.and_then(|e| e.is_battle).unwrap_or(false),
+            target_protect_time: entity.and_then(|e| e.protect_time),
+            scout_time_ms: now_ms,
+            target_resources,
+            garrison_troops,
+        };
+
+        vec![WorldOutboundEvent::ScoutReportRequested {
+            troop_key: troop.key,
+            origin: troop.origin,
+            target_pos: goal_pos,
+            camp: troop.camp,
+            report: Some(report),
+        }]
+    }
+
+    /// Collect resource info for mines from the WorldConfig.
+    fn collect_target_resources(&self, entity: Option<&BaseEntity>) -> Vec<proto::slg::AwardPb> {
+        let entity = match entity {
+            Some(e) => e,
+            None => return Vec::new(),
+        };
+
+        if entity.entity_type != Some(ENTITY_TYPE_MINE) {
+            return Vec::new();
+        }
+
+        let conf_id = match entity.conf_id {
+            Some(id) => id,
+            None => return Vec::new(),
+        };
+
+        let mine = match self.world_config.mines.get(&conf_id) {
+            Some(m) => m,
+            None => return Vec::new(),
+        };
+
+        let reward = match mine.parsed_reward().ok() {
+            Some(r) => r,
+            None => return Vec::new(),
+        };
+
+        // Only include resource-type rewards in the scout report preview.
+        if reward.award_type != crate::collect::STATIC_MINE_REWARD_TYPE_RESOURCE {
+            return Vec::new();
+        }
+
+        let resource_id = match mine.mine_type {
+            crate::collect::MINE_TYPE_GRAIN => crate::collect::RESOURCE_ID_MEAT,
+            crate::collect::MINE_TYPE_GOLD_INGOT => crate::collect::RESOURCE_ID_GOLD,
+            _ => return Vec::new(),
+        };
+
+        vec![proto::slg::AwardPb {
+            r#type: crate::collect::AWARD_TYPE_LORD_RESOURCE,
+            id: resource_id,
+            count: reward.amount,
+            safe: Some(true),
+            ..Default::default()
+        }]
     }
 
     fn log_collect_config_issues(&self, state: &CollectState) {
@@ -1365,6 +1447,193 @@ mod tests {
                 collect_end_time_ms: 600,
             }]
         );
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn scout_arrival_generates_report_with_entity_type_and_owner() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, _garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
+        let target = xy_to_pos(50, 50);
+
+        actor.entities.insert(
+            target,
+            BaseEntity {
+                pos: target,
+                entity_type: Some(proto::slg::WorldEntityTypeDefine::EntityTypePlayer as i32),
+                key_id: Some(900_001),
+                camp: Some(2),
+                conf_id: Some(7),
+                is_battle: Some(true),
+                protect_time: Some(1_800_000),
+                ..Default::default()
+            },
+        );
+
+        actor
+            .handle_arrival(BaseTroop {
+                key: 100,
+                r#type: Some(crate::march::MARCH_TYPE_SCOUT),
+                origin: Some(xy_to_pos(1, 1)),
+                goal: Some(target),
+                camp: Some(1),
+                ..Default::default()
+            })
+            .await;
+
+        let records = sink.records();
+        assert_eq!(records.len(), 1);
+
+        match &records[0] {
+            WorldOutboundEvent::ScoutReportRequested {
+                troop_key,
+                origin,
+                target_pos,
+                camp,
+                report,
+            } => {
+                assert_eq!(*troop_key, 100);
+                assert_eq!(*origin, Some(xy_to_pos(1, 1)));
+                assert_eq!(*target_pos, target);
+                assert_eq!(*camp, Some(1));
+
+                let report = report.as_ref().expect("scout report data must be present");
+                assert_eq!(report.target_entity_type, Some(proto::slg::WorldEntityTypeDefine::EntityTypePlayer as i32));
+                assert_eq!(report.target_owner_id, Some(900_001));
+                assert_eq!(report.target_camp, Some(2));
+                assert_eq!(report.target_conf_id, Some(7));
+                assert!(report.target_is_battle);
+                assert_eq!(report.target_protect_time, Some(1_800_000));
+                assert!(report.scout_time_ms >= 0);
+                assert!(report.target_resources.is_empty());
+                assert!(report.garrison_troops.is_empty());
+            }
+            other => panic!("expected ScoutReportRequested, got {:?}", other),
+        }
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn scout_report_includes_mine_resources_from_config() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let config = world_config_with_mine(static_mine(201, 2, "[2,3,300]", 3_600_000));
+        let (mut actor, _garrison_state, wal_path) =
+            actor_with_sink_and_config(sink.clone(), config).await;
+        let target = xy_to_pos(60, 60);
+
+        actor.entities.insert(
+            target,
+            BaseEntity {
+                pos: target,
+                entity_type: Some(proto::slg::WorldEntityTypeDefine::EntityTypeMine as i32),
+                conf_id: Some(201),
+                ..Default::default()
+            },
+        );
+
+        actor
+            .handle_arrival(BaseTroop {
+                key: 101,
+                r#type: Some(crate::march::MARCH_TYPE_SCOUT),
+                origin: Some(xy_to_pos(1, 1)),
+                goal: Some(target),
+                ..Default::default()
+            })
+            .await;
+
+        let records = sink.records();
+        assert_eq!(records.len(), 1);
+
+        let report = match &records[0] {
+            WorldOutboundEvent::ScoutReportRequested { report, .. } => {
+                report.as_ref().expect("scout report data must be present")
+            }
+            _ => panic!("unexpected event"),
+        };
+
+        assert_eq!(report.target_entity_type, Some(proto::slg::WorldEntityTypeDefine::EntityTypeMine as i32));
+        assert_eq!(report.target_resources.len(), 1);
+        assert_eq!(report.target_resources[0].id, crate::collect::RESOURCE_ID_MEAT);
+        assert_eq!(report.target_resources[0].count, 300);
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn scout_report_includes_garrison_troops_at_target() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
+        let target = xy_to_pos(70, 70);
+
+        garrison_state
+            .place(
+                target,
+                proto::slg::GarrisonTroop {
+                    troop_key_id: Some(500),
+                    role_id: Some(900_002),
+                    end_time: Some(99_000),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+
+        actor
+            .handle_arrival(BaseTroop {
+                key: 102,
+                r#type: Some(crate::march::MARCH_TYPE_SCOUT),
+                origin: Some(xy_to_pos(1, 1)),
+                goal: Some(target),
+                ..Default::default()
+            })
+            .await;
+
+        let records = sink.records();
+        assert_eq!(records.len(), 1);
+
+        let report = match &records[0] {
+            WorldOutboundEvent::ScoutReportRequested { report, .. } => {
+                report.as_ref().expect("scout report data must be present")
+            }
+            _ => panic!("unexpected event"),
+        };
+
+        assert_eq!(report.garrison_troops.len(), 1);
+        assert_eq!(report.garrison_troops[0].troop_key_id, Some(500));
+        assert_eq!(report.garrison_troops[0].role_id, Some(900_002));
+
+        let _ = tokio::fs::remove_file(wal_path).await;
+    }
+
+    #[tokio::test]
+    async fn scout_report_without_target_entity_still_publishes_event() {
+        let sink = Arc::new(InMemoryOutboundSink::new());
+        let (mut actor, _garrison_state, wal_path) = actor_with_sink(sink.clone()).await;
+        let target = xy_to_pos(80, 80);
+
+        actor
+            .handle_arrival(BaseTroop {
+                key: 103,
+                r#type: Some(crate::march::MARCH_TYPE_SCOUT),
+                origin: Some(xy_to_pos(1, 1)),
+                goal: Some(target),
+                ..Default::default()
+            })
+            .await;
+
+        let records = sink.records();
+        assert_eq!(records.len(), 1);
+
+        match &records[0] {
+            WorldOutboundEvent::ScoutReportRequested { report, .. } => {
+                let report = report.as_ref().expect("scout report data must be present");
+                assert!(report.target_entity_type.is_none());
+                assert!(report.target_resources.is_empty());
+                assert!(report.garrison_troops.is_empty());
+            }
+            _ => panic!("unexpected event"),
+        }
 
         let _ = tokio::fs::remove_file(wal_path).await;
     }
