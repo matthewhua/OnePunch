@@ -5,6 +5,7 @@ use std::sync::Arc;
 pub mod activity;
 pub mod backpack;
 pub mod building;
+pub mod chat;
 pub mod equip;
 pub mod hero;
 pub mod mail;

@@ -26,6 +26,7 @@ pub enum HomeCommandTarget {
     Technology,
     Equip,
     Mail,
+    Chat,
     Vip,
     Shop,
     Activity,
@@ -68,6 +69,7 @@ pub const HOME_COMMAND_ROUTES: &[HomeCommandRoute] = &[
     HomeCommandRoute::new(4201, 4208, HomeCommandTarget::Technology, "technology"),
     HomeCommandRoute::new(4801, 5100, HomeCommandTarget::Equip, "equip"),
     HomeCommandRoute::new(6001, 6026, HomeCommandTarget::Mail, "mail"),
+    HomeCommandRoute::new(7601, 7650, HomeCommandTarget::Chat, "chat"),
     HomeCommandRoute::new(7401, 7500, HomeCommandTarget::Vip, "vip"),
     HomeCommandRoute::new(7651, 7700, HomeCommandTarget::Shop, "shop"),
     HomeCommandRoute::new(8001, 10000, HomeCommandTarget::Activity, "activity"),
@@ -124,6 +126,7 @@ impl HomeSystemRegistry for PlayerActor {
             (&mut self.tech_system, row.technology_func.as_ref()),
             (&mut self.equip_system, row.equip_func.as_ref()),
             (&mut self.mail_system, row.mail_func.as_ref()),
+            (&mut self.chat_system, row.chat_func.as_ref()),
             (&mut self.mission_system, row.mission_func.as_ref()),
             (&mut self.skin_system, row.skin_func.as_ref()),
             (&mut self.shop_system, row.shop_func.as_ref()),
@@ -176,6 +179,7 @@ impl HomeSystemRegistry for PlayerActor {
             &mut self.tech_system,
             &mut self.equip_system,
             &mut self.mail_system,
+            &mut self.chat_system,
             &mut self.mission_system,
             &mut self.skin_system,
             &mut self.shop_system,
@@ -196,6 +200,7 @@ impl HomeSystemRegistry for PlayerActor {
             &mut self.tech_system,
             &mut self.equip_system,
             &mut self.mail_system,
+            &mut self.chat_system,
             &mut self.mission_system,
             &mut self.skin_system,
             &mut self.shop_system,
@@ -222,6 +227,7 @@ impl HomeSystemRegistry for PlayerActor {
             &mut self.tech_system,
             &mut self.equip_system,
             &mut self.mail_system,
+            &mut self.chat_system,
             &mut self.mission_system,
             &mut self.skin_system,
             &mut self.shop_system,
@@ -260,6 +266,7 @@ impl HomeSystemRegistry for PlayerActor {
             &mut self.tech_system,
             &mut self.equip_system,
             &mut self.mail_system,
+            &mut self.chat_system,
             &mut self.mission_system,
             &mut self.skin_system,
             &mut self.shop_system,
@@ -284,6 +291,7 @@ impl HomeSystemRegistry for PlayerActor {
         push_function_base(function_base, self.tech_system.to_function_base_bytes());
         push_function_base(function_base, self.equip_system.to_function_base_bytes());
         push_function_base(function_base, self.mail_system.to_function_base_bytes());
+        push_function_base(function_base, self.chat_system.to_function_base_bytes());
         push_function_base(function_base, self.mission_system.to_function_base_bytes());
         push_function_base(function_base, self.skin_system.to_function_base_bytes());
         push_function_base(function_base, self.shop_system.to_function_base_bytes());
@@ -318,6 +326,10 @@ impl HomeSystemRegistry for PlayerActor {
             Some(HomeCommandTarget::Mail) => self
                 .mail_system
                 .handle_command_with_events(cmd, payload, config),
+            Some(HomeCommandTarget::Chat) => self
+                .chat_system
+                .handle_command_for_role(self.role_id, cmd, payload, config)
+                .map(|response_payload| (response_payload, vec![])),
             Some(HomeCommandTarget::Vip) => self
                 .vip_system
                 .handle_command_with_events(cmd, payload, config),
@@ -510,6 +522,9 @@ mod tests {
         );
         assert_eq!(route_home_command(4801), Some(HomeCommandTarget::Equip));
         assert_eq!(route_home_command(6001), Some(HomeCommandTarget::Mail));
+        assert_eq!(route_home_command(7601), Some(HomeCommandTarget::Chat));
+        assert_eq!(route_home_command(7603), Some(HomeCommandTarget::Chat));
+        assert_eq!(route_home_command(7650), Some(HomeCommandTarget::Chat));
         assert_eq!(route_home_command(7401), Some(HomeCommandTarget::Vip));
         assert_eq!(route_home_command(7500), Some(HomeCommandTarget::Vip));
         assert_eq!(route_home_command(7651), Some(HomeCommandTarget::Shop));

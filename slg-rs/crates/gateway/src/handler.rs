@@ -608,7 +608,8 @@ mod tests {
     use proto::slg::{
         BeginGameRq, BeginGameRs, CreateRoleRq, CreateRoleRs, DispatchRq, DispatchRs, DoLoginRq,
         GetRoleDataRs, LoginRequest, LoginResponse, PlayerOfflineRq, PlayerOfflineRs, RoleLoginRq,
-        RoleLoginRs, ValidateTokenRequest, ValidateTokenResponse, VerifyRq,
+        RoleLoginRs, ValidateTokenRequest, ValidateTokenResponse, VerifyRq, WorldOutboundRq,
+        WorldOutboundRs,
     };
     use shared::msg::GameMessage;
     use std::sync::Mutex;
@@ -691,6 +692,16 @@ mod tests {
             Ok(Response::new(DispatchRs {
                 code: 0,
                 payload: GameMessage::build_response(1110, &GetRoleDataRs::default()).unwrap(),
+            }))
+        }
+
+        async fn world_outbound(
+            &self,
+            _request: Request<WorldOutboundRq>,
+        ) -> Result<Response<WorldOutboundRs>, Status> {
+            Ok(Response::new(WorldOutboundRs {
+                code: 0,
+                msg: String::new(),
             }))
         }
 

@@ -16,6 +16,7 @@ use crate::actors::global_event_bus::GlobalEventBus;
 use crate::systems::activity::ActivitySystem;
 use crate::systems::backpack::BackpackSystem;
 use crate::systems::building::BuildingSystem;
+use crate::systems::chat::ChatSystem;
 use crate::systems::equip::EquipSystem;
 use crate::systems::hero::HeroSystem;
 use crate::systems::mail::MailSystem;
@@ -99,6 +100,7 @@ pub struct PlayerActor {
     pub hero_system: HeroSystem,
     pub backpack_system: BackpackSystem,
     pub building_system: BuildingSystem,
+    pub chat_system: ChatSystem,
     pub tech_system: TechSystem,
     pub equip_system: EquipSystem,
     pub mail_system: MailSystem,
@@ -146,6 +148,7 @@ impl PlayerActor {
             hero_system: HeroSystem::new(),
             backpack_system: BackpackSystem::new(),
             building_system: BuildingSystem::new(),
+            chat_system: ChatSystem::new(),
             tech_system: TechSystem::new(),
             equip_system: EquipSystem::new(),
             mail_system: MailSystem::new(),
@@ -1158,6 +1161,7 @@ mod tests {
         assert!(function_types.contains(&func_type::BAG));
         assert!(function_types.contains(&func_type::SIM));
         assert!(function_types.contains(&func_type::MAIL));
+        assert!(function_types.contains(&func_type::CHAT));
         assert!(function_types.contains(&func_type::MISSION));
         assert!(function_types.contains(&func_type::SHOP));
         assert!(function_types.contains(&func_type::VIP));
