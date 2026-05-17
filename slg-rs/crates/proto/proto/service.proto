@@ -58,6 +58,8 @@ message WorldOutboundRq {
     int32 troop_key       = 4;  // 部队唯一ID
     bytes payload         = 5;  // 事件扩展 payload，承载后续细化 protobuf
     string context        = 6;  // 可诊断上下文
+    string event_id       = 7;  // 稳定事件ID，用于跨服务幂等
+    string event_key      = 8;  // 可读稳定事件键，用于诊断与幂等回退
 }
 
 message WorldOutboundRs {

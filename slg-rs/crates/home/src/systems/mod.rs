@@ -1,15 +1,16 @@
 use anyhow::Result;
-use std::sync::Arc;
 use shared::static_config::StaticConfig;
+use std::sync::Arc;
 
 pub mod activity;
-pub mod hero;
 pub mod backpack;
 pub mod building;
-pub mod tech;
 pub mod equip;
+pub mod hero;
 pub mod mission;
 pub mod skin;
+pub mod tech;
+pub mod world;
 
 /// 玩家功能系统 trait
 ///
@@ -23,7 +24,9 @@ pub trait PlayerSystem: Send + Sync {
     fn save_to_bin(&self) -> Result<Vec<u8>>;
 
     /// 是否有未存盘的变更
-    fn is_dirty(&self) -> bool { false }
+    fn is_dirty(&self) -> bool {
+        false
+    }
 
     /// 标记数据已变更
     fn mark_dirty(&mut self) {}
