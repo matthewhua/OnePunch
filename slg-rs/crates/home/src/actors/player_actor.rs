@@ -20,6 +20,7 @@ use crate::systems::hero::HeroSystem;
 use crate::systems::mission::MissionSystem;
 use crate::systems::skin::SkinSystem;
 use crate::systems::tech::TechSystem;
+use crate::systems::world::WorldSystem;
 use crate::systems::PlayerSystem;
 use shared::event::{EventDispatcher, GameEvent, MissionEvent, MissionType, PlayerContext};
 
@@ -97,6 +98,7 @@ pub struct PlayerActor {
     pub equip_system: EquipSystem,
     pub mission_system: MissionSystem,
     pub skin_system: SkinSystem,
+    pub world_system: WorldSystem,
 
     // ── 事件 ──
     pub event_dispatcher: EventDispatcher,
@@ -140,6 +142,7 @@ impl PlayerActor {
             equip_system: EquipSystem::new(),
             mission_system: MissionSystem::new(),
             skin_system: SkinSystem::new(),
+            world_system: WorldSystem::new(),
             event_dispatcher: EventDispatcher::new(),
             ctx: PlayerContext {
                 role_id,
@@ -339,10 +342,7 @@ impl PlayerActor {
                 match system.save_to_bin() {
                     Ok(data) => {
                         let column = system.column_name();
-                        entries.push(SaveEntry {
-                            column,
-                            data,
-                        });
+                        entries.push(SaveEntry { column, data });
                         saved_columns.push(column);
                     }
                     Err(e) => {
@@ -435,8 +435,7 @@ impl PlayerActor {
         } else {
             warn!(
                 role_id = self.role_id,
-                column,
-                "Unknown p_data column saved"
+                column, "Unknown p_data column saved"
             );
         }
     }
@@ -671,9 +670,28 @@ impl PlayerActor {
             }
         };
         let decoded_msg = decoded.description();
+        let event_token = world_outbound_event_token(&event);
+
+        if self.world_system.has_processed_outbound(&event_token) {
+            info!(
+                role_id = self.role_id,
+                event_type = event.event_type,
+                troop_key = event.troop_key,
+                world_entity_id = event.world_entity_id,
+                event_id = %event.event_id,
+                event_key = %event.event_key,
+                decoded = %decoded_msg,
+                "PlayerActor ignored duplicate World outbound event"
+            );
+            return Ok(WorldOutboundRs {
+                code: 0,
+                msg: format!("duplicate World outbound ignored: {}", decoded_msg),
+            });
+        }
 
         match self.apply_world_outbound(&decoded) {
             Ok(events) => {
+                self.world_system.mark_outbound_processed(event_token);
                 for event in events {
                     self.dispatch_event(&event);
                 }
@@ -698,6 +716,8 @@ impl PlayerActor {
             event_type = event.event_type,
             troop_key = event.troop_key,
             world_entity_id = event.world_entity_id,
+            event_id = %event.event_id,
+            event_key = %event.event_key,
             payload_len = event.payload.len(),
             decoded = %decoded_msg,
             context = %event.context,
@@ -865,6 +885,36 @@ fn decode_world_outbound_payload(event: &WorldOutboundRq) -> anyhow::Result<Deco
     }
 }
 
+fn world_outbound_event_token(event: &WorldOutboundRq) -> String {
+    if !event.event_id.is_empty() {
+        return format!("id:{}", event.event_id);
+    }
+    if !event.event_key.is_empty() {
+        return format!("key:{}", event.event_key);
+    }
+
+    format!(
+        "legacy:role={}:type={}:entity={}:troop={}:payload={}",
+        event.role_id,
+        event.event_type,
+        event.world_entity_id,
+        event.troop_key,
+        stable_bytes_hash(&event.payload)
+    )
+}
+
+fn stable_bytes_hash(bytes: &[u8]) -> String {
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x00000100000001b3;
+
+    let mut hash = FNV_OFFSET;
+    for byte in bytes {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    format!("{:016x}", hash)
+}
+
 fn add_i64_option(value: &mut Option<i64>, delta: i64) {
     *value = Some(value.unwrap_or_default().saturating_add(delta));
 }
@@ -1004,6 +1054,8 @@ mod tests {
                 troop_key: 44,
                 payload,
                 context: "test".to_string(),
+                event_id: "test-collect-started-44".to_string(),
+                event_key: "test:collect_started:44".to_string(),
             })
             .await
             .unwrap();
@@ -1026,6 +1078,8 @@ mod tests {
                 troop_key: 45,
                 payload: vec![0x80],
                 context: "test".to_string(),
+                event_id: "test-invalid-45".to_string(),
+                event_key: "test:invalid:45".to_string(),
             })
             .await
             .unwrap();
@@ -1063,6 +1117,8 @@ mod tests {
                 troop_key: 46,
                 payload,
                 context: "test".to_string(),
+                event_id: "test-collect-returned-mismatch-46".to_string(),
+                event_key: "test:collect_returned:mismatch:46".to_string(),
             })
             .await
             .unwrap();
@@ -1108,6 +1164,8 @@ mod tests {
                 troop_key: 46,
                 payload,
                 context: "test".to_string(),
+                event_id: "test-collect-returned-46".to_string(),
+                event_key: "test:collect_returned:46".to_string(),
             })
             .await
             .unwrap();
@@ -1118,6 +1176,56 @@ mod tests {
         assert!(actor.lord_dirty);
         assert_eq!(actor.hero_system.formations[0].state, FORMATION_STATE_IDLE);
         assert!(actor.hero_system.is_dirty());
+    }
+
+    #[tokio::test]
+    async fn world_outbound_collect_returned_duplicate_does_not_apply_twice() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        actor.hero_system.formations.push(proto::slg::Formation {
+            id: 7,
+            state: 1,
+            hero_id: vec![101],
+            ..Default::default()
+        });
+        let payload = WorldCollectReturnedPayload {
+            target_pos: 202,
+            home_pos: 101,
+            march_type: Some(3),
+            formation_id: Some(7),
+            awards: vec![AwardPb {
+                r#type: WORLD_AWARD_TYPE_LORD_RESOURCE,
+                id: LORD_RESOURCE_MEAT,
+                count: 50,
+                safe: Some(true),
+                ..Default::default()
+            }],
+            collect_start_time_ms: 12_000,
+            collect_end_time_ms: 12_500,
+        }
+        .encode_to_vec();
+        let request = WorldOutboundRq {
+            role_id,
+            event_type: WORLD_OUTBOUND_EVENT_COLLECT_RETURNED,
+            world_entity_id: 202,
+            troop_key: 46,
+            payload,
+            context: "test".to_string(),
+            event_id: "test-collect-returned-dedup-46".to_string(),
+            event_key: "test:collect_returned:dedup:46".to_string(),
+        };
+
+        let first = actor.handle_world_outbound(request.clone()).await.unwrap();
+        let duplicate = actor.handle_world_outbound(request).await.unwrap();
+
+        assert_eq!(first.code, 0);
+        assert_eq!(duplicate.code, 0);
+        assert!(duplicate.msg.contains("duplicate"));
+        assert_eq!(actor.lord.as_ref().unwrap().meat, Some(250));
+        assert_eq!(actor.hero_system.formations[0].state, FORMATION_STATE_IDLE);
+        assert!(actor
+            .world_system
+            .has_processed_outbound("id:test-collect-returned-dedup-46"));
     }
 
     #[tokio::test]
@@ -1149,6 +1257,8 @@ mod tests {
                 troop_key: 47,
                 payload,
                 context: "test".to_string(),
+                event_id: "test-collect-returned-47".to_string(),
+                event_key: "test:collect_returned:47".to_string(),
             })
             .await
             .unwrap();

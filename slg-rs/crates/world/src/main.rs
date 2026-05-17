@@ -101,6 +101,8 @@ async fn run_home_outbound_consumer(
                     role_id = request.role_id,
                     event_type = request.event_type,
                     troop_key = request.troop_key,
+                    event_id = %request.event_id,
+                    event_key = %request.event_key,
                     "World outbound delivered to Home"
                 );
             }
@@ -109,6 +111,8 @@ async fn run_home_outbound_consumer(
                     role_id = request.role_id,
                     event_type = request.event_type,
                     troop_key = request.troop_key,
+                    event_id = %request.event_id,
+                    event_key = %request.event_key,
                     code = response.code,
                     msg = %response.msg,
                     "Home rejected World outbound event"
@@ -119,6 +123,8 @@ async fn run_home_outbound_consumer(
                     role_id = request.role_id,
                     event_type = request.event_type,
                     troop_key = request.troop_key,
+                    event_id = %request.event_id,
+                    event_key = %request.event_key,
                     error = %err,
                     "Failed to deliver World outbound event to Home"
                 );

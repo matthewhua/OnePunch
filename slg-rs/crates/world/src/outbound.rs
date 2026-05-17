@@ -90,6 +90,96 @@ impl WorldOutboundEvent {
         }
     }
 
+    pub fn event_key_for_role(&self, role_id: i64) -> String {
+        match self {
+            Self::BattleStartRequested {
+                troop_key,
+                march_type,
+                origin,
+                target_pos,
+                camp,
+            } => format!(
+                "world:battle_start_requested:role={}:troop={}:target={}:march_type={}:origin={}:camp={}",
+                role_id,
+                troop_key,
+                target_pos,
+                optional_i32(*march_type),
+                optional_i32(*origin),
+                optional_i32(*camp)
+            ),
+            Self::ScoutReportRequested {
+                troop_key,
+                origin,
+                target_pos,
+                camp,
+            } => format!(
+                "world:scout_report_requested:role={}:troop={}:target={}:origin={}:camp={}",
+                role_id,
+                troop_key,
+                target_pos,
+                optional_i32(*origin),
+                optional_i32(*camp)
+            ),
+            Self::CollectStarted {
+                troop_key,
+                target_pos,
+                march_type,
+                start_time_ms,
+            } => format!(
+                "world:collect_started:role={}:troop={}:target={}:march_type={}:start={}",
+                role_id,
+                troop_key,
+                target_pos,
+                optional_i32(*march_type),
+                start_time_ms
+            ),
+            Self::CollectReturned {
+                troop_key,
+                target_pos,
+                home_pos,
+                march_type,
+                formation_id,
+                collect_start_time_ms,
+                collect_end_time_ms,
+                ..
+            } => format!(
+                "world:collect_returned:role={}:troop={}:target={}:home={}:march_type={}:formation={}:start={}:end={}",
+                role_id,
+                troop_key,
+                target_pos,
+                home_pos,
+                optional_i32(*march_type),
+                optional_i32(*formation_id),
+                collect_start_time_ms,
+                collect_end_time_ms
+            ),
+            Self::TroopReturned {
+                troop_key,
+                home_pos,
+                march_type,
+            } => format!(
+                "world:troop_returned:role={}:troop={}:home={}:march_type={}",
+                role_id,
+                troop_key,
+                home_pos,
+                optional_i32(*march_type)
+            ),
+            Self::GarrisonChanged {
+                troop_key,
+                target_pos,
+                camp,
+                is_arrival,
+            } => format!(
+                "world:garrison_changed:role={}:troop={}:target={}:camp={}:arrival={}",
+                role_id,
+                troop_key,
+                target_pos,
+                optional_i32(*camp),
+                is_arrival
+            ),
+        }
+    }
+
     pub fn to_home_request(&self, role_id: i64) -> Result<WorldOutboundRq> {
         if role_id <= 0 {
             return Err(anyhow::anyhow!(
@@ -213,6 +303,8 @@ impl WorldOutboundEvent {
                 ));
             }
         };
+        let event_key = self.event_key_for_role(role_id);
+        let event_id = stable_event_id(&event_key);
 
         Ok(WorldOutboundRq {
             role_id,
@@ -221,8 +313,22 @@ impl WorldOutboundEvent {
             troop_key,
             payload,
             context,
+            event_id,
+            event_key,
         })
     }
+}
+
+fn stable_event_id(event_key: &str) -> String {
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x00000100000001b3;
+
+    let mut hash = FNV_OFFSET;
+    for byte in event_key.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    format!("{:016x}", hash)
 }
 
 fn optional_i32(value: Option<i32>) -> String {
@@ -706,6 +812,9 @@ mod tests {
         assert_eq!(request.event_type, WORLD_OUTBOUND_EVENT_TROOP_RETURNED);
         assert_eq!(request.world_entity_id, 101);
         assert_eq!(request.troop_key, 44);
+        assert!(!request.event_id.is_empty());
+        assert!(request.event_key.contains("world:troop_returned"));
+        assert!(request.event_key.contains("role=900001"));
         let payload = WorldTroopReturnedPayload::decode(request.payload.as_slice()).unwrap();
         assert_eq!(payload.home_pos, 101);
         assert_eq!(payload.march_type, Some(MARCH_TYPE_ATK_PLAYER));
@@ -775,6 +884,14 @@ mod tests {
         .to_home_request(900_001)
         .unwrap();
         assert_eq!(returned.event_type, WORLD_OUTBOUND_EVENT_COLLECT_RETURNED);
+        assert_eq!(
+            returned.event_key,
+            "world:collect_returned:role=900001:troop=13:target=5:home=1:march_type=3:formation=7:start=12000:end=12500"
+        );
+        assert_eq!(
+            returned.event_id,
+            stable_event_id("world:collect_returned:role=900001:troop=13:target=5:home=1:march_type=3:formation=7:start=12000:end=12500")
+        );
         let returned_payload =
             WorldCollectReturnedPayload::decode(returned.payload.as_slice()).unwrap();
         assert_eq!(returned_payload.target_pos, 5);
