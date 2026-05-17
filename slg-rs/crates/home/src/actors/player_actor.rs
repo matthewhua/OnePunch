@@ -12,16 +12,17 @@ use tokio::sync::{mpsc, oneshot, watch};
 use tracing::{error, info, warn};
 
 use crate::actors::global_event_bus::GlobalEventBus;
+use crate::systems::PlayerSystem;
 use crate::systems::activity::ActivitySystem;
 use crate::systems::backpack::BackpackSystem;
 use crate::systems::building::BuildingSystem;
 use crate::systems::equip::EquipSystem;
 use crate::systems::hero::HeroSystem;
+use crate::systems::mail::MailSystem;
 use crate::systems::mission::MissionSystem;
 use crate::systems::skin::SkinSystem;
 use crate::systems::tech::TechSystem;
 use crate::systems::world::WorldSystem;
-use crate::systems::PlayerSystem;
 use shared::event::{EventDispatcher, GameEvent, MissionEvent, MissionType, PlayerContext};
 
 /// 存盘间隔（秒）
@@ -96,6 +97,7 @@ pub struct PlayerActor {
     pub building_system: BuildingSystem,
     pub tech_system: TechSystem,
     pub equip_system: EquipSystem,
+    pub mail_system: MailSystem,
     pub mission_system: MissionSystem,
     pub skin_system: SkinSystem,
     pub world_system: WorldSystem,
@@ -140,6 +142,7 @@ impl PlayerActor {
             building_system: BuildingSystem::new(),
             tech_system: TechSystem::new(),
             equip_system: EquipSystem::new(),
+            mail_system: MailSystem::new(),
             mission_system: MissionSystem::new(),
             skin_system: SkinSystem::new(),
             world_system: WorldSystem::new(),
@@ -198,6 +201,7 @@ impl PlayerActor {
             (&mut self.building_system, row.sim_func.as_ref()),
             (&mut self.tech_system, row.technology_func.as_ref()),
             (&mut self.equip_system, row.equip_func.as_ref()),
+            (&mut self.mail_system, row.mail_func.as_ref()),
             (&mut self.mission_system, row.mission_func.as_ref()),
             (&mut self.skin_system, row.skin_func.as_ref()),
         ];
@@ -234,6 +238,7 @@ impl PlayerActor {
         self.building_system.on_login();
         self.tech_system.on_login();
         self.equip_system.on_login();
+        self.mail_system.on_login();
         self.mission_system.on_login();
         self.skin_system.on_login();
 
@@ -333,6 +338,7 @@ impl PlayerActor {
             &mut self.building_system,
             &mut self.tech_system,
             &mut self.equip_system,
+            &mut self.mail_system,
             &mut self.mission_system,
             &mut self.skin_system,
         ];
@@ -428,6 +434,8 @@ impl PlayerActor {
             self.tech_system.clear_dirty();
         } else if column == self.equip_system.column_name() {
             self.equip_system.clear_dirty();
+        } else if column == self.mail_system.column_name() {
+            self.mail_system.clear_dirty();
         } else if column == self.mission_system.column_name() {
             self.mission_system.clear_dirty();
         } else if column == self.skin_system.column_name() {
@@ -514,6 +522,10 @@ impl PlayerActor {
         );
         push_function_base(
             &mut function_base,
+            self.mail_system.to_function_base_bytes(),
+        );
+        push_function_base(
+            &mut function_base,
             self.mission_system.to_function_base_bytes(),
         );
         push_function_base(
@@ -564,6 +576,7 @@ impl PlayerActor {
     /// - 4001-4004  Bag（背包）→ backpack_system
     /// - 4201-4208  Technology（科技）→ tech_system
     /// - 4801-5100  Equip（装备）→ equip_system
+    /// - 6001-6026  Mail（邮件）→ mail_system
     /// - 8001-10000 Activity（活动）→ activity_system
     pub async fn handle_game_command(
         &mut self,
@@ -611,6 +624,9 @@ impl PlayerActor {
                 .handle_command_with_events(cmd, &payload, &config),
             4801..=5100 => self
                 .equip_system
+                .handle_command_with_events(cmd, &payload, &config),
+            6001..=6026 => self
+                .mail_system
                 .handle_command_with_events(cmd, &payload, &config),
             8001..=10000 => self
                 .activity_system
@@ -938,8 +954,8 @@ fn i64_to_i32_saturating(value: i64) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proto::slg::GetRoleDataRq;
-    use shared::msg::{func_type, GameMessage};
+    use proto::slg::{BaseMailPb, GetMailListRq, GetMailListRs, GetRoleDataRq};
+    use shared::msg::{GameMessage, func_type};
     use sqlx::mysql::MySqlPoolOptions;
 
     fn test_lord(role_id: i64) -> LordRow {
@@ -1032,7 +1048,35 @@ mod tests {
         assert!(function_types.contains(&func_type::LORD));
         assert!(function_types.contains(&func_type::BAG));
         assert!(function_types.contains(&func_type::SIM));
+        assert!(function_types.contains(&func_type::MAIL));
         assert!(function_types.contains(&func_type::MISSION));
+    }
+
+    #[tokio::test]
+    async fn mail_command_route_returns_mail_list() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        actor.mail_system.add_personal_mail(BaseMailPb {
+            template_id: 100,
+            r#type: 0,
+            time: Some(1_700_000_001),
+            title: Some("Scout report".to_string()),
+            content: Some("pending scout report body".to_string()),
+            ..Default::default()
+        });
+
+        let request_payload = GameMessage::build_response(6001, &GetMailListRq::default()).unwrap();
+        let response_payload = actor
+            .handle_game_command(6001, request_payload)
+            .await
+            .unwrap();
+
+        let response = GameMessage::decode(response_payload).unwrap();
+        assert_eq!(response.base.cmd, 6002);
+        let body: GetMailListRs = response.get_payload().unwrap();
+        assert_eq!(body.mail_pb.len(), 1);
+        assert_eq!(body.mail_pb[0].title.as_deref(), Some("Scout report"));
+        assert!(actor.mail_system.is_dirty());
     }
 
     #[tokio::test]
@@ -1223,9 +1267,11 @@ mod tests {
         assert!(duplicate.msg.contains("duplicate"));
         assert_eq!(actor.lord.as_ref().unwrap().meat, Some(250));
         assert_eq!(actor.hero_system.formations[0].state, FORMATION_STATE_IDLE);
-        assert!(actor
-            .world_system
-            .has_processed_outbound("id:test-collect-returned-dedup-46"));
+        assert!(
+            actor
+                .world_system
+                .has_processed_outbound("id:test-collect-returned-dedup-46")
+        );
     }
 
     #[tokio::test]
