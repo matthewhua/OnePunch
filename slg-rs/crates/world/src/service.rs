@@ -14,6 +14,7 @@ use proto::slg::{
     TroopAccelerateCommandRq, TroopAccelerateCommandRs, TroopBackCommandRq, TroopBackCommandRs,
 };
 use shared::msg::GameMessage;
+use shared::static_config::WorldConfig;
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::{Arc, Mutex};
 use tonic::{Request, Response, Status};
@@ -52,10 +53,11 @@ impl WorldServiceImpl {
         marching_mgr: Arc<crate::march::MarchingManager>,
         outbound_sink: Arc<dyn crate::outbound::WorldOutboundSink>,
     ) -> Self {
-        Self::new_with_outbound_and_spawn_rules(
+        Self::new_with_outbound_config_and_spawn_rules(
             grid,
             marching_mgr,
             outbound_sink,
+            Arc::new(WorldConfig::default()),
             default_entity_spawn_rules(),
         )
     }
@@ -66,8 +68,40 @@ impl WorldServiceImpl {
         outbound_sink: Arc<dyn crate::outbound::WorldOutboundSink>,
         entity_spawn_rules: Vec<crate::map::lifecycle::EntitySpawnRule>,
     ) -> Self {
-        let runtime = Arc::new(crate::runtime::WorldRuntime::new_with_outbound(
+        Self::new_with_outbound_config_and_spawn_rules(
+            grid,
+            marching_mgr,
             outbound_sink,
+            Arc::new(WorldConfig::default()),
+            entity_spawn_rules,
+        )
+    }
+
+    pub fn new_with_outbound_and_config(
+        grid: Arc<crate::map::grid::MapGrid>,
+        marching_mgr: Arc<crate::march::MarchingManager>,
+        outbound_sink: Arc<dyn crate::outbound::WorldOutboundSink>,
+        world_config: Arc<WorldConfig>,
+    ) -> Self {
+        Self::new_with_outbound_config_and_spawn_rules(
+            grid,
+            marching_mgr,
+            outbound_sink,
+            world_config,
+            default_entity_spawn_rules(),
+        )
+    }
+
+    fn new_with_outbound_config_and_spawn_rules(
+        grid: Arc<crate::map::grid::MapGrid>,
+        marching_mgr: Arc<crate::march::MarchingManager>,
+        outbound_sink: Arc<dyn crate::outbound::WorldOutboundSink>,
+        world_config: Arc<WorldConfig>,
+        entity_spawn_rules: Vec<crate::map::lifecycle::EntitySpawnRule>,
+    ) -> Self {
+        let runtime = Arc::new(crate::runtime::WorldRuntime::new_with_outbound_and_config(
+            outbound_sink,
+            world_config,
         ));
         let garrison_state = runtime.garrison_state();
         let assembly_state = runtime.assembly_state();

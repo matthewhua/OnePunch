@@ -4,6 +4,8 @@ use proto::slg::{
     WorldOutboundRq, WorldOutboundRs,
 };
 use shared::config::AppConfig;
+use shared::db::init_mysql;
+use shared::static_config::WorldConfig;
 use std::sync::Arc;
 use std::time::Duration;
 use tonic::transport::Server;
@@ -35,6 +37,7 @@ async fn main() -> Result<()> {
     // 1. 初始化日志
     tracing_subscriber::fmt::init();
     let config = AppConfig::load().unwrap_or_default();
+    let world_config = load_world_config(&config).await;
 
     // 2. 初始化核心组件
     let grid = Arc::new(map::grid::MapGrid::new());
@@ -74,10 +77,11 @@ async fn main() -> Result<()> {
         )),
         Arc::new(outbound::InMemoryOutboundSink::new()),
     );
-    let world_service = service::WorldServiceImpl::new_with_outbound(
+    let world_service = service::WorldServiceImpl::new_with_outbound_and_config(
         grid.clone(),
         marching_mgr.clone(),
         Arc::new(outbound_dispatcher),
+        world_config,
     );
 
     info!("World Service starting on {}", addr);
@@ -88,6 +92,22 @@ async fn main() -> Result<()> {
         .await?;
 
     Ok(())
+}
+
+async fn load_world_config(config: &AppConfig) -> Arc<WorldConfig> {
+    match init_mysql(&config.database_url).await {
+        Ok(db) => match WorldConfig::load(&db).await {
+            Ok(world_config) => Arc::new(world_config),
+            Err(err) => {
+                error!(error = %err, "Failed to load world static config; collect will use fallback profile");
+                Arc::new(WorldConfig::default())
+            }
+        },
+        Err(err) => {
+            error!(error = %err, "Failed to connect static config database; collect will use fallback profile");
+            Arc::new(WorldConfig::default())
+        }
+    }
 }
 
 async fn run_home_outbound_consumer(

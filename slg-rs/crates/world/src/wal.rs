@@ -139,6 +139,7 @@ impl From<WalCollectState> for CollectState {
             resource_type: state.resource_type,
             camp: state.camp,
             target: None,
+            config_issues: Vec::new(),
             phase: collect_phase_from_i32(state.phase),
         }
     }
@@ -449,6 +450,7 @@ mod tests {
             resource_type: crate::collect::RESOURCE_ID_MEAT,
             camp: Some(1),
             target: None,
+            config_issues: Vec::new(),
             phase: CollectPhase::Collecting,
         };
         let mut returning_state = collect_state.clone();
