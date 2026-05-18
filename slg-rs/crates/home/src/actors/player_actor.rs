@@ -1063,7 +1063,8 @@ mod tests {
     use super::*;
     use crate::systems::PlayerSystem;
     use proto::slg::{
-        BaseMailPb, GetMailListRq, GetMailListRs, GetRoleDataRq, ShopBuyRq, ShopBuyRs,
+        BaseMailPb, DoSomeRq, DoSomeRs, GetMailListRq, GetMailListRs, GetRankRq, GetRankRs,
+        GetRoleDataRq, ShopBuyRq, ShopBuyRs,
     };
     use shared::msg::{GameMessage, func_type};
     use shared::static_config::shop::{StaticShop, StaticShopProp};
@@ -1192,6 +1193,73 @@ mod tests {
         assert_eq!(body.mail_pb.len(), 1);
         assert_eq!(body.mail_pb[0].title.as_deref(), Some("Scout report"));
         assert!(actor.mail_system.is_dirty());
+    }
+
+    #[tokio::test]
+    async fn rank_command_route_returns_local_snapshot() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+        crate::systems::rank::RankSystem::update(
+            1,
+            0,
+            crate::systems::rank::RankEntry::new(role_id, 99, 1),
+        )
+        .unwrap();
+
+        let request_payload = GameMessage::build_response(
+            1193,
+            &GetRankRq {
+                r#type: 1,
+                page: 1,
+                scope: 0,
+            },
+        )
+        .unwrap();
+        let response_payload = actor
+            .handle_game_command(1193, request_payload)
+            .await
+            .unwrap();
+
+        let response = GameMessage::decode(response_payload).unwrap();
+        assert_eq!(response.base.cmd, 1194);
+        let body: GetRankRs = response.get_payload().unwrap();
+        assert_eq!(body.r#type, Some(1));
+        assert_eq!(body.rank_item.len(), 1);
+        assert_eq!(body.my_rank.unwrap().role_id, Some(role_id));
+    }
+
+    #[tokio::test]
+    async fn gm_command_route_allows_safe_command_and_rejects_unknown() {
+        let role_id = 900_001;
+        let mut actor = test_actor(700_001, role_id);
+
+        let request_payload = GameMessage::build_response(
+            1113,
+            &DoSomeRq {
+                str: "gm.ping".to_string(),
+                role_id: Some(role_id.to_string()),
+            },
+        )
+        .unwrap();
+        let response_payload = actor
+            .handle_game_command(1113, request_payload)
+            .await
+            .unwrap();
+
+        let response = GameMessage::decode(response_payload).unwrap();
+        assert_eq!(response.base.cmd, 1114);
+        let body: DoSomeRs = response.get_payload().unwrap();
+        assert_eq!(body.success, Some(true));
+
+        let bad_payload = GameMessage::build_response(
+            1113,
+            &DoSomeRq {
+                str: "add_diamond 999999".to_string(),
+                role_id: None,
+            },
+        )
+        .unwrap();
+        assert!(actor.handle_game_command(1113, bad_payload).await.is_err());
     }
 
     fn test_shop_config(price: &str) -> shared::static_config::ShopConfig {
