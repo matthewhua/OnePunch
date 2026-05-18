@@ -1,6 +1,6 @@
 use anyhow::Result;
 use prost::Message;
-use proto::slg::{AwardPb, FunctionClientBase, ShopBuyRq, ShopBuyRs};
+use proto::slg::{AwardPb, DoSomeRq, FunctionClientBase, ShopBuyRq, ShopBuyRs};
 use shared::event::GameEvent;
 use shared::msg::ToFunctionClientBaseBytes;
 use shared::persistence::{PlayerDataRow, SaveEntry};
@@ -26,6 +26,8 @@ pub enum HomeCommandTarget {
     Technology,
     Equip,
     Mail,
+    Gm,
+    Rank,
     Chat,
     Vip,
     Shop,
@@ -62,6 +64,8 @@ impl HomeCommandRoute {
 /// Shop/VIP/Chat/Rank/GM) should be inserted before broader catch-all ranges such
 /// as Activity when their command IDs overlap.
 pub const HOME_COMMAND_ROUTES: &[HomeCommandRoute] = &[
+    HomeCommandRoute::new(1113, 1113, HomeCommandTarget::Gm, "gm"),
+    HomeCommandRoute::new(1193, 1193, HomeCommandTarget::Rank, "rank"),
     HomeCommandRoute::new(1101, 1200, HomeCommandTarget::Mission, "mission"),
     HomeCommandRoute::new(1501, 1603, HomeCommandTarget::Building, "building"),
     HomeCommandRoute::new(2001, 2500, HomeCommandTarget::Hero, "hero"),
@@ -326,6 +330,14 @@ impl HomeSystemRegistry for PlayerActor {
             Some(HomeCommandTarget::Mail) => self
                 .mail_system
                 .handle_command_with_events(cmd, payload, config),
+            Some(HomeCommandTarget::Gm) => {
+                return self.dispatch_gm_command(payload, config);
+            }
+            Some(HomeCommandTarget::Rank) => crate::systems::rank::RankSystem::query_for_role(
+                self.role_id,
+                payload,
+            )
+            .map(|response_payload| (response_payload, vec![])),
             Some(HomeCommandTarget::Chat) => self
                 .chat_system
                 .handle_command_for_role(self.role_id, cmd, payload, config)
@@ -350,6 +362,26 @@ impl HomeSystemRegistry for PlayerActor {
 }
 
 impl PlayerActor {
+    fn dispatch_gm_command(
+        &mut self,
+        payload: &[u8],
+        config: &Arc<StaticConfig>,
+    ) -> Result<SystemCommandResult> {
+        let rq = DoSomeRq::decode(payload)?;
+        let response = crate::systems::gm::GmSystem::execute(
+            crate::systems::gm::GmContext {
+                role_id: self.role_id,
+                target_role_id: Some(self.role_id),
+            },
+            rq,
+            config,
+        )?;
+        Ok(SystemCommandResult {
+            response_payload: response.encode_to_vec(),
+            events: Vec::new(),
+        })
+    }
+
     fn dispatch_shop_command(
         &mut self,
         cmd: u32,
@@ -512,7 +544,9 @@ mod tests {
     #[test]
     fn routes_existing_home_command_ranges() {
         assert_eq!(route_home_command(1101), Some(HomeCommandTarget::Mission));
+        assert_eq!(route_home_command(1113), Some(HomeCommandTarget::Gm));
         assert_eq!(route_home_command(1179), Some(HomeCommandTarget::Mission));
+        assert_eq!(route_home_command(1193), Some(HomeCommandTarget::Rank));
         assert_eq!(route_home_command(1501), Some(HomeCommandTarget::Building));
         assert_eq!(route_home_command(2001), Some(HomeCommandTarget::Hero));
         assert_eq!(route_home_command(4003), Some(HomeCommandTarget::Backpack));
