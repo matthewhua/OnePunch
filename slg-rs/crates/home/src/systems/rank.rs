@@ -1,14 +1,14 @@
 //! Minimal local rank snapshot support for Step 15.
 //!
-//! The full design calls for a dedicated RankActor backed by `p_global.rank_data`.
-//! This module keeps the first slice deliberately small and deterministic: it owns an
-//! in-memory snapshot, can ingest score updates, and can answer `1193 GetRankRq`
-//! from Home registry without touching World/Battle semantics.
+//! `p_global.rank_data` is designed to store `proto::slg::LocalRankData` directly.
+//! A `LocalRankData` contains multiple `RankCollect` buckets, and every bucket is
+//! keyed by rank type (`Common.RankTypeDefine`) with the on-list entries serialized
+//! as protobuf `RankItem`. This keeps the wire/query shape and persistence shape
+//! aligned while leaving a future dedicated RankActor free to own loading/saving.
 
 use anyhow::Result;
 use prost::Message;
-use proto::slg::{GetRankRq, GetRankRs, RankItem};
-use std::collections::HashMap;
+use proto::slg::{GetRankRq, GetRankRs, LocalRankData, RankCollect, RankItem};
 use std::sync::{LazyLock, Mutex};
 
 const DEFAULT_PAGE_SIZE: usize = 20;
@@ -19,8 +19,7 @@ static LOCAL_RANKS: LazyLock<Mutex<RankSnapshot>> = LazyLock::new(|| Mutex::new(
 
 #[derive(Debug, Clone, Default)]
 pub struct RankSnapshot {
-    values: HashMap<(i32, i32), HashMap<i64, RankEntry>>,
-    versions: HashMap<(i32, i32), i64>,
+    data: LocalRankData,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,15 +65,34 @@ impl RankSystem {
         .encode_to_vec())
     }
 
-    pub fn update(entry_type: i32, scope: i32, entry: RankEntry) -> Result<()> {
-        validate_rank_type_and_scope(entry_type, scope)?;
+    pub fn update(rank_type: i32, scope: i32, entry: RankEntry) -> Result<()> {
+        validate_rank_type_and_scope(rank_type, scope)?;
         if entry.role_id <= 0 {
             anyhow::bail!("invalid rank role_id={}", entry.role_id);
         }
         let mut snapshot = LOCAL_RANKS
             .lock()
             .map_err(|_| anyhow::anyhow!("local rank lock poisoned"))?;
-        snapshot.upsert(entry_type, scope, entry);
+        snapshot.upsert(rank_type, scope, entry);
+        Ok(())
+    }
+
+    /// Encode the current rank state in the same protobuf shape intended for
+    /// `p_global.rank_data`.
+    pub fn save_to_global_rank_data() -> Result<Vec<u8>> {
+        let snapshot = LOCAL_RANKS
+            .lock()
+            .map_err(|_| anyhow::anyhow!("local rank lock poisoned"))?;
+        snapshot.save_to_bin()
+    }
+
+    /// Load a protobuf `LocalRankData` blob, e.g. from `p_global.rank_data`.
+    pub fn load_from_global_rank_data(data: &[u8]) -> Result<()> {
+        let snapshot = RankSnapshot::load_from_bin(data)?;
+        let mut current = LOCAL_RANKS
+            .lock()
+            .map_err(|_| anyhow::anyhow!("local rank lock poisoned"))?;
+        *current = snapshot;
         Ok(())
     }
 
@@ -89,29 +107,41 @@ impl RankSnapshot {
         Self::default()
     }
 
+    pub fn from_proto(mut data: LocalRankData) -> Self {
+        for collect in &mut data.rank_collect {
+            normalize_rank_items(&mut collect.rank_item);
+        }
+        Self { data }
+    }
+
+    pub fn to_proto(&self) -> LocalRankData {
+        self.data.clone()
+    }
+
+    pub fn load_from_bin(data: &[u8]) -> Result<Self> {
+        Ok(Self::from_proto(LocalRankData::decode(data)?))
+    }
+
+    pub fn save_to_bin(&self) -> Result<Vec<u8>> {
+        Ok(self.data.encode_to_vec())
+    }
+
     pub fn upsert(&mut self, rank_type: i32, scope: i32, entry: RankEntry) {
-        let key = (rank_type, scope);
-        self.values
-            .entry(key)
-            .or_default()
-            .insert(entry.role_id, entry);
-        *self.versions.entry(key).or_insert(DEFAULT_VERSION) += 1;
+        let collect = self.ensure_collect(rank_type, scope);
+        upsert_rank_item(&mut collect.rank_item, entry.to_unranked_item());
+        normalize_rank_items(&mut collect.rank_item);
+        self.data.unique_id = Some(self.data.unique_id.unwrap_or(DEFAULT_VERSION).saturating_add(1));
     }
 
     pub fn query(&self, role_id: i64, rank_type: i32, page: i32, scope: i32) -> RankPage {
-        let key = (rank_type, scope);
-        let mut rows: Vec<&RankEntry> = self
-            .values
-            .get(&key)
-            .map(|rows| rows.values().collect())
-            .unwrap_or_default();
-        rows.sort_by(|left, right| {
-            right
-                .rank_value
-                .cmp(&left.rank_value)
-                .then_with(|| left.update_time.cmp(&right.update_time))
-                .then_with(|| left.role_id.cmp(&right.role_id))
-        });
+        let rank_key = rank_key(rank_type, scope);
+        let rows: &[RankItem] = self
+            .data
+            .rank_collect
+            .iter()
+            .find(|collect| collect.r#type == Some(rank_key))
+            .map(|collect| collect.rank_item.as_slice())
+            .unwrap_or(&[]);
 
         let total_page = total_pages(rows.len());
         let page = page.max(1);
@@ -119,19 +149,15 @@ impl RankSnapshot {
         let end = start.saturating_add(MAX_PAGE_SIZE).min(rows.len());
 
         let items = if start < rows.len() {
-            rows[start..end]
-                .iter()
-                .enumerate()
-                .map(|(offset, entry)| entry.to_rank_item((start + offset + 1) as i32))
-                .collect()
+            rows[start..end].to_vec()
         } else {
             Vec::new()
         };
 
         let my_rank = rows
             .iter()
-            .position(|entry| entry.role_id == role_id)
-            .map(|index| rows[index].to_rank_item((index + 1) as i32));
+            .find(|entry| entry.role_id == Some(role_id))
+            .cloned();
 
         RankPage {
             rank_type,
@@ -140,8 +166,29 @@ impl RankSnapshot {
             items,
             my_rank,
             total_page,
-            version: *self.versions.get(&key).unwrap_or(&DEFAULT_VERSION),
+            version: self.data.unique_id.unwrap_or(DEFAULT_VERSION),
         }
+    }
+
+    fn ensure_collect(&mut self, rank_type: i32, scope: i32) -> &mut RankCollect {
+        let rank_key = rank_key(rank_type, scope);
+        if let Some(index) = self
+            .data
+            .rank_collect
+            .iter()
+            .position(|collect| collect.r#type == Some(rank_key))
+        {
+            return &mut self.data.rank_collect[index];
+        }
+
+        self.data.rank_collect.push(RankCollect {
+            r#type: Some(rank_key),
+            rank_item: Vec::new(),
+        });
+        self.data
+            .rank_collect
+            .last_mut()
+            .expect("rank collect just inserted")
     }
 }
 
@@ -157,9 +204,9 @@ impl RankEntry {
         }
     }
 
-    fn to_rank_item(&self, rank: i32) -> RankItem {
+    fn to_unranked_item(&self) -> RankItem {
         RankItem {
-            rank: Some(rank),
+            rank: None,
             rank_value: Some(self.rank_value),
             update_time: Some(self.update_time),
             role_id: Some(self.role_id),
@@ -169,6 +216,53 @@ impl RankEntry {
             ..Default::default()
         }
     }
+}
+
+/// Fold `scope` into the stored collect key while keeping global scope compatible
+/// with the legacy `RankCollect.type == RankTypeDefine` format.
+fn rank_key(rank_type: i32, scope: i32) -> i32 {
+    if scope == 0 {
+        rank_type
+    } else {
+        rank_type.saturating_mul(10).saturating_add(scope)
+    }
+}
+
+fn upsert_rank_item(items: &mut Vec<RankItem>, item: RankItem) {
+    if let Some(role_id) = item.role_id {
+        if let Some(existing) = items
+            .iter_mut()
+            .find(|existing| existing.role_id == Some(role_id))
+        {
+            *existing = item;
+            return;
+        }
+    }
+    items.push(item);
+}
+
+fn normalize_rank_items(items: &mut Vec<RankItem>) {
+    items.sort_by(|left, right| {
+        rank_value(right)
+            .cmp(&rank_value(left))
+            .then_with(|| update_time(left).cmp(&update_time(right)))
+            .then_with(|| role_id(left).cmp(&role_id(right)))
+    });
+    for (index, item) in items.iter_mut().enumerate() {
+        item.rank = Some((index + 1) as i32);
+    }
+}
+
+fn rank_value(item: &RankItem) -> i64 {
+    item.rank_value.unwrap_or_default()
+}
+
+fn update_time(item: &RankItem) -> i64 {
+    item.update_time.unwrap_or_default()
+}
+
+fn role_id(item: &RankItem) -> i64 {
+    item.role_id.unwrap_or_default()
 }
 
 fn validate_rank_request(rq: &GetRankRq) -> Result<()> {
@@ -220,11 +314,25 @@ mod tests {
         let page = snapshot.query(20, 1, 1, 0);
         assert_eq!(page.items.len(), 3);
         assert_eq!(page.items[0].role_id, Some(10));
+        assert_eq!(page.items[0].rank, Some(1));
         assert_eq!(page.items[1].role_id, Some(20));
         assert_eq!(page.items[2].role_id, Some(30));
         assert_eq!(page.my_rank.unwrap().rank, Some(2));
         assert_eq!(page.total_page, 1);
         assert_eq!(page.version, 3);
+    }
+
+    #[test]
+    fn supports_multiple_rank_types_and_scope_buckets() {
+        let mut snapshot = RankSnapshot::new();
+        snapshot.upsert(1, 0, RankEntry::new(10, 100, 1));
+        snapshot.upsert(2, 0, RankEntry::new(20, 200, 1));
+        snapshot.upsert(1, 1, RankEntry::new(30, 300, 1));
+
+        assert_eq!(snapshot.query(10, 1, 1, 0).items[0].role_id, Some(10));
+        assert_eq!(snapshot.query(20, 2, 1, 0).items[0].role_id, Some(20));
+        assert_eq!(snapshot.query(30, 1, 1, 1).items[0].role_id, Some(30));
+        assert_eq!(snapshot.to_proto().rank_collect.len(), 3);
     }
 
     #[test]
@@ -249,6 +357,28 @@ mod tests {
         assert_eq!(rs.scope, Some(0));
         assert_eq!(rs.rank_item.len(), 1);
         assert_eq!(rs.my_rank.unwrap().role_id, Some(42));
+    }
+
+    #[test]
+    fn global_rank_data_roundtrip_uses_local_rank_data_pb() {
+        RankSystem::reset_for_test();
+        RankSystem::update(7, 0, RankEntry::new(77, 700, 1)).unwrap();
+
+        let bytes = RankSystem::save_to_global_rank_data().unwrap();
+        let decoded = LocalRankData::decode(bytes.as_slice()).unwrap();
+        assert_eq!(decoded.rank_collect.len(), 1);
+        assert_eq!(decoded.rank_collect[0].r#type, Some(7));
+        assert_eq!(decoded.rank_collect[0].rank_item[0].role_id, Some(77));
+
+        RankSystem::reset_for_test();
+        RankSystem::load_from_global_rank_data(&bytes).unwrap();
+        let rs = GetRankRs::decode(
+            RankSystem::query_for_role(77, &payload(7, 1, 0))
+                .unwrap()
+                .as_slice(),
+        )
+        .unwrap();
+        assert_eq!(rs.my_rank.unwrap().rank_value, Some(700));
     }
 
     #[test]
