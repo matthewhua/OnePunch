@@ -9,13 +9,21 @@
 use anyhow::Result;
 use prost::Message;
 use proto::slg::{GetRankRq, GetRankRs, LocalRankData, RankCollect, RankItem};
-use std::sync::{LazyLock, Mutex};
+use shared::persistence::{global_col, PlayerDao};
+use std::sync::{Arc, LazyLock, Mutex};
+use tracing::{info, warn};
 
 const DEFAULT_PAGE_SIZE: usize = 20;
 const MAX_PAGE_SIZE: usize = 20;
 const DEFAULT_VERSION: i64 = 0;
 
-static LOCAL_RANKS: LazyLock<Mutex<RankSnapshot>> = LazyLock::new(|| Mutex::new(RankSnapshot::new()));
+static LOCAL_RANKS: LazyLock<Mutex<RankRuntime>> = LazyLock::new(|| Mutex::new(RankRuntime::new()));
+
+#[derive(Debug, Clone, Default)]
+struct RankRuntime {
+    snapshot: RankSnapshot,
+    dirty: bool,
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct RankSnapshot {
@@ -49,10 +57,10 @@ impl RankSystem {
     pub fn query_for_role(role_id: i64, payload: &[u8]) -> Result<Vec<u8>> {
         let rq = GetRankRq::decode(payload)?;
         validate_rank_request(&rq)?;
-        let snapshot = LOCAL_RANKS
+        let runtime = LOCAL_RANKS
             .lock()
             .map_err(|_| anyhow::anyhow!("local rank lock poisoned"))?;
-        let page = snapshot.query(role_id, rq.r#type, rq.page, rq.scope);
+        let page = runtime.snapshot.query(role_id, rq.r#type, rq.page, rq.scope);
         Ok(GetRankRs {
             r#type: Some(page.rank_type),
             page: Some(page.page),
@@ -70,35 +78,127 @@ impl RankSystem {
         if entry.role_id <= 0 {
             anyhow::bail!("invalid rank role_id={}", entry.role_id);
         }
-        let mut snapshot = LOCAL_RANKS
+        let mut runtime = LOCAL_RANKS
             .lock()
             .map_err(|_| anyhow::anyhow!("local rank lock poisoned"))?;
-        snapshot.upsert(rank_type, scope, entry);
+        runtime.snapshot.upsert(rank_type, scope, entry);
+        runtime.dirty = true;
         Ok(())
+    }
+
+    /// Load rank data from `p_global.rank_data` into the process-local runtime.
+    pub async fn load_from_global(dao: &PlayerDao, server_id: i32) -> Result<()> {
+        dao.init_global(server_id).await?;
+        let row = dao.load_global(server_id).await?;
+        if let Some(data) = row.and_then(|row| row.rank_data) {
+            if !data.is_empty() {
+                Self::load_from_global_rank_data(&data)?;
+                info!(server_id, bytes = data.len(), "RankSystem loaded p_global.rank_data");
+                return Ok(());
+            }
+        }
+
+        Self::replace_snapshot(RankSnapshot::new(), false)?;
+        info!(server_id, "RankSystem initialized empty p_global.rank_data");
+        Ok(())
+    }
+
+    /// Save rank data to `p_global.rank_data` only when it changed.
+    pub async fn save_to_global(dao: &PlayerDao, server_id: i32) -> Result<bool> {
+        let Some(data) = Self::take_dirty_global_rank_data()? else {
+            return Ok(false);
+        };
+
+        if let Err(err) = dao
+            .save_global_column(server_id, global_col::RANK_DATA, &data)
+            .await
+        {
+            Self::mark_dirty()?;
+            return Err(err);
+        }
+
+        info!(server_id, bytes = data.len(), "RankSystem saved p_global.rank_data");
+        Ok(true)
+    }
+
+    /// Spawn a lightweight periodic saver for the process-local Rank runtime.
+    pub fn spawn_global_persistence_task(
+        dao: Arc<PlayerDao>,
+        server_id: i32,
+        interval: std::time::Duration,
+    ) -> tokio::task::JoinHandle<()> {
+        tokio::spawn(async move {
+            if let Err(err) = Self::load_from_global(&dao, server_id).await {
+                warn!(server_id, error = %err, "RankSystem failed to load p_global.rank_data");
+            }
+
+            let mut ticker = tokio::time::interval(interval);
+            ticker.tick().await;
+            loop {
+                ticker.tick().await;
+                if let Err(err) = Self::save_to_global(&dao, server_id).await {
+                    warn!(server_id, error = %err, "RankSystem failed to save p_global.rank_data");
+                }
+            }
+        })
     }
 
     /// Encode the current rank state in the same protobuf shape intended for
     /// `p_global.rank_data`.
     pub fn save_to_global_rank_data() -> Result<Vec<u8>> {
-        let snapshot = LOCAL_RANKS
+        let runtime = LOCAL_RANKS
             .lock()
             .map_err(|_| anyhow::anyhow!("local rank lock poisoned"))?;
-        snapshot.save_to_bin()
+        runtime.snapshot.save_to_bin()
     }
 
     /// Load a protobuf `LocalRankData` blob, e.g. from `p_global.rank_data`.
     pub fn load_from_global_rank_data(data: &[u8]) -> Result<()> {
         let snapshot = RankSnapshot::load_from_bin(data)?;
-        let mut current = LOCAL_RANKS
+        Self::replace_snapshot(snapshot, false)
+    }
+
+    fn take_dirty_global_rank_data() -> Result<Option<Vec<u8>>> {
+        let mut runtime = LOCAL_RANKS
             .lock()
             .map_err(|_| anyhow::anyhow!("local rank lock poisoned"))?;
-        *current = snapshot;
+        if !runtime.dirty {
+            return Ok(None);
+        }
+        let data = runtime.snapshot.save_to_bin()?;
+        runtime.dirty = false;
+        Ok(Some(data))
+    }
+
+    fn mark_dirty() -> Result<()> {
+        let mut runtime = LOCAL_RANKS
+            .lock()
+            .map_err(|_| anyhow::anyhow!("local rank lock poisoned"))?;
+        runtime.dirty = true;
+        Ok(())
+    }
+
+    fn replace_snapshot(snapshot: RankSnapshot, dirty: bool) -> Result<()> {
+        let mut runtime = LOCAL_RANKS
+            .lock()
+            .map_err(|_| anyhow::anyhow!("local rank lock poisoned"))?;
+        runtime.snapshot = snapshot;
+        runtime.dirty = dirty;
         Ok(())
     }
 
     #[cfg(test)]
     fn reset_for_test() {
-        *LOCAL_RANKS.lock().unwrap() = RankSnapshot::new();
+        *LOCAL_RANKS.lock().unwrap() = RankRuntime::new();
+    }
+}
+
+impl RankRuntime {
+    fn new() -> Self {
+        Self {
+            snapshot: RankSnapshot::new(),
+            dirty: false,
+        }
     }
 }
 
